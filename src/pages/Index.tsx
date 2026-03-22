@@ -9,7 +9,7 @@ export default function Index() {
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
         <div className="container flex h-16 items-center justify-between">
-          <span className="text-lg font-semibold text-foreground">My App</span>
+          <span className="text-lg font-semibold text-foreground">Meu App</span>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <UserCircle className="h-4 w-4" />
@@ -17,7 +17,7 @@ export default function Index() {
             </div>
             <Button variant="ghost" size="sm" onClick={signOut} className="active:scale-[0.97]">
               <LogOut className="mr-2 h-4 w-4" />
-              Sign out
+              Sair
             </Button>
           </div>
         </div>
@@ -29,10 +29,10 @@ export default function Index() {
             className="text-4xl font-bold tracking-tight text-foreground"
             style={{ lineHeight: "1.1" }}
           >
-            Welcome back
+            Bem-vindo de volta
           </h1>
           <p className="mt-3 text-lg text-muted-foreground" style={{ textWrap: "pretty" }}>
-            You're signed in and ready to go. Start building something great.
+            Você está conectado e pronto para começar. Construa algo incrível.
           </p>
         </div>
       </main>
