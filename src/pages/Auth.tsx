@@ -32,12 +32,12 @@ export default function Auth() {
             className="text-3xl font-bold tracking-tight text-foreground"
             style={{ lineHeight: "1.1" }}
           >
-            {isSignUp ? "Create account" : "Welcome back"}
+            {isSignUp ? "Criar conta" : "Bem-vindo de volta"}
           </h1>
           <p className="mt-2 text-muted-foreground">
             {isSignUp
-              ? "Sign up to get started"
-              : "Sign in to your account"}
+              ? "Cadastre-se para começar"
+              : "Entre na sua conta"}
           </p>
         </div>
 
@@ -46,12 +46,12 @@ export default function Auth() {
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
           <button
             onClick={() => setIsSignUp(!isSignUp)}
             className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
           >
-            {isSignUp ? "Sign in" : "Sign up"}
+            {isSignUp ? "Entrar" : "Cadastrar"}
           </button>
         </p>
       </div>
@@ -78,13 +78,13 @@ function SignInForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">E-mail</Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="voce@exemplo.com"
             className="pl-10"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -93,7 +93,7 @@ function SignInForm() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Senha</Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -110,7 +110,7 @@ function SignInForm() {
       </div>
       <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
         {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Sign in
+        Entrar
       </Button>
     </form>
   );
@@ -130,7 +130,7 @@ function SignUpForm() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("Check your email to confirm your account");
+      toast.success("Verifique seu e-mail para confirmar sua conta");
     }
     setSubmitting(false);
   };
@@ -138,13 +138,13 @@ function SignUpForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="display-name">Display name</Label>
+        <Label htmlFor="display-name">Nome de exibição</Label>
         <div className="relative">
           <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="display-name"
             type="text"
-            placeholder="Your name"
+            placeholder="Seu nome"
             className="pl-10"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
@@ -152,13 +152,13 @@ function SignUpForm() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="signup-email">Email</Label>
+        <Label htmlFor="signup-email">E-mail</Label>
         <div className="relative">
           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             id="signup-email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="voce@exemplo.com"
             className="pl-10"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -167,7 +167,7 @@ function SignUpForm() {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="signup-password">Password</Label>
+        <Label htmlFor="signup-password">Senha</Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -184,7 +184,7 @@ function SignUpForm() {
       </div>
       <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
         {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Create account
+        Criar conta
       </Button>
     </form>
   );
