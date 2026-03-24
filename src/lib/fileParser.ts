@@ -89,12 +89,30 @@ export function parseXLSX(buffer: ArrayBuffer): FinancialRecord[] {
   return allRecords;
 }
 
+// Detect best delimiter for CSV/TXT
+function detectDelimiter(text: string): string {
+  const firstLines = text.split("\n").slice(0, 5).join("\n");
+  const delimiters = [";", "\t", ",", "|"];
+  let best = ",";
+  let maxCount = 0;
+  for (const d of delimiters) {
+    const count = (firstLines.match(new RegExp(d === "\t" ? "\\t" : "\\" + d, "g")) || []).length;
+    if (count > maxCount) {
+      maxCount = count;
+      best = d;
+    }
+  }
+  return best;
+}
+
 // Parse CSV
 export function parseCSV(text: string): FinancialRecord[] {
+  const delimiter = detectDelimiter(text);
   const result = Papa.parse<Record<string, unknown>>(text, {
     header: true,
     skipEmptyLines: true,
     dynamicTyping: true,
+    delimiter,
   });
   return rowsToRecords(result.data);
 }
@@ -178,17 +196,19 @@ export function parseCNAB(text: string): FinancialRecord[] {
   return records;
 }
 
-// Parse TXT (try as CSV or line-by-line)
+// Parse TXT (try structured formats first, then line-by-line)
 export function parseTXT(text: string): FinancialRecord[] {
-  // Try CSV first
-  const csvResult = parseCSV(text);
-  if (csvResult.length > 0) return csvResult;
-
-  // Try CNAB
+  // Try CNAB first (fixed-width lines of 240 or 400 chars)
   const cnabResult = parseCNAB(text);
   if (cnabResult.length > 0) return cnabResult;
 
-  // Fallback: line-by-line
+  // Try as delimited file (CSV/TSV/semicolon) with header detection
+  const csvResult = parseCSV(text);
+  if (csvResult.length > 0 && csvResult.some((r) => r.data || r.valor !== 0)) {
+    return csvResult;
+  }
+
+  // Fallback: line-by-line (no structured data found)
   const lines = text.split("\n").filter((l) => l.trim());
   return lines.map((line) => ({
     data: "",
