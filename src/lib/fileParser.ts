@@ -11,12 +11,14 @@ export interface FinancialRecord {
   raw: Record<string, unknown>;
 }
 
-// Normalize column name for matching
+// ── Helpers ──────────────────────────────────────────────────
+
 function normalize(col: string): string {
   return col
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "")
     .trim();
 }
 
@@ -26,6 +28,99 @@ function detectColumn(headers: string[], keywords: string[]): string | null {
     if (keywords.some((k) => n.includes(k))) return h;
   }
   return null;
+}
+
+/** Parse a Brazilian monetary value like "1.234,56" or "-1234.56" */
+function parseBRValue(raw: unknown): number {
+  if (typeof raw === "number" && !isNaN(raw)) return raw;
+  if (raw == null) return 0;
+
+  let s = String(raw).trim();
+
+  // Detect sign from parentheses: (1.234,56) → negative
+  let negative = false;
+  if (/^\(.*\)$/.test(s)) {
+    negative = true;
+    s = s.replace(/[()]/g, "");
+  }
+  if (/^-/.test(s)) {
+    negative = true;
+    s = s.replace(/^-/, "");
+  }
+  // Also handle "D" / "C" suffix used by some banks
+  if (/[dD]$/.test(s)) {
+    negative = true;
+    s = s.replace(/[dD]$/, "");
+  } else {
+    s = s.replace(/[cC]$/, "");
+  }
+
+  // Remove currency symbols and spaces
+  s = s.replace(/[R$\s]/g, "");
+
+  if (!s) return 0;
+
+  // Detect Brazilian format: dots as thousands, comma as decimal
+  // e.g. "1.234,56" or "1.234.567,89"
+  const hasDotAndComma = s.includes(".") && s.includes(",");
+  const commaPos = s.lastIndexOf(",");
+  const dotPos = s.lastIndexOf(".");
+
+  let num: number;
+
+  if (hasDotAndComma) {
+    // Both present: last separator is decimal
+    if (commaPos > dotPos) {
+      // Brazilian: 1.234,56
+      num = parseFloat(s.replace(/\./g, "").replace(",", "."));
+    } else {
+      // US: 1,234.56
+      num = parseFloat(s.replace(/,/g, ""));
+    }
+  } else if (s.includes(",")) {
+    // Only comma: check if it's a decimal separator
+    const afterComma = s.split(",")[1];
+    if (afterComma && afterComma.length <= 2) {
+      // Likely decimal: 1234,56
+      num = parseFloat(s.replace(",", "."));
+    } else {
+      // Likely thousands: 1,234,567
+      num = parseFloat(s.replace(/,/g, ""));
+    }
+  } else {
+    num = parseFloat(s.replace(/[^\d.]/g, ""));
+  }
+
+  if (isNaN(num)) return 0;
+  return negative ? -num : num;
+}
+
+/** Format a date string to DD/MM/YYYY when possible */
+function normalizeDate(raw: unknown): string {
+  if (raw == null) return "";
+  if (raw instanceof Date) {
+    const d = raw;
+    return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+  }
+  const s = String(raw).trim();
+  if (!s) return "";
+
+  // Already DD/MM/YYYY
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // YYYY-MM-DD
+  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(s);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  // DDMMYYYY (no separators, 8 digits)
+  if (/^\d{8}$/.test(s)) return `${s.slice(0, 2)}/${s.slice(2, 4)}/${s.slice(4, 8)}`;
+  // DD/MM/YY
+  const short = /^(\d{2})\/(\d{2})\/(\d{2})$/.exec(s);
+  if (short) {
+    const y = parseInt(short[3]);
+    const fullYear = y > 50 ? 1900 + y : 2000 + y;
+    return `${short[1]}/${short[2]}/${fullYear}`;
+  }
+
+  return s;
 }
 
 function classifyType(valor: number): string {
@@ -40,63 +135,85 @@ function classifyCategory(descricao: string): string {
   if (d.includes("ted") || d.includes("doc")) return "Transferência";
   if (d.includes("boleto")) return "Boleto";
   if (d.includes("tarifa") || d.includes("taxa") || d.includes("iof")) return "Tarifa";
-  if (d.includes("salario") || d.includes("salário") || d.includes("pagamento")) return "Pagamento";
+  if (d.includes("salario") || d.includes("salário") || d.includes("pagamento") || d.includes("pgto")) return "Pagamento";
   if (d.includes("saque")) return "Saque";
   if (d.includes("deposito") || d.includes("depósito")) return "Depósito";
-  if (d.includes("compra") || d.includes("debito automatico")) return "Compra";
-  if (d.includes("juros") || d.includes("rendimento")) return "Rendimento";
-  if (d.includes("estorno")) return "Estorno";
+  if (d.includes("compra") || d.includes("debito automatico") || d.includes("débito automático")) return "Compra";
+  if (d.includes("juros") || d.includes("rendimento") || d.includes("aplicacao") || d.includes("aplicação")) return "Rendimento";
+  if (d.includes("estorno") || d.includes("devolucao") || d.includes("devolução")) return "Estorno";
+  if (d.includes("cheque")) return "Cheque";
   return "Outros";
 }
+
+// ── Row normalization (shared by XLSX, CSV, TXT) ────────────
 
 function rowsToRecords(rows: Record<string, unknown>[]): FinancialRecord[] {
   if (rows.length === 0) return [];
 
   const headers = Object.keys(rows[0]);
 
-  const dateCol = detectColumn(headers, ["data", "date", "dt", "lancamento", "lançamento"]);
-  const descCol = detectColumn(headers, ["descricao", "descrição", "historico", "histórico", "memo", "detail", "description"]);
-  const valueCol = detectColumn(headers, ["valor", "value", "amount", "quantia", "vlr", "montante"]);
-  const docCol = detectColumn(headers, ["documento", "doc", "nrdoc", "numero"]);
+  const dateCol = detectColumn(headers, ["data", "date", "dt", "lancamento", "lançamento", "datalancamento", "dtlancamento", "dtmovimento", "datamovimento"]);
+  const descCol = detectColumn(headers, ["descricao", "descrição", "historico", "histórico", "memo", "detail", "description", "lancamento", "complemento"]);
+  const valueCol = detectColumn(headers, ["valor", "value", "amount", "quantia", "vlr", "montante", "vlrmovimento", "vlrlancamento"]);
+  const docCol = detectColumn(headers, ["documento", "doc", "nrdoc", "numero", "numdocumento"]);
+
+  // Try to detect separate credit/debit columns
+  const creditCol = detectColumn(headers, ["credito", "crédito", "credit", "entrada", "vlrcredito"]);
+  const debitCol = detectColumn(headers, ["debito", "débito", "debit", "saida", "vlrdebito"]);
 
   return rows
     .map((row) => {
-      const rawValor = valueCol ? row[valueCol] : 0;
-      const valor = typeof rawValor === "number" ? rawValor : parseFloat(String(rawValor).replace(/[^\d.,-]/g, "").replace(",", ".")) || 0;
-      const descricao = descCol ? String(row[descCol] ?? "") : JSON.stringify(row);
+      let valor: number;
+
+      if (valueCol) {
+        valor = parseBRValue(row[valueCol]);
+      } else if (creditCol || debitCol) {
+        // Merge credit/debit columns
+        const cred = creditCol ? parseBRValue(row[creditCol]) : 0;
+        const deb = debitCol ? parseBRValue(row[debitCol]) : 0;
+        valor = cred > 0 ? cred : deb !== 0 ? -Math.abs(deb) : 0;
+      } else {
+        valor = 0;
+      }
+
+      const descricao = descCol ? String(row[descCol] ?? "").trim() : "";
+      const data = normalizeDate(dateCol ? row[dateCol] : "");
 
       return {
-        data: dateCol ? String(row[dateCol] ?? "") : "",
+        data,
         descricao,
         valor,
         tipo: classifyType(valor),
         categoria: classifyCategory(descricao),
-        documento: docCol ? String(row[docCol] ?? "") : undefined,
+        documento: docCol ? String(row[docCol] ?? "").trim() : undefined,
         raw: row as Record<string, unknown>,
       };
     })
     .filter((r) => r.descricao || r.valor !== 0);
 }
 
-// Parse XLSX/XLS
+// ── XLSX / XLS ──────────────────────────────────────────────
+
 export function parseXLSX(buffer: ArrayBuffer): FinancialRecord[] {
   const wb = XLSX.read(buffer, { type: "array", cellDates: true });
   const allRecords: FinancialRecord[] = [];
   for (const name of wb.SheetNames) {
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[name]);
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[name], { defval: "" });
     allRecords.push(...rowsToRecords(rows));
   }
   return allRecords;
 }
 
-// Detect best delimiter for CSV/TXT
+// ── CSV ─────────────────────────────────────────────────────
+
 function detectDelimiter(text: string): string {
   const firstLines = text.split("\n").slice(0, 5).join("\n");
   const delimiters = [";", "\t", ",", "|"];
   let best = ",";
   let maxCount = 0;
   for (const d of delimiters) {
-    const count = (firstLines.match(new RegExp(d === "\t" ? "\\t" : "\\" + d, "g")) || []).length;
+    const escaped = d === "\t" ? "\\t" : "\\" + d;
+    const count = (firstLines.match(new RegExp(escaped, "g")) || []).length;
     if (count > maxCount) {
       maxCount = count;
       best = d;
@@ -105,19 +222,37 @@ function detectDelimiter(text: string): string {
   return best;
 }
 
-// Parse CSV
 export function parseCSV(text: string): FinancialRecord[] {
+  // Skip leading non-header lines (some bank CSVs have metadata lines)
+  const lines = text.split("\n");
+  let startIndex = 0;
   const delimiter = detectDelimiter(text);
-  const result = Papa.parse<Record<string, unknown>>(text, {
+
+  // Heuristic: find the first line that looks like a header (has multiple delimiter-separated words)
+  for (let i = 0; i < Math.min(lines.length, 10); i++) {
+    const parts = lines[i].split(delimiter);
+    if (parts.length >= 3) {
+      const hasLetterCols = parts.filter((p) => /[a-zA-ZÀ-ú]/.test(p.trim())).length >= 2;
+      if (hasLetterCols) {
+        startIndex = i;
+        break;
+      }
+    }
+  }
+
+  const csvText = lines.slice(startIndex).join("\n");
+
+  const result = Papa.parse<Record<string, unknown>>(csvText, {
     header: true,
     skipEmptyLines: true,
-    dynamicTyping: true,
+    dynamicTyping: false, // Keep as strings so we control number parsing
     delimiter,
   });
   return rowsToRecords(result.data);
 }
 
-// Parse OFX (simplified)
+// ── OFX ─────────────────────────────────────────────────────
+
 export function parseOFX(text: string): FinancialRecord[] {
   const records: FinancialRecord[] = [];
   const txRegex = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
@@ -130,10 +265,12 @@ export function parseOFX(text: string): FinancialRecord[] {
       return m ? m[1].trim() : "";
     };
 
-    const valor = parseFloat(get("TRNAMT").replace(",", ".")) || 0;
+    const valor = parseBRValue(get("TRNAMT"));
     const descricao = get("MEMO") || get("NAME") || "";
     const dtStr = get("DTPOSTED");
-    const data = dtStr ? `${dtStr.slice(6, 8)}/${dtStr.slice(4, 6)}/${dtStr.slice(0, 4)}` : "";
+    const data = dtStr.length >= 8
+      ? `${dtStr.slice(6, 8)}/${dtStr.slice(4, 6)}/${dtStr.slice(0, 4)}`
+      : "";
 
     records.push({
       data,
@@ -145,24 +282,61 @@ export function parseOFX(text: string): FinancialRecord[] {
       raw: { DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), MEMO: descricao },
     });
   }
+
+  // Also try SGML-style OFX (without closing tags)
+  if (records.length === 0) {
+    const sgmlBlocks = text.split(/<STMTTRN>/i).slice(1);
+    for (const block of sgmlBlocks) {
+      const get = (tag: string) => {
+        const m = new RegExp(`<${tag}>\\s*(.+)`, "i").exec(block);
+        return m ? m[1].trim() : "";
+      };
+
+      const valor = parseBRValue(get("TRNAMT"));
+      const descricao = get("MEMO") || get("NAME") || "";
+      const dtStr = get("DTPOSTED");
+      const data = dtStr.length >= 8
+        ? `${dtStr.slice(6, 8)}/${dtStr.slice(4, 6)}/${dtStr.slice(0, 4)}`
+        : "";
+
+      if (descricao || valor !== 0) {
+        records.push({
+          data,
+          descricao,
+          valor,
+          tipo: classifyType(valor),
+          categoria: classifyCategory(descricao),
+          documento: get("FITID") || undefined,
+          raw: { DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), MEMO: descricao },
+        });
+      }
+    }
+  }
+
   return records;
 }
 
-// Parse CNAB 240/400
+// ── CNAB 240/400 ────────────────────────────────────────────
+
 export function parseCNAB(text: string): FinancialRecord[] {
   const lines = text.split("\n").filter((l) => l.trim().length > 0);
   const records: FinancialRecord[] = [];
 
   for (const line of lines) {
-    if (line.length === 240) {
-      // CNAB 240 - Segment T/U
+    const len = line.length;
+
+    if (len >= 230 && len <= 250) {
+      // CNAB 240
       const segType = line.charAt(13);
       if (segType === "3") {
-        const segCode = line.charAt(13 + 1);
+        const segCode = line.charAt(14);
         if (segCode === "T" || segCode === "U") {
           const valor = parseFloat(line.substring(119, 134).replace(/^0+/, "")) / 100 || 0;
           const descricao = line.substring(133, 173).trim() || `Registro CNAB 240`;
-          const data = line.substring(143, 151).trim();
+          const rawDate = line.substring(143, 151).trim();
+          const data = rawDate.length === 8
+            ? `${rawDate.slice(0, 2)}/${rawDate.slice(2, 4)}/${rawDate.slice(4, 8)}`
+            : rawDate;
 
           records.push({
             data,
@@ -174,13 +348,16 @@ export function parseCNAB(text: string): FinancialRecord[] {
           });
         }
       }
-    } else if (line.length === 400) {
-      // CNAB 400 - Type 1 detail
+    } else if (len >= 390 && len <= 410) {
+      // CNAB 400
       const tipo = line.charAt(0);
       if (tipo === "1") {
         const valor = parseFloat(line.substring(152, 165).replace(/^0+/, "")) / 100 || 0;
-        const descricao = line.substring(394, 400).trim() || `Registro CNAB 400`;
-        const data = line.substring(110, 116).trim();
+        const descricao = line.substring(394, 400).trim() || "";
+        const rawDate = line.substring(110, 116).trim();
+        const data = rawDate.length === 6
+          ? `${rawDate.slice(0, 2)}/${rawDate.slice(2, 4)}/${rawDate.slice(4, 6)}`
+          : rawDate;
 
         records.push({
           data,
@@ -196,19 +373,18 @@ export function parseCNAB(text: string): FinancialRecord[] {
   return records;
 }
 
-// Parse TXT (try structured formats first, then line-by-line)
+// ── TXT ─────────────────────────────────────────────────────
+
 export function parseTXT(text: string): FinancialRecord[] {
-  // Try CNAB first (fixed-width lines of 240 or 400 chars)
   const cnabResult = parseCNAB(text);
   if (cnabResult.length > 0) return cnabResult;
 
-  // Try as delimited file (CSV/TSV/semicolon) with header detection
   const csvResult = parseCSV(text);
   if (csvResult.length > 0 && csvResult.some((r) => r.data || r.valor !== 0)) {
     return csvResult;
   }
 
-  // Fallback: line-by-line (no structured data found)
+  // Fallback: line-by-line
   const lines = text.split("\n").filter((l) => l.trim());
   return lines.map((line) => ({
     data: "",
@@ -220,7 +396,8 @@ export function parseTXT(text: string): FinancialRecord[] {
   }));
 }
 
-// Master parser
+// ── Master parser ───────────────────────────────────────────
+
 export async function parseFile(file: File): Promise<FinancialRecord[]> {
   const ext = file.name.split(".").pop()?.toLowerCase() || "";
 
