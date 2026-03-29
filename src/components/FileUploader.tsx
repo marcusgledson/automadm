@@ -7,8 +7,6 @@ interface FileUploaderProps {
   loading: boolean;
 }
 
-const ACCEPTED = ".xlsx,.xls,.csv,.ofx,.txt,.ret,.rem,.pdf";
-
 export default function FileUploader({ onFileSelected, loading }: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -16,7 +14,9 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
     (e: React.DragEvent) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
-      if (file) onFileSelected(file);
+      if (file && file.name.toLowerCase().endsWith(".ofx")) {
+        onFileSelected(file);
+      }
     },
     [onFileSelected]
   );
@@ -40,10 +40,10 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
       </div>
       <div className="text-center">
         <p className="text-lg font-medium text-foreground">
-          Arraste seu arquivo aqui
+          Arraste seu arquivo OFX aqui
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Formatos aceitos: XLSX, XLS, CSV, OFX, TXT, CNAB (RET/REM)
+          Formato aceito: OFX (Open Financial Exchange)
         </p>
       </div>
       <Button
@@ -53,12 +53,12 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
         className="gap-2"
       >
         <Upload className="h-4 w-4" />
-        {loading ? "Processando..." : "Selecionar Arquivo"}
+        {loading ? "Processando..." : "Selecionar Arquivo OFX"}
       </Button>
       <input
         ref={inputRef}
         type="file"
-        accept={ACCEPTED}
+        accept=".ofx"
         onChange={handleChange}
         className="hidden"
       />
