@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { LogOut, Minimize2, Maximize2, X, FileSpreadsheet, FolderOpen } from "lucide-react";
+import { LogOut, Minimize2, Maximize2, X, FileSpreadsheet, FolderOpen, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { parseFile, FinancialRecord } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
