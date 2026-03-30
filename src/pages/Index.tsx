@@ -10,6 +10,7 @@ import { toast } from "sonner";
 
 export default function Index() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
