@@ -41,7 +41,23 @@ const App = () => (
               path="/"
               element={
                 <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/extrato"
+              element={
+                <ProtectedRoute>
                   <Index />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/neoenergia"
+              element={
+                <ProtectedRoute>
+                  <Neoenergia />
                 </ProtectedRoute>
               }
             />
