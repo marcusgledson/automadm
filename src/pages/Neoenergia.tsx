@@ -14,6 +14,7 @@ import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Tra
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import GoogleDriveImport from "@/components/GoogleDriveImport";
 
 interface InvoiceData {
   fileName: string;
@@ -183,6 +184,9 @@ export default function Neoenergia() {
       {/* Content */}
       <main className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-6xl space-y-6">
+          {/* Google Drive import */}
+          <GoogleDriveImport onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])} />
+
           {/* Upload area */}
           <Card className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <CardHeader>
