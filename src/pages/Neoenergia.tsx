@@ -184,6 +184,9 @@ export default function Neoenergia() {
       {/* Content */}
       <main className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-6xl space-y-6">
+          {/* Google Drive import */}
+          <GoogleDriveImport onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])} />
+
           {/* Upload area */}
           <Card className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
             <CardHeader>
