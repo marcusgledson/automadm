@@ -14,6 +14,7 @@ import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Tra
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import GoogleDriveImport from "@/components/GoogleDriveImport";
 
 interface InvoiceData {
   fileName: string;
