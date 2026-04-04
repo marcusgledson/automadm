@@ -68,21 +68,43 @@ serve(async (req) => {
       const errText = await driveResponse.text();
       console.error("Google Drive API error:", driveResponse.status, errText);
 
+      // Detect invalid API key
+      if (errText.includes("API_KEY_INVALID") || errText.includes("API key not valid")) {
+        return new Response(
+          JSON.stringify({
+            error: "A chave da API do Google é inválida. Verifique se: 1) A chave está correta, 2) A Google Drive API está ativada no Google Cloud Console, 3) Não há restrições de IP/referrer bloqueando o acesso.",
+            errorCode: "API_KEY_INVALID",
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Detect expired or revoked key
+      if (errText.includes("API_KEY_EXPIRED") || errText.includes("PERMISSION_DENIED")) {
+        return new Response(
+          JSON.stringify({
+            error: "A chave da API do Google expirou ou foi revogada. Gere uma nova chave no Google Cloud Console.",
+            errorCode: "API_KEY_EXPIRED",
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (driveResponse.status === 404) {
         return new Response(
-          JSON.stringify({ error: "Pasta não encontrada. Verifique se o link está correto e se a pasta é pública." }),
+          JSON.stringify({ error: "Pasta não encontrada. Verifique se o link está correto e se a pasta é pública.", errorCode: "FOLDER_NOT_FOUND" }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (driveResponse.status === 403) {
         return new Response(
-          JSON.stringify({ error: "Acesso negado. Verifique se a pasta está compartilhada como 'Qualquer pessoa com o link'." }),
+          JSON.stringify({ error: "Acesso negado. Verifique se a pasta está compartilhada como 'Qualquer pessoa com o link'.", errorCode: "ACCESS_DENIED" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
       return new Response(
-        JSON.stringify({ error: "Erro ao acessar o Google Drive." }),
+        JSON.stringify({ error: `Erro ao acessar o Google Drive (código ${driveResponse.status}).`, errorCode: "DRIVE_ERROR" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
