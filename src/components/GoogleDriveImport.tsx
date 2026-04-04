@@ -88,9 +88,17 @@ export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImp
       setFiles(driveFiles);
       setSelectedFiles(new Set(driveFiles.map((f) => f.id)));
       toast.success(`${driveFiles.length} PDF(s) encontrado(s)!`);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error listing files:", err);
-      toast.error(err instanceof Error ? err.message : "Erro ao listar arquivos.");
+      const message = err instanceof Error ? err.message : "Erro ao listar arquivos.";
+      if (message.includes("API key") || message.includes("chave da API")) {
+        toast.error("Problema com a API Key do Google", {
+          description: message,
+          duration: 10000,
+        });
+      } else {
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
     }
