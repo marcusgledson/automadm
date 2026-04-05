@@ -79,8 +79,19 @@ serve(async (req) => {
         );
       }
 
+      // Detect API key service blocked (API restrictions on the key)
+      if (errText.includes("API_KEY_SERVICE_BLOCKED")) {
+        return new Response(
+          JSON.stringify({
+            error: "A chave da API do Google está bloqueada para o Google Drive API. No Google Cloud Console, edite a chave de API e em 'Restrições de API' selecione 'Não restringir chave' ou adicione 'Google Drive API' à lista de APIs permitidas.",
+            errorCode: "API_KEY_SERVICE_BLOCKED",
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Detect expired or revoked key
-      if (errText.includes("API_KEY_EXPIRED") || errText.includes("PERMISSION_DENIED")) {
+      if (errText.includes("API_KEY_EXPIRED")) {
         return new Response(
           JSON.stringify({
             error: "A chave da API do Google expirou ou foi revogada. Gere uma nova chave no Google Cloud Console.",
