@@ -171,7 +171,8 @@ REGRAS IMPORTANTES:
 
     // Fallback: if valor_total is 0, null, or missing, calculate from components
     if (!invoiceData.valor_total || invoiceData.valor_total === 0) {
-      const sum = [
+      // Try summing known fields first
+      let sum = [
         invoiceData.valor_energia,
         invoiceData.valor_distribuicao,
         invoiceData.icms,
@@ -182,6 +183,18 @@ REGRAS IMPORTANTES:
       ]
         .filter((v: unknown) => typeof v === "number" && v > 0)
         .reduce((a: number, b: number) => a + b, 0);
+
+      // If still 0, try summing itens_fatura + tributos
+      if (sum === 0 && Array.isArray(invoiceData.itens_fatura)) {
+        sum = invoiceData.itens_fatura
+          .map((item: { valor?: number }) => item.valor || 0)
+          .reduce((a: number, b: number) => a + b, 0);
+        // Add tributos and contrib not in itens_fatura
+        const extras = [invoiceData.icms, invoiceData.pis, invoiceData.cofins, invoiceData.contrib_iluminacao]
+          .filter((v: unknown) => typeof v === "number" && v > 0)
+          .reduce((a: number, b: number) => a + b, 0);
+        sum += extras;
+      }
 
       if (sum > 0) {
         invoiceData.valor_total = Math.round(sum * 100) / 100;
