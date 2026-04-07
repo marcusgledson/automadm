@@ -79,11 +79,13 @@ Se um campo não for encontrado no texto, use null.
 Para valores monetários, use números (ex: 245.67, não "R$ 245,67").
 Para datas, use formato DD/MM/AAAA.
 
-ATENÇÃO ESPECIAL para o campo valor_total:
-- É o VALOR TOTAL DA FATURA que o cliente deve pagar. Nunca deve ser 0 ou null.
-- Procure por textos como "Total a Pagar", "Valor a Pagar", "TOTAL", "Valor da Fatura", "Total da Fatura".
-- Se não encontrar explicitamente, SOME todos os itens da fatura (energia + distribuição + tributos + iluminação + bandeira).
-- O valor_total DEVE ser maior que 0 em faturas válidas.`;
+REGRAS IMPORTANTES:
+- valor_total: É o VALOR TOTAL A PAGAR da fatura. Procure "Total a Pagar", "Valor a Pagar", "TOTAL". NUNCA retorne 0.
+- valor_energia: É o valor da linha "Consumo-TE" ou "Energia Elétrica-TE" nos itens da fatura.
+- valor_distribuicao: É o valor da linha "Consumo-TUSD" ou "Distribuição-TUSD" nos itens da fatura.
+- contrib_iluminacao: É o valor de "Ilum. Públ. Municipal" ou "CIP/COSIP".
+- Se valor_total não estiver explícito, SOME: valor_energia + valor_distribuicao + icms + pis + cofins + contrib_iluminacao + valor_bandeira.
+- consumo_kwh: Use o valor em kWh do mês de referência (não confunda com quantidade faturada).`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
