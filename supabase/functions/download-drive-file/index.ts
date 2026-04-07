@@ -77,7 +77,15 @@ serve(async (req) => {
 Extraia TODOS os dados possíveis da fatura. Retorne os dados estruturados usando a função fornecida.
 Se um campo não for encontrado no texto, use null.
 Para valores monetários, use números (ex: 245.67, não "R$ 245,67").
-Para datas, use formato DD/MM/AAAA.`;
+Para datas, use formato DD/MM/AAAA.
+
+REGRAS IMPORTANTES:
+- valor_total: É o VALOR TOTAL A PAGAR da fatura. Procure "Total a Pagar", "Valor a Pagar", "TOTAL". NUNCA retorne 0.
+- valor_energia: É o valor da linha "Consumo-TE" ou "Energia Elétrica-TE" nos itens da fatura.
+- valor_distribuicao: É o valor da linha "Consumo-TUSD" ou "Distribuição-TUSD" nos itens da fatura.
+- contrib_iluminacao: É o valor de "Ilum. Públ. Municipal" ou "CIP/COSIP".
+- Se valor_total não estiver explícito, SOME: valor_energia + valor_distribuicao + icms + pis + cofins + contrib_iluminacao + valor_bandeira.
+- consumo_kwh: Use o valor em kWh do mês de referência (não confunda com quantidade faturada).`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -160,6 +168,38 @@ Para datas, use formato DD/MM/AAAA.`;
     }
 
     const invoiceData = JSON.parse(toolCall.function.arguments);
+
+    // Fallback: if valor_total is 0, null, or missing, calculate from components
+    if (!invoiceData.valor_total || invoiceData.valor_total === 0) {
+      // Try summing known fields first
+      let sum = [
+        invoiceData.valor_energia,
+        invoiceData.valor_distribuicao,
+        invoiceData.icms,
+        invoiceData.pis,
+        invoiceData.cofins,
+        invoiceData.contrib_iluminacao,
+        invoiceData.valor_bandeira,
+      ]
+        .filter((v: unknown) => typeof v === "number" && v > 0)
+        .reduce((a: number, b: number) => a + b, 0);
+
+      // If still 0, try summing itens_fatura + tributos
+      if (sum === 0 && Array.isArray(invoiceData.itens_fatura)) {
+        sum = invoiceData.itens_fatura
+          .map((item: { valor?: number }) => item.valor || 0)
+          .reduce((a: number, b: number) => a + b, 0);
+        // Add tributos and contrib not in itens_fatura
+        const extras = [invoiceData.icms, invoiceData.pis, invoiceData.cofins, invoiceData.contrib_iluminacao]
+          .filter((v: unknown) => typeof v === "number" && v > 0)
+          .reduce((a: number, b: number) => a + b, 0);
+        sum += extras;
+      }
+
+      if (sum > 0) {
+        invoiceData.valor_total = Math.round(sum * 100) / 100;
+      }
+    }
 
     return new Response(
       JSON.stringify({ success: true, data: invoiceData }),
