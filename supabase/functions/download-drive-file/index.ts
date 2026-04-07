@@ -77,7 +77,13 @@ serve(async (req) => {
 Extraia TODOS os dados possíveis da fatura. Retorne os dados estruturados usando a função fornecida.
 Se um campo não for encontrado no texto, use null.
 Para valores monetários, use números (ex: 245.67, não "R$ 245,67").
-Para datas, use formato DD/MM/AAAA.`;
+Para datas, use formato DD/MM/AAAA.
+
+ATENÇÃO ESPECIAL para o campo valor_total:
+- É o VALOR TOTAL DA FATURA que o cliente deve pagar. Nunca deve ser 0 ou null.
+- Procure por textos como "Total a Pagar", "Valor a Pagar", "TOTAL", "Valor da Fatura", "Total da Fatura".
+- Se não encontrar explicitamente, SOME todos os itens da fatura (energia + distribuição + tributos + iluminação + bandeira).
+- O valor_total DEVE ser maior que 0 em faturas válidas.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
