@@ -167,6 +167,25 @@ ATENÇÃO ESPECIAL para o campo valor_total:
 
     const invoiceData = JSON.parse(toolCall.function.arguments);
 
+    // Fallback: if valor_total is 0, null, or missing, calculate from components
+    if (!invoiceData.valor_total || invoiceData.valor_total === 0) {
+      const sum = [
+        invoiceData.valor_energia,
+        invoiceData.valor_distribuicao,
+        invoiceData.icms,
+        invoiceData.pis,
+        invoiceData.cofins,
+        invoiceData.contrib_iluminacao,
+        invoiceData.valor_bandeira,
+      ]
+        .filter((v: unknown) => typeof v === "number" && v > 0)
+        .reduce((a: number, b: number) => a + b, 0);
+
+      if (sum > 0) {
+        invoiceData.valor_total = Math.round(sum * 100) / 100;
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true, data: invoiceData }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
