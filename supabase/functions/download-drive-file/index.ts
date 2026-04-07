@@ -27,7 +27,12 @@ serve(async (req) => {
       downloadUrl += `&key=${API_KEY}`;
     }
 
-    const fileResponse = await fetch(downloadUrl);
+    const fileResponse = await fetch(downloadUrl, {
+      headers: {
+        "Accept": "application/pdf",
+        "User-Agent": "Mozilla/5.0 (compatible; InvoiceParser/1.0)",
+      },
+    });
 
     if (!fileResponse.ok) {
       const errText = await fileResponse.text();
