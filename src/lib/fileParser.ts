@@ -16,6 +16,7 @@ function classifyType(valor: number): string {
 
 function classifyCategory(descricao: string): string {
   const d = descricao.toLowerCase();
+  if (d.includes("saldo") && d.includes("dia")) return "Saldo do Dia";
   if (d.includes("pix")) return "PIX";
   if (d.includes("ted") || d.includes("doc")) return "Transferência";
   if (d.includes("boleto")) return "Boleto";

@@ -58,9 +58,21 @@ export default function DataTable({ records }: DataTableProps) {
   }, [records, search, filterTipo, filterCategoria, sortField, sortDir]);
 
   const summary = useMemo(() => {
-    const creditos = filtered.filter((r) => r.valor > 0).reduce((s, r) => s + r.valor, 0);
-    const debitos = filtered.filter((r) => r.valor < 0).reduce((s, r) => s + r.valor, 0);
-    return { creditos, debitos, saldo: creditos + debitos, total: filtered.length };
+    const movimentacoes = filtered.filter((r) => r.categoria !== "Saldo do Dia");
+    const creditos = movimentacoes.filter((r) => r.valor > 0).reduce((s, r) => s + r.valor, 0);
+    const debitos = movimentacoes.filter((r) => r.valor < 0).reduce((s, r) => s + r.valor, 0);
+    // Saldo do dia: pega o registro mais recente (última data)
+    const saldosDoDia = filtered.filter((r) => r.categoria === "Saldo do Dia");
+    const saldoDia = saldosDoDia.length > 0
+      ? saldosDoDia.sort((a, b) => b.data.localeCompare(a.data))[0].valor
+      : null;
+    return {
+      creditos,
+      debitos,
+      saldo: creditos + debitos,
+      saldoDia,
+      total: filtered.length,
+    };
   }, [filtered]);
 
   const toggleSort = (field: SortField) => {
@@ -92,7 +104,7 @@ export default function DataTable({ records }: DataTableProps) {
   return (
     <div className="flex flex-col gap-4">
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-3 ${summary.saldoDia !== null ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
         <div className="rounded-lg border border-border bg-card p-4">
           <p className="text-xs font-medium text-muted-foreground">Registros</p>
           <p className="mt-1 text-2xl font-bold text-foreground">{summary.total}</p>
@@ -110,11 +122,19 @@ export default function DataTable({ records }: DataTableProps) {
           <p className="mt-1 text-2xl font-bold text-destructive">{fmt(summary.debitos)}</p>
         </div>
         <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-xs font-medium text-muted-foreground">Saldo</p>
+          <p className="text-xs font-medium text-muted-foreground">Saldo (Mov.)</p>
           <p className={`mt-1 text-2xl font-bold ${summary.saldo >= 0 ? "text-primary" : "text-destructive"}`}>
             {fmt(summary.saldo)}
           </p>
         </div>
+        {summary.saldoDia !== null && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+            <p className="text-xs font-medium text-muted-foreground">Saldo do Dia</p>
+            <p className={`mt-1 text-2xl font-bold ${summary.saldoDia >= 0 ? "text-primary" : "text-destructive"}`}>
+              {fmt(summary.saldoDia)}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Filters + Action buttons */}
