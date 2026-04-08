@@ -23,7 +23,7 @@ interface DataTableProps {
   records: FinancialRecord[];
 }
 
-type SortField = "data" | "descricao" | "valor" | "tipo" | "categoria" | "codigoOperacao";
+type SortField = "data" | "lancamento" | "descricao" | "documento" | "valor" | "tipoLancamento" | "categoria";
 type SortDir = "asc" | "desc";
 
 export default function DataTable({ records }: DataTableProps) {
@@ -209,10 +209,10 @@ export default function DataTable({ records }: DataTableProps) {
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
-                {(["data", "codigoOperacao", "descricao", "valor", "tipo", "categoria"] as SortField[]).map((f) => (
+                {(["data", "lancamento", "descricao", "documento", "valor", "tipoLancamento"] as SortField[]).map((f) => (
                   <TableHead key={f}>
                     <Button variant="ghost" size="sm" onClick={() => toggleSort(f)} className="gap-1 -ml-2 font-medium">
-                      {{ data: "Data", codigoOperacao: "Código", descricao: "Descrição", valor: "Valor", tipo: "Tipo", categoria: "Categoria" }[f]}
+                      {{ data: "Data", lancamento: "Lançamento", descricao: "Detalhes", documento: "N° Documento", valor: "Valor", tipoLancamento: "Tipo Lançamento" }[f]}
                       <ArrowUpDown className="h-3 w-3" />
                     </Button>
                   </TableHead>
@@ -228,11 +228,15 @@ export default function DataTable({ records }: DataTableProps) {
                 filtered.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell className="whitespace-nowrap text-sm">{r.data}</TableCell>
-                    <TableCell className="whitespace-nowrap text-sm font-mono text-xs">{r.codigoOperacao || "—"}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm">
+                      <Badge variant="outline">{r.lancamento}</Badge>
+                    </TableCell>
                     <TableCell className="max-w-[300px] truncate text-sm">{r.descricao}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm font-mono text-xs">{r.documento || "—"}</TableCell>
                     <TableCell className={`whitespace-nowrap text-sm font-medium ${r.valor >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(r.valor)}</TableCell>
-                    <TableCell><Badge variant={r.tipo === "Crédito" ? "default" : r.tipo === "Débito" ? "destructive" : "secondary"}>{r.tipo}</Badge></TableCell>
-                    <TableCell><Badge variant="outline">{r.categoria}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={r.tipo === "Crédito" ? "default" : r.tipo === "Débito" ? "destructive" : "secondary"}>{r.tipoLancamento}</Badge>
+                    </TableCell>
                   </TableRow>
                 ))
               )}
