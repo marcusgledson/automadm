@@ -5,6 +5,7 @@ export interface FinancialRecord {
   tipo: string;
   categoria: string;
   documento?: string;
+  codigoOperacao?: string;
   raw: Record<string, unknown>;
 }
 
@@ -49,6 +50,8 @@ export function parseOFX(text: string): FinancialRecord[] {
       ? `${dtStr.slice(6, 8)}/${dtStr.slice(4, 6)}/${dtStr.slice(0, 4)}`
       : "";
 
+    const codigoOperacao = get("CHECKNUM") || get("REFNUM") || undefined;
+
     records.push({
       data,
       descricao,
@@ -56,7 +59,8 @@ export function parseOFX(text: string): FinancialRecord[] {
       tipo: classifyType(valor),
       categoria: classifyCategory(descricao),
       documento: get("FITID") || undefined,
-      raw: { DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), MEMO: descricao },
+      codigoOperacao,
+      raw: { DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), MEMO: descricao, CHECKNUM: get("CHECKNUM"), REFNUM: get("REFNUM") },
     });
   }
   return records;
