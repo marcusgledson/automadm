@@ -5,6 +5,8 @@ import { exportSummary } from "@/lib/exportSummary";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -21,7 +23,7 @@ interface DataTableProps {
   records: FinancialRecord[];
 }
 
-type SortField = "data" | "descricao" | "valor" | "tipo" | "categoria";
+type SortField = "data" | "descricao" | "valor" | "tipo" | "categoria" | "codigoOperacao";
 type SortDir = "asc" | "desc";
 
 export default function DataTable({ records }: DataTableProps) {
@@ -31,19 +33,22 @@ export default function DataTable({ records }: DataTableProps) {
   const [sortField, setSortField] = useState<SortField>("data");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showSaldoDia, setShowSaldoDia] = useState(true);
 
   const tipos = useMemo(() => [...new Set(records.map((r) => r.tipo))], [records]);
   const categorias = useMemo(() => [...new Set(records.map((r) => r.categoria))].sort(), [records]);
 
   const filtered = useMemo(() => {
     let data = records;
+    if (!showSaldoDia) data = data.filter((r) => r.categoria !== "Saldo do Dia");
     if (search) {
       const q = search.toLowerCase();
       data = data.filter(
         (r) =>
           r.descricao.toLowerCase().includes(q) ||
           r.data.includes(q) ||
-          r.documento?.toLowerCase().includes(q)
+          r.documento?.toLowerCase().includes(q) ||
+          r.codigoOperacao?.toLowerCase().includes(q)
       );
     }
     if (filterTipo !== "todos") data = data.filter((r) => r.tipo === filterTipo);
@@ -51,11 +56,11 @@ export default function DataTable({ records }: DataTableProps) {
     data = [...data].sort((a, b) => {
       let cmp = 0;
       if (sortField === "valor") cmp = a.valor - b.valor;
-      else cmp = String(a[sortField]).localeCompare(String(b[sortField]));
+      else cmp = String(a[sortField] ?? "").localeCompare(String(b[sortField] ?? ""));
       return sortDir === "asc" ? cmp : -cmp;
     });
     return data;
-  }, [records, search, filterTipo, filterCategoria, sortField, sortDir]);
+  }, [records, search, filterTipo, filterCategoria, sortField, sortDir, showSaldoDia]);
 
   const summary = useMemo(() => {
     const movimentacoes = filtered.filter((r) => r.categoria !== "Saldo do Dia");
@@ -161,6 +166,10 @@ export default function DataTable({ records }: DataTableProps) {
           </Select>
         </div>
         <div className="flex items-center gap-2">
+          <Switch id="toggle-saldo" checked={showSaldoDia} onCheckedChange={setShowSaldoDia} />
+          <Label htmlFor="toggle-saldo" className="text-xs text-muted-foreground cursor-pointer">Saldo do Dia</Label>
+        </div>
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleExportXlsx} className="gap-2">
             <FileDown className="h-4 w-4" />
             Relatório XLSX
@@ -200,10 +209,10 @@ export default function DataTable({ records }: DataTableProps) {
           <Table>
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
-                {(["data", "descricao", "valor", "tipo", "categoria"] as SortField[]).map((f) => (
+                {(["data", "codigoOperacao", "descricao", "valor", "tipo", "categoria"] as SortField[]).map((f) => (
                   <TableHead key={f}>
                     <Button variant="ghost" size="sm" onClick={() => toggleSort(f)} className="gap-1 -ml-2 font-medium">
-                      {{ data: "Data", descricao: "Descrição", valor: "Valor", tipo: "Tipo", categoria: "Categoria" }[f]}
+                      {{ data: "Data", codigoOperacao: "Código", descricao: "Descrição", valor: "Valor", tipo: "Tipo", categoria: "Categoria" }[f]}
                       <ArrowUpDown className="h-3 w-3" />
                     </Button>
                   </TableHead>
@@ -213,12 +222,13 @@ export default function DataTable({ records }: DataTableProps) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">Nenhum registro encontrado</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Nenhum registro encontrado</TableCell>
                 </TableRow>
               ) : (
                 filtered.map((r, i) => (
                   <TableRow key={i}>
                     <TableCell className="whitespace-nowrap text-sm">{r.data}</TableCell>
+                    <TableCell className="whitespace-nowrap text-sm font-mono text-xs">{r.codigoOperacao || "—"}</TableCell>
                     <TableCell className="max-w-[300px] truncate text-sm">{r.descricao}</TableCell>
                     <TableCell className={`whitespace-nowrap text-sm font-medium ${r.valor >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(r.valor)}</TableCell>
                     <TableCell><Badge variant={r.tipo === "Crédito" ? "default" : r.tipo === "Débito" ? "destructive" : "secondary"}>{r.tipo}</Badge></TableCell>
