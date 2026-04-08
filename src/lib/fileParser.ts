@@ -1,8 +1,10 @@
 export interface FinancialRecord {
   data: string;
+  lancamento: string;
   descricao: string;
   valor: number;
   tipo: string;
+  tipoLancamento: string;
   categoria: string;
   documento?: string;
   codigoOperacao?: string;
@@ -44,23 +46,50 @@ export function parseOFX(text: string): FinancialRecord[] {
     };
 
     const valor = parseFloat(get("TRNAMT").replace(",", ".")) || 0;
-    const descricao = get("MEMO") || get("NAME") || "";
+    const memo = get("MEMO") || "";
+    const name = get("NAME") || "";
+    const descricao = memo || name;
     const dtStr = get("DTPOSTED");
     const data = dtStr.length >= 8
       ? `${dtStr.slice(6, 8)}/${dtStr.slice(4, 6)}/${dtStr.slice(0, 4)}`
       : "";
 
     const codigoOperacao = get("CHECKNUM") || get("REFNUM") || undefined;
+    const trnType = get("TRNTYPE") || "";
+
+    // Map OFX TRNTYPE to readable label
+    const trnTypeMap: Record<string, string> = {
+      CREDIT: "Crédito",
+      DEBIT: "Débito",
+      INT: "Juros",
+      DIV: "Dividendo",
+      FEE: "Taxa",
+      SRVCHG: "Tarifa",
+      DEP: "Depósito",
+      ATM: "Caixa Eletrônico",
+      POS: "Ponto de Venda",
+      XFER: "Transferência",
+      CHECK: "Cheque",
+      PAYMENT: "Pagamento",
+      CASH: "Saque",
+      DIRECTDEP: "Depósito Direto",
+      DIRECTDEBIT: "Débito Direto",
+      REPEATPMT: "Pagamento Recorrente",
+      OTHER: "Outros",
+    };
+    const lancamento = trnTypeMap[trnType.toUpperCase()] || trnType || classifyType(valor);
 
     records.push({
       data,
+      lancamento,
       descricao,
       valor,
       tipo: classifyType(valor),
+      tipoLancamento: trnType.toUpperCase() || (valor >= 0 ? "CREDIT" : "DEBIT"),
       categoria: classifyCategory(descricao),
       documento: get("FITID") || undefined,
       codigoOperacao,
-      raw: { DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), MEMO: descricao, CHECKNUM: get("CHECKNUM"), REFNUM: get("REFNUM") },
+      raw: { TRNTYPE: trnType, DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), NAME: name, MEMO: memo, FITID: get("FITID"), CHECKNUM: get("CHECKNUM"), REFNUM: get("REFNUM") },
     });
   }
   return records;
