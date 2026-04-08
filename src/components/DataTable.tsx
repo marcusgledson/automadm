@@ -58,9 +58,21 @@ export default function DataTable({ records }: DataTableProps) {
   }, [records, search, filterTipo, filterCategoria, sortField, sortDir]);
 
   const summary = useMemo(() => {
-    const creditos = filtered.filter((r) => r.valor > 0).reduce((s, r) => s + r.valor, 0);
-    const debitos = filtered.filter((r) => r.valor < 0).reduce((s, r) => s + r.valor, 0);
-    return { creditos, debitos, saldo: creditos + debitos, total: filtered.length };
+    const movimentacoes = filtered.filter((r) => r.categoria !== "Saldo do Dia");
+    const creditos = movimentacoes.filter((r) => r.valor > 0).reduce((s, r) => s + r.valor, 0);
+    const debitos = movimentacoes.filter((r) => r.valor < 0).reduce((s, r) => s + r.valor, 0);
+    // Saldo do dia: pega o registro mais recente (última data)
+    const saldosDoDia = filtered.filter((r) => r.categoria === "Saldo do Dia");
+    const saldoDia = saldosDoDia.length > 0
+      ? saldosDoDia.sort((a, b) => b.data.localeCompare(a.data))[0].valor
+      : null;
+    return {
+      creditos,
+      debitos,
+      saldo: creditos + debitos,
+      saldoDia,
+      total: filtered.length,
+    };
   }, [filtered]);
 
   const toggleSort = (field: SortField) => {
