@@ -12,6 +12,7 @@ import {
 import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 
 interface DriveFile {
   id: string;
@@ -47,9 +48,10 @@ interface InvoiceData {
 
 interface GoogleDriveImportProps {
   onInvoicesImported: (invoices: InvoiceData[]) => void;
+  existingInvoices?: InvoiceData[];
 }
 
-export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImportProps) {
+export default function GoogleDriveImport({ onInvoicesImported, existingInvoices = [] }: GoogleDriveImportProps) {
   const [folderLink, setFolderLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
