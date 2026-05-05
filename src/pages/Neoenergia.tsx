@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
+import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 
 interface InvoiceData {
   fileName: string;
@@ -94,10 +95,19 @@ export default function Neoenergia() {
 
     setLoading(true);
     const newInvoices: InvoiceData[] = [];
+    const existingKeys = new Set(invoices.map((i) => getInvoiceKey(i)));
+    const existingNames = new Set(invoices.map((i) => (i.fileName || "").toLowerCase()));
+    let duplicates = 0;
 
     for (const file of Array.from(files)) {
       if (file.type !== "application/pdf") {
         toast.error(`${file.name} não é um PDF.`);
+        continue;
+      }
+
+      if (existingNames.has(file.name.toLowerCase())) {
+        duplicates++;
+        toast.warning(`${file.name} já foi importado anteriormente.`);
         continue;
       }
 
@@ -112,7 +122,19 @@ export default function Neoenergia() {
         if (error) throw new Error(error.message);
         if (!data?.success) throw new Error(data?.error || "Erro ao processar");
 
-        newInvoices.push({ ...data.data, fileName: file.name });
+        const invoice: InvoiceData = {
+          ...data.data,
+          fileName: file.name,
+          mes_referencia: normalizeMesReferencia(data.data?.mes_referencia),
+        };
+        const key = getInvoiceKey(invoice);
+        if (existingKeys.has(key)) {
+          duplicates++;
+          toast.warning(`${file.name}: já existe fatura desta instalação para ${invoice.mes_referencia}.`);
+          continue;
+        }
+        existingKeys.add(key);
+        newInvoices.push(invoice);
         toast.success(`${file.name} processado com sucesso!`);
       } catch (err) {
         console.error("Error processing", file.name, err);
@@ -122,6 +144,9 @@ export default function Neoenergia() {
 
     if (newInvoices.length > 0) {
       setInvoices((prev) => [...prev, ...newInvoices]);
+    }
+    if (duplicates > 0 && newInvoices.length === 0) {
+      toast.info(`${duplicates} arquivo(s) ignorado(s) por duplicidade.`);
     }
     setLoading(false);
     e.target.value = "";
@@ -185,7 +210,10 @@ export default function Neoenergia() {
       <main className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-6xl space-y-6">
           {/* Google Drive import */}
-          <GoogleDriveImport onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])} />
+          <GoogleDriveImport
+            existingInvoices={invoices}
+            onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])}
+          />
 
           {/* Upload area */}
           <Card className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
