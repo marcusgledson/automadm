@@ -12,6 +12,7 @@ import {
 import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 
 interface DriveFile {
   id: string;
@@ -47,9 +48,10 @@ interface InvoiceData {
 
 interface GoogleDriveImportProps {
   onInvoicesImported: (invoices: InvoiceData[]) => void;
+  existingInvoices?: InvoiceData[];
 }
 
-export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImportProps) {
+export default function GoogleDriveImport({ onInvoicesImported, existingInvoices = [] }: GoogleDriveImportProps) {
   const [folderLink, setFolderLink] = useState("");
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -80,14 +82,22 @@ export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImp
         return;
       }
 
-      const driveFiles: DriveFile[] = data.files.map((f: { id: string; name: string; size: number | null; modifiedTime: string | null }) => ({
-        ...f,
-        status: "pending" as const,
-      }));
+      const existingNames = new Set(existingInvoices.map((i) => (i.fileName || "").toLowerCase()));
+      const driveFiles: DriveFile[] = data.files.map((f: { id: string; name: string; size: number | null; modifiedTime: string | null }) => {
+        const already = existingNames.has((f.name || "").toLowerCase());
+        return {
+          ...f,
+          status: already ? ("done" as const) : ("pending" as const),
+          errorMsg: already ? "Já importado" : undefined,
+        };
+      });
 
       setFiles(driveFiles);
-      setSelectedFiles(new Set(driveFiles.map((f) => f.id)));
-      toast.success(`${driveFiles.length} PDF(s) encontrado(s)!`);
+      // Pré-selecionar apenas os ainda não importados
+      setSelectedFiles(new Set(driveFiles.filter((f) => f.status === "pending").map((f) => f.id)));
+      const novos = driveFiles.filter((f) => f.status === "pending").length;
+      const repetidos = driveFiles.length - novos;
+      toast.success(`${driveFiles.length} PDF(s) encontrado(s)${repetidos ? ` — ${repetidos} já importado(s)` : ""}.`);
     } catch (err: unknown) {
       console.error("Error listing files:", err);
       const message = err instanceof Error ? err.message : "Erro ao listar arquivos.";
@@ -130,8 +140,17 @@ export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImp
 
     setImporting(true);
     const importedInvoices: InvoiceData[] = [];
+    // Chaves já existentes (instalação + mês/ano) para evitar duplicidade
+    const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
+    let duplicates = 0;
 
     for (const file of toProcess) {
+      // Skip se já marcado como done (já importado anteriormente)
+      if (file.status === "done") {
+        duplicates++;
+        continue;
+      }
+
       setFiles((prev) =>
         prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const } : f))
       );
@@ -144,7 +163,26 @@ export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImp
         if (error) throw new Error(error.message);
         if (!data?.success) throw new Error(data?.error || "Erro ao processar");
 
-        importedInvoices.push({ ...data.data, fileName: file.name });
+        const invoice: InvoiceData = {
+          ...data.data,
+          fileName: file.name,
+          mes_referencia: normalizeMesReferencia(data.data?.mes_referencia as string | undefined),
+        };
+        const key = getInvoiceKey(invoice);
+
+        if (existingKeys.has(key)) {
+          duplicates++;
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id
+                ? { ...f, status: "done" as const, errorMsg: "Duplicado (instalação/mês)" }
+                : f
+            )
+          );
+          continue;
+        }
+        existingKeys.add(key);
+        importedInvoices.push(invoice);
         setFiles((prev) =>
           prev.map((f) => (f.id === file.id ? { ...f, status: "done" as const } : f))
         );
@@ -162,11 +200,15 @@ export default function GoogleDriveImport({ onInvoicesImported }: GoogleDriveImp
 
     if (importedInvoices.length > 0) {
       onInvoicesImported(importedInvoices);
-      toast.success(`${importedInvoices.length} fatura(s) importada(s) com sucesso!`);
+      toast.success(
+        `${importedInvoices.length} fatura(s) importada(s)${duplicates ? ` — ${duplicates} ignorada(s) por duplicidade` : ""}.`
+      );
+    } else if (duplicates > 0) {
+      toast.info(`Nenhuma nova fatura — ${duplicates} já estavam importadas.`);
     }
 
     setImporting(false);
-  }, [files, selectedFiles, onInvoicesImported]);
+  }, [files, selectedFiles, onInvoicesImported, existingInvoices]);
 
   const formatSize = (bytes: number | null) => {
     if (!bytes) return "—";
