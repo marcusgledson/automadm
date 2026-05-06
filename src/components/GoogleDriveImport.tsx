@@ -261,7 +261,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
               </div>
             </div>
 
-            <div className="rounded-lg border border-border overflow-hidden max-h-64 overflow-auto">
+            <div className="rounded-lg border border-border overflow-hidden max-h-[420px] overflow-y-auto">
               <Table>
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>
