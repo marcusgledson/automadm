@@ -46,8 +46,46 @@ export default function Neoenergia() {
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [invoices, setInvoices] = useState<InvoiceData[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceData[]>(() => loadInvoices() as InvoiceData[]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    saveInvoices(invoices);
+  }, [invoices]);
+
+  const toggleSelect = (i: number) => {
+    setSelected((prev) => {
+      const n = new Set(prev);
+      if (n.has(i)) n.delete(i); else n.add(i);
+      return n;
+    });
+  };
+  const toggleSelectAll = () => {
+    if (selected.size === invoices.length) setSelected(new Set());
+    else setSelected(new Set(invoices.map((_, i) => i)));
+  };
+  const deleteSelected = () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Excluir ${selected.size} fatura(s)?`)) return;
+    setInvoices((prev) => prev.filter((_, i) => !selected.has(i)));
+    setSelected(new Set());
+    toast.success("Faturas excluídas");
+  };
+  const archiveSelected = () => {
+    if (selected.size === 0) return;
+    const toArchive = invoices.filter((_, i) => selected.has(i));
+    archiveInvoices(toArchive);
+    setInvoices((prev) => prev.filter((_, i) => !selected.has(i)));
+    setSelected(new Set());
+    toast.success(`${toArchive.length} fatura(s) arquivada(s)`);
+  };
+  const clearAll = () => {
+    if (invoices.length === 0) return;
+    if (!confirm("Limpar todas as faturas processadas?")) return;
+    setInvoices([]);
+    setSelected(new Set());
+  };
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
