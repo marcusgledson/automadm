@@ -9,7 +9,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle } from "lucide-react";
+import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle, Trash2, Archive } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
@@ -246,13 +246,59 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
 
         {files.length > 0 && (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
                 {selectedFiles.size} de {files.length} selecionado(s)
               </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={toggleAll}>
+              <div className="flex gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={toggleAll} disabled={importing}>
                   {selectedFiles.size === files.length ? "Desmarcar todos" : "Selecionar todos"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFiles((prev) =>
+                      prev.map((f) =>
+                        selectedFiles.has(f.id)
+                          ? { ...f, status: "done" as const, errorMsg: "Arquivado" }
+                          : f
+                      )
+                    );
+                    setSelectedFiles(new Set());
+                    toast.success("Arquivos arquivados.");
+                  }}
+                  disabled={importing || selectedFiles.size === 0}
+                  title="Marcar como arquivado (não remove da lista)"
+                >
+                  <Archive className="h-4 w-4 mr-2" />
+                  Arquivar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFiles((prev) => prev.filter((f) => !selectedFiles.has(f.id)));
+                    setSelectedFiles(new Set());
+                    toast.success("Selecionados removidos da lista.");
+                  }}
+                  disabled={importing || selectedFiles.size === 0}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir selecionados
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setFiles([]);
+                    setSelectedFiles(new Set());
+                    toast.success("Lista limpa.");
+                  }}
+                  disabled={importing}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Limpar tudo
                 </Button>
                 <Button size="sm" onClick={importSelected} disabled={importing || selectedFiles.size === 0}>
                   {importing ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
