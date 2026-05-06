@@ -33,36 +33,65 @@ serve(async (req) => {
 
     let fileResponse: Response | null = null;
     let lastErr = "";
-    for (const url of urls) {
-      try {
-        const res = await fetch(url, {
-          headers: {
-            "Accept": "application/pdf,application/octet-stream,*/*",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-          },
-          redirect: "follow",
-        });
-        if (res.ok) {
+    const attempts: { url: string; attempt: number; status: string; httpStatus?: number }[] = [];
+    const MAX_RETRIES = 4;
+
+    outer: for (const url of urls) {
+      let delay = 800;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const res = await fetch(url, {
+            headers: {
+              "Accept": "application/pdf,application/octet-stream,*/*",
+              "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+            },
+            redirect: "follow",
+          });
           const ct = res.headers.get("content-type") || "";
-          // Reject HTML responses (Google block / consent page)
-          if (!ct.includes("text/html")) {
+          if (res.ok && !ct.includes("text/html")) {
+            attempts.push({ url, attempt, status: "ok", httpStatus: res.status });
             fileResponse = res;
-            break;
+            break outer;
           }
-          lastErr = `HTML response from ${url}`;
-        } else {
-          lastErr = `HTTP ${res.status} from ${url}`;
-          console.error("Download attempt failed:", lastErr);
+          // Consume body to free resources
+          await res.text().catch(() => {});
+          const isHtml = ct.includes("text/html");
+          const retriable = res.status === 403 || res.status === 429 || res.status >= 500 || isHtml;
+          lastErr = isHtml ? `HTML block (${res.status})` : `HTTP ${res.status}`;
+          attempts.push({
+            url,
+            attempt,
+            status: retriable ? `retry: ${lastErr}` : `fail: ${lastErr}`,
+            httpStatus: res.status,
+          });
+          console.warn(`Download attempt ${attempt} for ${url}: ${lastErr}`);
+          if (!retriable) break; // try next URL
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, delay));
+            delay *= 2; // exponential backoff
+          }
+        } catch (e) {
+          lastErr = e instanceof Error ? e.message : String(e);
+          attempts.push({ url, attempt, status: `error: ${lastErr}` });
+          console.error(`Download attempt ${attempt} threw:`, lastErr);
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, delay));
+            delay *= 2;
+          }
         }
-      } catch (e) {
-        lastErr = e instanceof Error ? e.message : String(e);
       }
     }
+
+    console.log("Download attempts log:", JSON.stringify(attempts));
 
     if (!fileResponse) {
       console.error("All download attempts failed:", lastErr);
       return new Response(
-        JSON.stringify({ error: "Erro ao baixar o arquivo. Verifique se está compartilhado como 'Qualquer pessoa com o link'." }),
+        JSON.stringify({
+          error: "Erro ao baixar o arquivo após múltiplas tentativas. Verifique se está compartilhado como 'Qualquer pessoa com o link'.",
+          attempts,
+          lastError: lastErr,
+        }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
