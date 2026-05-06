@@ -1,21 +1,22 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye } from "lucide-react";
+import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
+import { loadInvoices, saveInvoices, archiveInvoices } from "@/lib/invoiceStore";
 
 interface InvoiceData {
   fileName: string;
