@@ -299,10 +299,15 @@ export default function Neoenergia() {
           {invoices.length > 0 && (
             <Card className="opacity-0 animate-fade-up" style={{ animationDelay: "200ms" }}>
               <CardHeader>
-                <CardTitle className="text-lg">
-                  Faturas Processadas ({invoices.length})
-                </CardTitle>
-                <CardDescription>Dados extraídos automaticamente via IA</CardDescription>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div>
+                    <CardTitle className="text-lg">Faturas Processadas ({invoices.length})</CardTitle>
+                    <CardDescription>Dados extraídos automaticamente via IA</CardDescription>
+                  </div>
+                  <Button variant="default" size="sm" onClick={() => navigate("/neoenergia/analytics")}>
+                    <BarChart3 className="h-4 w-4" /> Análises & Projeções
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {/* Summary cards */}
@@ -331,13 +336,40 @@ export default function Neoenergia() {
                   </div>
                 </div>
 
+                {/* Bulk action toolbar */}
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={selected.size > 0 && selected.size === invoices.length}
+                      onCheckedChange={toggleSelectAll}
+                      aria-label="Selecionar todos"
+                    />
+                    <span className="text-muted-foreground">
+                      {selected.size} de {invoices.length} selecionada(s)
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={archiveSelected} disabled={selected.size === 0}>
+                      <Archive className="h-4 w-4" /> Arquivar
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={deleteSelected} disabled={selected.size === 0} className="text-destructive">
+                      <Trash2 className="h-4 w-4" /> Excluir selecionadas
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={clearAll}>
+                      <Trash2 className="h-4 w-4" /> Limpar tudo
+                    </Button>
+                  </div>
+                </div>
+
                 {/* Data table */}
                 <div className="rounded-lg border border-border overflow-hidden">
-                  <div className="max-h-[calc(100vh-500px)] overflow-auto">
+                  <div className="max-h-[640px] overflow-auto">
                     <Table>
                       <TableHeader className="sticky top-0 bg-card z-10">
                         <TableRow>
+                          <TableHead className="w-[40px]"></TableHead>
                           <TableHead>Arquivo</TableHead>
+                          <TableHead>Instalação</TableHead>
                           <TableHead>Referência</TableHead>
                           <TableHead>Vencimento</TableHead>
                           <TableHead>Consumo</TableHead>
@@ -348,8 +380,12 @@ export default function Neoenergia() {
                       </TableHeader>
                       <TableBody>
                         {invoices.map((inv, i) => (
-                          <TableRow key={i}>
+                          <TableRow key={i} data-state={selected.has(i) ? "selected" : undefined}>
+                            <TableCell>
+                              <Checkbox checked={selected.has(i)} onCheckedChange={() => toggleSelect(i)} />
+                            </TableCell>
                             <TableCell className="max-w-[200px] truncate text-sm">{inv.fileName}</TableCell>
+                            <TableCell className="text-sm">{inv.numero_instalacao || "—"}</TableCell>
                             <TableCell className="text-sm">{inv.mes_referencia || "—"}</TableCell>
                             <TableCell className="text-sm">{inv.data_vencimento || "—"}</TableCell>
                             <TableCell className="text-sm">{fmtKwh(inv.consumo_kwh)}</TableCell>
