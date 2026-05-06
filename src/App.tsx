@@ -62,6 +62,14 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/neoenergia/analytics"
+              element={
+                <ProtectedRoute>
+                  <NeoenergiaAnalytics />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
