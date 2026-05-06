@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Neoenergia from "./pages/Neoenergia";
+import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
