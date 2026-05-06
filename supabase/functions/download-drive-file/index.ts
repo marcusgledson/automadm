@@ -22,24 +22,48 @@ serve(async (req) => {
     }
 
     const API_KEY = Deno.env.get("GOOGLE_API_KEY");
-    let downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+
+    // Try multiple download strategies for public Drive files
+    const urls: string[] = [];
     if (API_KEY) {
-      downloadUrl += `&key=${API_KEY}`;
+      urls.push(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`);
+    }
+    urls.push(`https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`);
+    urls.push(`https://drive.google.com/uc?export=download&id=${fileId}&confirm=t`);
+
+    let fileResponse: Response | null = null;
+    let lastErr = "";
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, {
+          headers: {
+            "Accept": "application/pdf,application/octet-stream,*/*",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
+          },
+          redirect: "follow",
+        });
+        if (res.ok) {
+          const ct = res.headers.get("content-type") || "";
+          // Reject HTML responses (Google block / consent page)
+          if (!ct.includes("text/html")) {
+            fileResponse = res;
+            break;
+          }
+          lastErr = `HTML response from ${url}`;
+        } else {
+          lastErr = `HTTP ${res.status} from ${url}`;
+          console.error("Download attempt failed:", lastErr);
+        }
+      } catch (e) {
+        lastErr = e instanceof Error ? e.message : String(e);
+      }
     }
 
-    const fileResponse = await fetch(downloadUrl, {
-      headers: {
-        "Accept": "application/pdf",
-        "User-Agent": "Mozilla/5.0 (compatible; InvoiceParser/1.0)",
-      },
-    });
-
-    if (!fileResponse.ok) {
-      const errText = await fileResponse.text();
-      console.error("Download error:", fileResponse.status, errText);
+    if (!fileResponse) {
+      console.error("All download attempts failed:", lastErr);
       return new Response(
-        JSON.stringify({ error: "Erro ao baixar o arquivo. Verifique se está compartilhado publicamente." }),
-        { status: fileResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Erro ao baixar o arquivo. Verifique se está compartilhado como 'Qualquer pessoa com o link'." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
