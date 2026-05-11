@@ -57,6 +57,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
   const [importing, setImporting] = useState(false);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+  const [pdfPassword, setPdfPassword] = useState("");
 
   const listFiles = useCallback(async () => {
     if (!folderLink.trim()) {
@@ -157,7 +158,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
 
       try {
         const { data, error } = await supabase.functions.invoke("download-drive-file", {
-          body: { fileId: file.id, fileName: file.name },
+          body: { fileId: file.id, fileName: file.name, password: pdfPassword || undefined },
         });
 
         if (error) throw new Error(error.message);
@@ -246,6 +247,20 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
 
         {files.length > 0 && (
           <div className="space-y-3">
+            <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-2">
+              <label className="text-sm font-medium">Senha de visualização do PDF (se houver)</label>
+              <p className="text-xs text-muted-foreground">
+                Algumas faturas da Neoenergia abrem com senha (CPF/CNPJ do titular). Informe abaixo antes de importar — a mesma senha será usada para todos os arquivos selecionados.
+              </p>
+              <Input
+                type="password"
+                placeholder="Ex: somente números do CPF/CNPJ"
+                value={pdfPassword}
+                onChange={(e) => setPdfPassword(e.target.value)}
+                disabled={importing}
+                autoComplete="off"
+              />
+            </div>
             <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
                 {selectedFiles.size} de {files.length} selecionado(s)
