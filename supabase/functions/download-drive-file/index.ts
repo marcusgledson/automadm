@@ -101,22 +101,54 @@ serve(async (req) => {
     const pdfBytes = await fileResponse.arrayBuffer();
     const bytes = new Uint8Array(pdfBytes);
 
-    // Extract text from PDF (simple extraction)
-    const decoder = new TextDecoder("latin1");
-    const rawText = decoder.decode(bytes);
-
+    // Extract text using pdf.js (handles encrypted PDFs when password is provided)
     let text = "";
-    const textMatches = rawText.match(/\(([^)]+)\)/g);
-    if (textMatches) {
-      text = textMatches.map((m: string) => m.slice(1, -1)).join(" ");
-    }
-    const readableSegments = rawText.match(/[A-Za-zÀ-ÿ0-9\s.,;:\/\-@#$%&*()+=]{10,}/g);
-    if (readableSegments) {
-      text += "\n" + readableSegments.join("\n");
+    try {
+      const loadingTask = pdfjsLib.getDocument({
+        data: bytes,
+        password: password || "",
+        useSystemFonts: true,
+        disableFontFace: true,
+        isEvalSupported: false,
+      });
+      const pdfDoc = await loadingTask.promise;
+      const pages: string[] = [];
+      for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items
+          .map((it: { str?: string }) => (typeof it.str === "string" ? it.str : ""))
+          .join(" ");
+        pages.push(pageText);
+      }
+      text = pages.join("\n");
+      console.log(`PDF extraído: ${pdfDoc.numPages} página(s), ${text.length} chars`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Erro ao abrir PDF com pdf.js:", msg);
+      const lower = msg.toLowerCase();
+      if (lower.includes("password") || lower.includes("encrypt")) {
+        return new Response(
+          JSON.stringify({
+            error: password
+              ? "Senha do PDF incorreta. Verifique e tente novamente."
+              : "Este PDF está protegido por senha. Informe a senha de visualização e tente novamente.",
+            requiresPassword: true,
+          }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      return new Response(
+        JSON.stringify({ error: `Não foi possível ler o PDF: ${msg}` }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     if (!text.trim()) {
-      text = "Não foi possível extrair texto do PDF.";
+      return new Response(
+        JSON.stringify({ error: "PDF aberto, mas sem texto extraível (pode ser apenas imagem/scan)." }),
+        { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Now call parse-invoice logic inline (same AI call)
