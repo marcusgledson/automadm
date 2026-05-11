@@ -158,7 +158,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
 
       try {
         const { data, error } = await supabase.functions.invoke("download-drive-file", {
-          body: { fileId: file.id, fileName: file.name },
+          body: { fileId: file.id, fileName: file.name, password: pdfPassword || undefined },
         });
 
         if (error) throw new Error(error.message);
