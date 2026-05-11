@@ -197,6 +197,8 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
           )
         );
       }
+      // Pequeno intervalo para evitar rate-limit (429) da IA
+      await new Promise((r) => setTimeout(r, 1200));
     }
 
     if (importedInvoices.length > 0) {
