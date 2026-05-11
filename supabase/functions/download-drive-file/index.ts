@@ -174,70 +174,100 @@ REGRAS IMPORTANTES:
 - Se valor_total não estiver explícito, SOME: valor_energia + valor_distribuicao + icms + pis + cofins + contrib_iluminacao + valor_bandeira.
 - consumo_kwh: Use o valor em kWh do mês de referência (não confunda com quantidade faturada).`;
 
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Extraia todos os dados desta fatura de energia:\n\nArquivo: ${fileName || "fatura.pdf"}\n\n${text}` },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "extract_invoice_data",
-              description: "Extrai dados estruturados de uma fatura de energia elétrica",
-              parameters: {
-                type: "object",
-                properties: {
-                  titular: { type: "string" },
-                  cpf_cnpj: { type: "string" },
-                  endereco: { type: "string" },
-                  numero_instalacao: { type: "string" },
-                  mes_referencia: { type: "string" },
-                  data_vencimento: { type: "string" },
-                  consumo_kwh: { type: "number" },
-                  valor_energia: { type: "number" },
-                  valor_distribuicao: { type: "number" },
-                  icms: { type: "number" },
-                  pis: { type: "number" },
-                  cofins: { type: "number" },
-                  contrib_iluminacao: { type: "number" },
-                  bandeira_tarifaria: { type: "string" },
-                  valor_bandeira: { type: "number" },
-                  valor_total: { type: "number" },
-                  historico_consumo: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: { mes: { type: "string" }, consumo_kwh: { type: "number" }, valor: { type: "number" } },
-                    },
-                  },
-                  itens_fatura: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: { descricao: { type: "string" }, quantidade: { type: "string" }, preco_unitario: { type: "number" }, valor: { type: "number" } },
-                    },
+    const aiBody = JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Extraia todos os dados desta fatura de energia:\n\nArquivo: ${fileName || "fatura.pdf"}\n\n${text}` },
+      ],
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "extract_invoice_data",
+            description: "Extrai dados estruturados de uma fatura de energia elétrica",
+            parameters: {
+              type: "object",
+              properties: {
+                titular: { type: "string" },
+                cpf_cnpj: { type: "string" },
+                endereco: { type: "string" },
+                numero_instalacao: { type: "string" },
+                mes_referencia: { type: "string" },
+                data_vencimento: { type: "string" },
+                consumo_kwh: { type: "number" },
+                valor_energia: { type: "number" },
+                valor_distribuicao: { type: "number" },
+                icms: { type: "number" },
+                pis: { type: "number" },
+                cofins: { type: "number" },
+                contrib_iluminacao: { type: "number" },
+                bandeira_tarifaria: { type: "string" },
+                valor_bandeira: { type: "number" },
+                valor_total: { type: "number" },
+                historico_consumo: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: { mes: { type: "string" }, consumo_kwh: { type: "number" }, valor: { type: "number" } },
                   },
                 },
-                required: ["valor_total"],
+                itens_fatura: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: { descricao: { type: "string" }, quantidade: { type: "string" }, preco_unitario: { type: "number" }, valor: { type: "number" } },
+                  },
+                },
               },
+              required: ["valor_total"],
             },
           },
-        ],
-        tool_choice: { type: "function", function: { name: "extract_invoice_data" } },
-      }),
+        },
+      ],
+      tool_choice: { type: "function", function: { name: "extract_invoice_data" } },
     });
 
-    if (!aiResponse.ok) {
-      const errText = await aiResponse.text();
-      console.error("AI error:", aiResponse.status, errText);
+    // Call AI with retry/backoff for 429 (rate limit) and 5xx
+    let aiResponse: Response | null = null;
+    let aiErrText = "";
+    let aiStatus = 0;
+    let delay = 1500;
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: aiBody,
+      });
+      if (r.ok) { aiResponse = r; break; }
+      aiStatus = r.status;
+      aiErrText = await r.text().catch(() => "");
+      console.warn(`AI attempt ${attempt} failed: ${r.status} ${aiErrText.slice(0, 200)}`);
+      if (r.status === 402) break; // no retry on credits exhausted
+      if (r.status !== 429 && r.status < 500) break;
+      if (attempt < 5) {
+        await new Promise((res) => setTimeout(res, delay + Math.random() * 500));
+        delay *= 2;
+      }
+    }
+
+    if (!aiResponse) {
+      console.error("AI error final:", aiStatus, aiErrText);
+      if (aiStatus === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições da IA excedido. Aguarde alguns segundos e tente processar menos faturas por vez." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (aiStatus === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos no workspace." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
         JSON.stringify({ error: "Erro ao processar fatura com IA" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
