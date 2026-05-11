@@ -140,6 +140,28 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     }
 
     setImporting(true);
+
+    // Validação prévia da senha usando o primeiro PDF ainda não processado
+    const sample = toProcess.find((f) => f.status !== "done") || toProcess[0];
+    try {
+      const { data: vData, error: vErr } = await supabase.functions.invoke("validate-pdf-password", {
+        body: { fileId: sample.id, password: pdfPassword || undefined },
+      });
+      if (vErr) throw new Error(vErr.message);
+      if (!vData?.success) {
+        toast.error(vData?.error || "Senha inválida.", {
+          description: "Corrija a senha e tente novamente.",
+        });
+        setImporting(false);
+        return;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Falha ao validar a senha do PDF.";
+      toast.error(msg);
+      setImporting(false);
+      return;
+    }
+
     const importedInvoices: InvoiceData[] = [];
     // Chaves já existentes (instalação + mês/ano) para evitar duplicidade
     const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
