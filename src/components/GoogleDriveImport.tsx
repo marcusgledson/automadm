@@ -168,7 +168,6 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     let duplicates = 0;
 
     for (const file of toProcess) {
-      // Skip se já marcado como done (já importado anteriormente)
       if (file.status === "done") {
         duplicates++;
         continue;
@@ -178,49 +177,74 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
         prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const } : f))
       );
 
-      try {
-        const { data, error } = await supabase.functions.invoke("download-drive-file", {
-          body: { fileId: file.id, fileName: file.name, password: pdfPassword || undefined },
-        });
+      // Retry com backoff em caso de rate-limit (429) da IA
+      const MAX_ATTEMPTS = 4;
+      let attempt = 0;
+      let succeeded = false;
 
-        if (error) throw new Error(error.message);
-        if (!data?.success) throw new Error(data?.error || "Erro ao processar");
+      while (attempt < MAX_ATTEMPTS && !succeeded) {
+        attempt++;
+        try {
+          const { data, error } = await supabase.functions.invoke("download-drive-file", {
+            body: { fileId: file.id, fileName: file.name, password: pdfPassword || undefined },
+          });
 
-        const invoice: InvoiceData = {
-          ...data.data,
-          fileName: file.name,
-          mes_referencia: normalizeMesReferencia(data.data?.mes_referencia as string | undefined),
-        };
-        const key = getInvoiceKey(invoice);
+          if (error) throw new Error(error.message);
+          if (!data?.success) throw new Error(data?.error || "Erro ao processar");
 
-        if (existingKeys.has(key)) {
-          duplicates++;
+          const invoice: InvoiceData = {
+            ...data.data,
+            fileName: file.name,
+            mes_referencia: normalizeMesReferencia(data.data?.mes_referencia as string | undefined),
+          };
+          const key = getInvoiceKey(invoice);
+
+          if (existingKeys.has(key)) {
+            duplicates++;
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id
+                  ? { ...f, status: "done" as const, errorMsg: "Duplicado (instalação/mês)" }
+                  : f
+              )
+            );
+          } else {
+            existingKeys.add(key);
+            importedInvoices.push(invoice);
+            setFiles((prev) =>
+              prev.map((f) => (f.id === file.id ? { ...f, status: "done" as const } : f))
+            );
+          }
+          succeeded = true;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Erro";
+          const isRateLimit = /429|limite de requisi|rate limit/i.test(msg);
+          if (isRateLimit && attempt < MAX_ATTEMPTS) {
+            const waitMs = 5000 * attempt; // 5s, 10s, 15s
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === file.id
+                  ? { ...f, status: "processing" as const, errorMsg: `Aguardando ${waitMs / 1000}s (rate-limit)` }
+                  : f
+              )
+            );
+            await new Promise((r) => setTimeout(r, waitMs));
+            continue;
+          }
+          console.error("Error processing", file.name, err);
           setFiles((prev) =>
             prev.map((f) =>
               f.id === file.id
-                ? { ...f, status: "done" as const, errorMsg: "Duplicado (instalação/mês)" }
+                ? { ...f, status: "error" as const, errorMsg: msg }
                 : f
             )
           );
-          continue;
+          break;
         }
-        existingKeys.add(key);
-        importedInvoices.push(invoice);
-        setFiles((prev) =>
-          prev.map((f) => (f.id === file.id ? { ...f, status: "done" as const } : f))
-        );
-      } catch (err) {
-        console.error("Error processing", file.name, err);
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === file.id
-              ? { ...f, status: "error" as const, errorMsg: err instanceof Error ? err.message : "Erro" }
-              : f
-          )
-        );
       }
-      // Pequeno intervalo para evitar rate-limit (429) da IA
-      await new Promise((r) => setTimeout(r, 1200));
+
+      // Intervalo entre faturas para reduzir rate-limit (429) da IA
+      await new Promise((r) => setTimeout(r, 3000));
     }
 
     if (importedInvoices.length > 0) {
