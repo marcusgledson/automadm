@@ -79,8 +79,9 @@ serve(async (req) => {
               ? "Senha do PDF incorreta. Verifique e tente novamente."
               : "Este PDF está protegido por senha. Informe a senha de visualização.",
           }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+
       }
       return new Response(
         JSON.stringify({ success: false, error: `Não foi possível abrir o PDF: ${msg}` }),
