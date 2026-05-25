@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Neoenergia from "./pages/Neoenergia";
 import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
+import ContasCentral from "./pages/ContasCentral";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -67,6 +68,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <NeoenergiaAnalytics />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contas"
+              element={
+                <ProtectedRoute>
+                  <ContasCentral />
                 </ProtectedRoute>
               }
             />

@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileSpreadsheet, Zap, LogOut, Minimize2, Maximize2, X } from "lucide-react";
+import { FileSpreadsheet, Zap, Receipt, LogOut, Minimize2, Maximize2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -44,6 +44,14 @@ export default function Dashboard() {
       color: "text-accent",
       bgColor: "bg-accent/10",
     },
+    {
+      title: "Central de Contas",
+      description: "Energia, Internet, Água, IPTU, IPVA, Taxas. Base unificada com filtros e análises.",
+      icon: Receipt,
+      path: "/contas",
+      color: "text-emerald-600 dark:text-emerald-400",
+      bgColor: "bg-emerald-500/10",
+    },
   ];
 
   return (
@@ -78,7 +86,7 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Selecione um módulo para começar</p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modules.map((mod, i) => (
               <Card
                 key={mod.path}

@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 import { loadInvoices, saveInvoices, archiveInvoices } from "@/lib/invoiceStore";
+import { useConsumptionBills, DUPLICATE_MESSAGE } from "@/hooks/useConsumptionBills";
+import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
 
 interface InvoiceData {
   fileName: string;
@@ -49,6 +51,24 @@ export default function Neoenergia() {
   const [invoices, setInvoices] = useState<InvoiceData[]>(() => loadInvoices() as InvoiceData[]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const { insertBill } = useConsumptionBills();
+
+  // Persiste fatura no banco (consumption_bills) — usado também por upload e Drive
+  const persistToDatabase = useCallback(async (inv: InvoiceData, source: "upload" | "drive") => {
+    const row = toBillRow(inv as ExtractedInvoice, {
+      fileName: inv.fileName || "fatura.pdf",
+      tipo_conta: "energia",
+      fornecedor: "Neoenergia",
+      source,
+    });
+    if ("error" in row) {
+      toast.warning(`${inv.fileName}: não salva na base (${row.error})`);
+      return;
+    }
+    const res = await insertBill(row);
+    if (res.duplicate) toast.warning(`${inv.fileName}: ${DUPLICATE_MESSAGE}`);
+    else if (!res.ok) toast.error(`${inv.fileName}: ${res.error}`);
+  }, [insertBill]);
 
   useEffect(() => {
     saveInvoices(invoices);
@@ -174,6 +194,8 @@ export default function Neoenergia() {
         }
         existingKeys.add(key);
         newInvoices.push(invoice);
+        // Persiste no banco unificado (consumption_bills)
+        await persistToDatabase(invoice, "upload");
         toast.success(`${file.name} processado com sucesso!`);
       } catch (err) {
         console.error("Error processing", file.name, err);
@@ -251,7 +273,11 @@ export default function Neoenergia() {
           {/* Google Drive import */}
           <GoogleDriveImport
             existingInvoices={invoices}
-            onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])}
+            onInvoicesImported={(newInvoices) => {
+              setInvoices((prev) => [...prev, ...newInvoices]);
+              // Persiste todas as faturas importadas no banco unificado
+              newInvoices.forEach((inv) => { void persistToDatabase(inv, "drive"); });
+            }}
           />
 
           {/* Upload area */}
