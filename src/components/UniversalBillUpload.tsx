@@ -132,11 +132,6 @@ export default function UniversalBillUpload({ onInserted }: { onInserted?: () =>
             disabled={loading}
             onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }} />
         </label>
-        <Button variant="outline" size="sm" disabled={loading} asChild>
-          <Button onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}>
-            Selecionar arquivos
-          </Button>
-        </Button>
       </CardContent>
     </Card>
   );
