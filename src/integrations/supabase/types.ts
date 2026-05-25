@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      consumption_bills: {
+        Row: {
+          codigo_instalacao: string
+          consumo: number | null
+          cpf_cnpj: string | null
+          created_at: string
+          data_vencimento: string
+          endereco: string | null
+          file_name: string | null
+          fornecedor: string | null
+          historico: Json | null
+          id: string
+          impostos: Json | null
+          itens: Json | null
+          mes_referencia: string | null
+          raw_data: Json | null
+          source: Database["public"]["Enums"]["bill_source"]
+          tipo_conta: Database["public"]["Enums"]["bill_type"]
+          titular: string | null
+          unidade_consumo: string | null
+          updated_at: string
+          user_id: string
+          valor_total: number | null
+        }
+        Insert: {
+          codigo_instalacao: string
+          consumo?: number | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          data_vencimento: string
+          endereco?: string | null
+          file_name?: string | null
+          fornecedor?: string | null
+          historico?: Json | null
+          id?: string
+          impostos?: Json | null
+          itens?: Json | null
+          mes_referencia?: string | null
+          raw_data?: Json | null
+          source?: Database["public"]["Enums"]["bill_source"]
+          tipo_conta?: Database["public"]["Enums"]["bill_type"]
+          titular?: string | null
+          unidade_consumo?: string | null
+          updated_at?: string
+          user_id: string
+          valor_total?: number | null
+        }
+        Update: {
+          codigo_instalacao?: string
+          consumo?: number | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          data_vencimento?: string
+          endereco?: string | null
+          file_name?: string | null
+          fornecedor?: string | null
+          historico?: Json | null
+          id?: string
+          impostos?: Json | null
+          itens?: Json | null
+          mes_referencia?: string | null
+          raw_data?: Json | null
+          source?: Database["public"]["Enums"]["bill_source"]
+          tipo_conta?: Database["public"]["Enums"]["bill_type"]
+          titular?: string | null
+          unidade_consumo?: string | null
+          updated_at?: string
+          user_id?: string
+          valor_total?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -52,7 +124,17 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      bill_source: "drive" | "upload" | "manual"
+      bill_type:
+        | "energia"
+        | "internet"
+        | "agua"
+        | "iptu"
+        | "ipva"
+        | "taxa"
+        | "gas"
+        | "telefone"
+        | "outro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -179,6 +261,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      bill_source: ["drive", "upload", "manual"],
+      bill_type: [
+        "energia",
+        "internet",
+        "agua",
+        "iptu",
+        "ipva",
+        "taxa",
+        "gas",
+        "telefone",
+        "outro",
+      ],
+    },
   },
 } as const
