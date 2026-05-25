@@ -194,6 +194,8 @@ export default function Neoenergia() {
         }
         existingKeys.add(key);
         newInvoices.push(invoice);
+        // Persiste no banco unificado (consumption_bills)
+        await persistToDatabase(invoice, "upload");
         toast.success(`${file.name} processado com sucesso!`);
       } catch (err) {
         console.error("Error processing", file.name, err);
@@ -271,7 +273,11 @@ export default function Neoenergia() {
           {/* Google Drive import */}
           <GoogleDriveImport
             existingInvoices={invoices}
-            onInvoicesImported={(newInvoices) => setInvoices((prev) => [...prev, ...newInvoices])}
+            onInvoicesImported={(newInvoices) => {
+              setInvoices((prev) => [...prev, ...newInvoices]);
+              // Persiste todas as faturas importadas no banco unificado
+              newInvoices.forEach((inv) => { void persistToDatabase(inv, "drive"); });
+            }}
           />
 
           {/* Upload area */}
