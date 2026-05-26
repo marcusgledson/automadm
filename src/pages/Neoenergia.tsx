@@ -51,6 +51,8 @@ export default function Neoenergia() {
   const [invoices, setInvoices] = useState<InvoiceData[]>(() => loadInvoices() as InvoiceData[]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [archived, setArchived] = useState<StoredInvoice[]>(() => loadArchived());
   const { insertBill } = useConsumptionBills();
 
   // Persiste fatura no banco (consumption_bills) — usado também por upload e Drive
