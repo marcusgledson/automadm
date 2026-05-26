@@ -116,15 +116,52 @@ export default function NeoenergiaAnalytics() {
   );
 
   const filtered = useMemo(() => {
+    const minYear = new Date().getFullYear() - (windowYears - 1);
     return allInvoices.filter((inv) => {
       if (installation !== "__all__" && inv.numero_instalacao !== installation) return false;
       if (bandeira !== "__all__" && inv.bandeira_tarifaria !== bandeira) return false;
       const ym = parseMesReferencia(inv.mes_referencia);
       if (periodFrom && (!ym || ym < periodFrom)) return false;
       if (periodTo && (!ym || ym > periodTo)) return false;
+      if (ym) {
+        const y = parseInt(ym.slice(0, 4), 10);
+        if (y < minYear) return false;
+      }
       return true;
     });
-  }, [allInvoices, installation, bandeira, periodFrom, periodTo]);
+  }, [allInvoices, installation, bandeira, periodFrom, periodTo, windowYears]);
+
+  // Anos disponíveis nas faturas filtradas
+  const yearsAvailable = useMemo(() => {
+    const ys = new Set<number>();
+    for (const inv of filtered) {
+      const ym = parseMesReferencia(inv.mes_referencia);
+      if (ym) ys.add(parseInt(ym.slice(0, 4), 10));
+    }
+    return Array.from(ys).sort((a, b) => a - b);
+  }, [filtered]);
+
+  const fetchTaxes = useCallback(async () => {
+    if (yearsAvailable.length === 0) {
+      toast.warning("Não há faturas no período selecionado.");
+      return;
+    }
+    setTaxesLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tax-research", {
+        body: { tipo_conta: "energia", anos: yearsAvailable },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Erro na pesquisa");
+      setTaxes(data.data.anos || []);
+      setTaxesFontes(data.data.fontes || "");
+      toast.success("Tributos pesquisados via IA");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setTaxesLoading(false);
+    }
+  }, [yearsAvailable]);
 
   // ----- KPIs -----
   const kpi = useMemo(() => {
