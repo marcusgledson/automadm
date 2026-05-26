@@ -40,18 +40,71 @@ export default function NeoenergiaAnalytics() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const allInvoices = useMemo<StoredInvoice[]>(() => loadInvoices(), []);
+  const [dbInvoices, setDbInvoices] = useState<StoredInvoice[]>([]);
+  const allInvoices = useMemo<StoredInvoice[]>(() => {
+    const local = loadInvoices();
+    // Mescla por chave fileName+instalação+mes para evitar duplicidade
+    const seen = new Set(local.map((i) => `${i.numero_instalacao || ""}|${i.mes_referencia || ""}|${i.fileName || ""}`));
+    const merged = [...local];
+    for (const inv of dbInvoices) {
+      const k = `${inv.numero_instalacao || ""}|${inv.mes_referencia || ""}|${inv.fileName || ""}`;
+      if (!seen.has(k)) merged.push(inv);
+    }
+    return merged;
+  }, [dbInvoices]);
+
+  // Busca faturas de energia da base unificada (consumption_bills)
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("consumption_bills")
+        .select("*")
+        .eq("tipo_conta", "energia")
+        .order("data_vencimento", { ascending: true });
+      if (error || !data) return;
+      const mapped: StoredInvoice[] = data.map((b: Record<string, unknown>) => {
+        const raw = (b.raw_data as Record<string, unknown>) || {};
+        const imp = (b.impostos as Record<string, number>) || {};
+        return {
+          fileName: (b.file_name as string) || `${b.codigo_instalacao}-${b.data_vencimento}.pdf`,
+          titular: b.titular as string | undefined,
+          cpf_cnpj: b.cpf_cnpj as string | undefined,
+          endereco: b.endereco as string | undefined,
+          numero_instalacao: b.codigo_instalacao as string,
+          mes_referencia: (b.mes_referencia as string) || undefined,
+          data_vencimento: b.data_vencimento as string,
+          consumo_kwh: b.consumo as number | undefined,
+          valor_total: b.valor_total as number | undefined,
+          icms: imp.icms,
+          pis: imp.pis,
+          cofins: imp.cofins,
+          contrib_iluminacao: imp.contrib_iluminacao,
+          valor_energia: (raw.valor_energia as number) || undefined,
+          valor_distribuicao: (raw.valor_distribuicao as number) || undefined,
+          bandeira_tarifaria: raw.bandeira_tarifaria as string | undefined,
+          valor_bandeira: raw.valor_bandeira as number | undefined,
+        };
+      });
+      setDbInvoices(mapped);
+    })();
+  }, []);
 
   // ----- Filters -----
   const [installation, setInstallation] = useState<string>("__all__");
   const [bandeira, setBandeira] = useState<string>("__all__");
   const [periodFrom, setPeriodFrom] = useState<string>(""); // YYYY-MM
   const [periodTo, setPeriodTo] = useState<string>("");
+  const [windowYears, setWindowYears] = useState<number>(5); // 1-5 anos
 
   // Projection
   const [projMonths, setProjMonths] = useState<number>(6);
   const [projMode, setProjMode] = useState<"percent" | "valor">("percent");
   const [projDelta, setProjDelta] = useState<number>(0);
+
+  // Tax research
+  const [taxes, setTaxes] = useState<Array<{ ano: number; icms_pct: number; pis_pct: number; cofins_pct: number; iss_pct?: number; outros_pct?: number; total_pct: number; observacao?: string }>>([]);
+  const [taxesFontes, setTaxesFontes] = useState<string>("");
+  const [taxesLoading, setTaxesLoading] = useState(false);
 
   const installations = useMemo(
     () => Array.from(new Set(allInvoices.map((i) => i.numero_instalacao).filter(Boolean))) as string[],
