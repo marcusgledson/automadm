@@ -565,6 +565,65 @@ export default function Neoenergia() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Archived invoices dialog */}
+      <Dialog open={archivedOpen} onOpenChange={setArchivedOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-accent" />
+              Faturas Arquivadas ({archived.length})
+            </DialogTitle>
+            <DialogDescription>
+              As informações pertinentes já foram salvas na base. Você pode desarquivar para reanalisar ou excluir definitivamente.
+            </DialogDescription>
+          </DialogHeader>
+          {archived.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma fatura arquivada.</p>
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={clearAllArchived} className="text-destructive">
+                  <Trash2 className="h-4 w-4" /> Limpar todas
+                </Button>
+              </div>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Arquivo</TableHead>
+                      <TableHead>Instalação</TableHead>
+                      <TableHead>Referência</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="w-[140px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {archived.map((a) => (
+                      <TableRow key={a.fileName}>
+                        <TableCell className="text-sm max-w-[220px] truncate">{a.fileName}</TableCell>
+                        <TableCell className="text-sm">{a.numero_instalacao || "—"}</TableCell>
+                        <TableCell className="text-sm">{a.mes_referencia || "—"}</TableCell>
+                        <TableCell className="text-sm font-medium text-destructive">{fmt(a.valor_total)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => unarchiveOne(a.fileName)} title="Desarquivar">
+                              <ArchiveRestore className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteArchived(a.fileName)} title="Excluir">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
