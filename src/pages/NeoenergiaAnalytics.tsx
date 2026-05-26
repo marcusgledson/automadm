@@ -572,6 +572,97 @@ export default function NeoenergiaAnalytics() {
                     </CardContent>
                   </Card>
                 </TabsContent>
+
+                <TabsContent value="tributos" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Calculator className="h-4 w-4 text-accent" /> Impostos embutidos por ano
+                          </CardTitle>
+                          <CardDescription>
+                            Carga tributária estimada (ICMS, PIS, COFINS) sobre energia elétrica residencial — pesquisada via IA com base nos anos das faturas filtradas ({yearsAvailable.join(", ") || "—"}).
+                          </CardDescription>
+                        </div>
+                        <Button size="sm" onClick={fetchTaxes} disabled={taxesLoading || yearsAvailable.length === 0}>
+                          {taxesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+                          {taxesLoading ? "Pesquisando…" : "Pesquisar tributos"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {taxes.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                          Clique em "Pesquisar tributos" para carregar a estimativa por ano.
+                        </p>
+                      ) : (
+                        <>
+                          <div className="h-[300px]">
+                            <ResponsiveContainer>
+                              <BarChart data={taxes}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                <XAxis dataKey="ano" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${v}%`} />
+                                <Tooltip
+                                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                                  formatter={(v: number) => `${v.toFixed(2)}%`}
+                                />
+                                <Legend />
+                                <Bar dataKey="icms_pct" name="ICMS" stackId="a" fill={COLORS[0]} />
+                                <Bar dataKey="pis_pct" name="PIS" stackId="a" fill={COLORS[1]} />
+                                <Bar dataKey="cofins_pct" name="COFINS" stackId="a" fill={COLORS[2]} />
+                                <Bar dataKey="outros_pct" name="Outros" stackId="a" fill={COLORS[3]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="rounded-lg border border-border overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Ano</TableHead>
+                                  <TableHead>ICMS</TableHead>
+                                  <TableHead>PIS</TableHead>
+                                  <TableHead>COFINS</TableHead>
+                                  <TableHead>Outros</TableHead>
+                                  <TableHead>Total</TableHead>
+                                  <TableHead>Estimativa de imposto pago</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {taxes.map((t) => {
+                                  const gastoAno = filtered
+                                    .filter((inv) => {
+                                      const ym = parseMesReferencia(inv.mes_referencia);
+                                      return ym && parseInt(ym.slice(0, 4), 10) === t.ano;
+                                    })
+                                    .reduce((s, i) => s + (i.valor_total || 0), 0);
+                                  const imposto = gastoAno * (t.total_pct / 100);
+                                  return (
+                                    <TableRow key={t.ano}>
+                                      <TableCell className="text-sm font-medium">{t.ano}</TableCell>
+                                      <TableCell className="text-sm">{t.icms_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{t.pis_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{t.cofins_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{(t.outros_pct || 0).toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm font-semibold">{t.total_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm font-medium text-destructive">{fmtBRL(imposto)}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {taxesFontes && (
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Fontes:</strong> {taxesFontes}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
               </Tabs>
             </>
           )}
