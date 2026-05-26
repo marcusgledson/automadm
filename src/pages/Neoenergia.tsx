@@ -10,13 +10,13 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, BarChart3 } from "lucide-react";
+import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, ArchiveRestore, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
-import { loadInvoices, saveInvoices, archiveInvoices } from "@/lib/invoiceStore";
+import { loadInvoices, saveInvoices, archiveInvoices, loadArchived, removeArchived, saveArchived, type StoredInvoice } from "@/lib/invoiceStore";
 import { useConsumptionBills, DUPLICATE_MESSAGE } from "@/hooks/useConsumptionBills";
 import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
 
