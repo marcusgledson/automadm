@@ -97,10 +97,45 @@ export default function Neoenergia() {
   const archiveSelected = () => {
     if (selected.size === 0) return;
     const toArchive = invoices.filter((_, i) => selected.has(i));
+    // Garante que já temos os dados extraídos e persistidos antes de arquivar.
+    const missingData = toArchive.filter((inv) => !inv.numero_instalacao || !inv.valor_total);
+    if (missingData.length > 0) {
+      toast.error(`Não é possível arquivar: ${missingData.length} fatura(s) sem dados extraídos. Reprocesse antes.`);
+      return;
+    }
     archiveInvoices(toArchive);
+    setArchived(loadArchived());
     setInvoices((prev) => prev.filter((_, i) => !selected.has(i)));
     setSelected(new Set());
     toast.success(`${toArchive.length} fatura(s) arquivada(s)`);
+  };
+
+  const unarchiveOne = (fileName: string) => {
+    const item = archived.find((a) => a.fileName === fileName);
+    if (!item) return;
+    const existingKeys = new Set(invoices.map((i) => getInvoiceKey(i)));
+    if (existingKeys.has(getInvoiceKey(item))) {
+      toast.warning("Fatura já está na lista ativa.");
+      return;
+    }
+    setInvoices((prev) => [...prev, item as InvoiceData]);
+    removeArchived(fileName);
+    setArchived(loadArchived());
+    toast.success("Fatura desarquivada");
+  };
+
+  const deleteArchived = (fileName: string) => {
+    if (!confirm("Excluir definitivamente esta fatura arquivada?")) return;
+    removeArchived(fileName);
+    setArchived(loadArchived());
+    toast.success("Fatura arquivada excluída");
+  };
+
+  const clearAllArchived = () => {
+    if (archived.length === 0) return;
+    if (!confirm("Excluir todas as faturas arquivadas?")) return;
+    saveArchived([]);
+    setArchived([]);
   };
   const clearAll = () => {
     if (invoices.length === 0) return;
