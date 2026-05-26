@@ -355,6 +355,15 @@ export default function NeoenergiaAnalytics() {
                       <Label className="text-xs">Período até</Label>
                       <Input type="month" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} />
                     </div>
+                    <div className="lg:col-span-2">
+                      <Label className="text-xs">Janela de análise: últimos {windowYears} {windowYears === 1 ? "ano" : "anos"}</Label>
+                      <Slider
+                        value={[windowYears]}
+                        onValueChange={(v) => setWindowYears(v[0])}
+                        min={1} max={5} step={1}
+                        className="mt-3"
+                      />
+                    </div>
                     <div className="flex items-end gap-2">
                       <Button variant="outline" className="flex-1" onClick={() => {
                         setInstallation("__all__"); setBandeira("__all__"); setPeriodFrom(""); setPeriodTo("");
