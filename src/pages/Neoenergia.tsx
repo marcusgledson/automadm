@@ -367,9 +367,14 @@ export default function Neoenergia() {
                     <CardTitle className="text-lg">Faturas Processadas ({invoices.length})</CardTitle>
                     <CardDescription>Dados extraídos automaticamente via IA</CardDescription>
                   </div>
-                  <Button variant="default" size="sm" onClick={() => navigate("/neoenergia/analytics")}>
-                    <BarChart3 className="h-4 w-4" /> Análises & Projeções
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setArchivedOpen(true)}>
+                      <ArchiveRestore className="h-4 w-4" /> Arquivadas ({archived.length})
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => navigate("/neoenergia/analytics")}>
+                      <BarChart3 className="h-4 w-4" /> Análises & Projeções
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
