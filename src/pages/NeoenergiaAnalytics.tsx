@@ -390,6 +390,7 @@ export default function NeoenergiaAnalytics() {
                   <TabsTrigger value="instalacao">Por instalação</TabsTrigger>
                   <TabsTrigger value="composicao">Composição</TabsTrigger>
                   <TabsTrigger value="projecao">Projeção</TabsTrigger>
+                  <TabsTrigger value="tributos">Tributos por Ano</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
