@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -15,8 +16,9 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
-import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter } from "lucide-react";
+import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter, Calculator, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { loadInvoices, parseMesReferencia, formatMesLabel, type StoredInvoice } from "@/lib/invoiceStore";
 
 const COLORS = [
@@ -38,18 +40,71 @@ export default function NeoenergiaAnalytics() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const allInvoices = useMemo<StoredInvoice[]>(() => loadInvoices(), []);
+  const [dbInvoices, setDbInvoices] = useState<StoredInvoice[]>([]);
+  const allInvoices = useMemo<StoredInvoice[]>(() => {
+    const local = loadInvoices();
+    // Mescla por chave fileName+instalação+mes para evitar duplicidade
+    const seen = new Set(local.map((i) => `${i.numero_instalacao || ""}|${i.mes_referencia || ""}|${i.fileName || ""}`));
+    const merged = [...local];
+    for (const inv of dbInvoices) {
+      const k = `${inv.numero_instalacao || ""}|${inv.mes_referencia || ""}|${inv.fileName || ""}`;
+      if (!seen.has(k)) merged.push(inv);
+    }
+    return merged;
+  }, [dbInvoices]);
+
+  // Busca faturas de energia da base unificada (consumption_bills)
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase
+        .from("consumption_bills")
+        .select("*")
+        .eq("tipo_conta", "energia")
+        .order("data_vencimento", { ascending: true });
+      if (error || !data) return;
+      const mapped: StoredInvoice[] = data.map((b: Record<string, unknown>) => {
+        const raw = (b.raw_data as Record<string, unknown>) || {};
+        const imp = (b.impostos as Record<string, number>) || {};
+        return {
+          fileName: (b.file_name as string) || `${b.codigo_instalacao}-${b.data_vencimento}.pdf`,
+          titular: b.titular as string | undefined,
+          cpf_cnpj: b.cpf_cnpj as string | undefined,
+          endereco: b.endereco as string | undefined,
+          numero_instalacao: b.codigo_instalacao as string,
+          mes_referencia: (b.mes_referencia as string) || undefined,
+          data_vencimento: b.data_vencimento as string,
+          consumo_kwh: b.consumo as number | undefined,
+          valor_total: b.valor_total as number | undefined,
+          icms: imp.icms,
+          pis: imp.pis,
+          cofins: imp.cofins,
+          contrib_iluminacao: imp.contrib_iluminacao,
+          valor_energia: (raw.valor_energia as number) || undefined,
+          valor_distribuicao: (raw.valor_distribuicao as number) || undefined,
+          bandeira_tarifaria: raw.bandeira_tarifaria as string | undefined,
+          valor_bandeira: raw.valor_bandeira as number | undefined,
+        };
+      });
+      setDbInvoices(mapped);
+    })();
+  }, []);
 
   // ----- Filters -----
   const [installation, setInstallation] = useState<string>("__all__");
   const [bandeira, setBandeira] = useState<string>("__all__");
   const [periodFrom, setPeriodFrom] = useState<string>(""); // YYYY-MM
   const [periodTo, setPeriodTo] = useState<string>("");
+  const [windowYears, setWindowYears] = useState<number>(5); // 1-5 anos
 
   // Projection
   const [projMonths, setProjMonths] = useState<number>(6);
   const [projMode, setProjMode] = useState<"percent" | "valor">("percent");
   const [projDelta, setProjDelta] = useState<number>(0);
+
+  // Tax research
+  const [taxes, setTaxes] = useState<Array<{ ano: number; icms_pct: number; pis_pct: number; cofins_pct: number; iss_pct?: number; outros_pct?: number; total_pct: number; observacao?: string }>>([]);
+  const [taxesFontes, setTaxesFontes] = useState<string>("");
+  const [taxesLoading, setTaxesLoading] = useState(false);
 
   const installations = useMemo(
     () => Array.from(new Set(allInvoices.map((i) => i.numero_instalacao).filter(Boolean))) as string[],
@@ -61,15 +116,52 @@ export default function NeoenergiaAnalytics() {
   );
 
   const filtered = useMemo(() => {
+    const minYear = new Date().getFullYear() - (windowYears - 1);
     return allInvoices.filter((inv) => {
       if (installation !== "__all__" && inv.numero_instalacao !== installation) return false;
       if (bandeira !== "__all__" && inv.bandeira_tarifaria !== bandeira) return false;
       const ym = parseMesReferencia(inv.mes_referencia);
       if (periodFrom && (!ym || ym < periodFrom)) return false;
       if (periodTo && (!ym || ym > periodTo)) return false;
+      if (ym) {
+        const y = parseInt(ym.slice(0, 4), 10);
+        if (y < minYear) return false;
+      }
       return true;
     });
-  }, [allInvoices, installation, bandeira, periodFrom, periodTo]);
+  }, [allInvoices, installation, bandeira, periodFrom, periodTo, windowYears]);
+
+  // Anos disponíveis nas faturas filtradas
+  const yearsAvailable = useMemo(() => {
+    const ys = new Set<number>();
+    for (const inv of filtered) {
+      const ym = parseMesReferencia(inv.mes_referencia);
+      if (ym) ys.add(parseInt(ym.slice(0, 4), 10));
+    }
+    return Array.from(ys).sort((a, b) => a - b);
+  }, [filtered]);
+
+  const fetchTaxes = useCallback(async () => {
+    if (yearsAvailable.length === 0) {
+      toast.warning("Não há faturas no período selecionado.");
+      return;
+    }
+    setTaxesLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tax-research", {
+        body: { tipo_conta: "energia", anos: yearsAvailable },
+      });
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || "Erro na pesquisa");
+      setTaxes(data.data.anos || []);
+      setTaxesFontes(data.data.fontes || "");
+      toast.success("Tributos pesquisados via IA");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setTaxesLoading(false);
+    }
+  }, [yearsAvailable]);
 
   // ----- KPIs -----
   const kpi = useMemo(() => {
@@ -263,6 +355,15 @@ export default function NeoenergiaAnalytics() {
                       <Label className="text-xs">Período até</Label>
                       <Input type="month" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} />
                     </div>
+                    <div className="lg:col-span-2">
+                      <Label className="text-xs">Janela de análise: últimos {windowYears} {windowYears === 1 ? "ano" : "anos"}</Label>
+                      <Slider
+                        value={[windowYears]}
+                        onValueChange={(v) => setWindowYears(v[0])}
+                        min={1} max={5} step={1}
+                        className="mt-3"
+                      />
+                    </div>
                     <div className="flex items-end gap-2">
                       <Button variant="outline" className="flex-1" onClick={() => {
                         setInstallation("__all__"); setBandeira("__all__"); setPeriodFrom(""); setPeriodTo("");
@@ -289,6 +390,7 @@ export default function NeoenergiaAnalytics() {
                   <TabsTrigger value="instalacao">Por instalação</TabsTrigger>
                   <TabsTrigger value="composicao">Composição</TabsTrigger>
                   <TabsTrigger value="projecao">Projeção</TabsTrigger>
+                  <TabsTrigger value="tributos">Tributos por Ano</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
@@ -467,6 +569,97 @@ export default function NeoenergiaAnalytics() {
                           </TableBody>
                         </Table>
                       </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="tributos" className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-base">
+                            <Calculator className="h-4 w-4 text-accent" /> Impostos embutidos por ano
+                          </CardTitle>
+                          <CardDescription>
+                            Carga tributária estimada (ICMS, PIS, COFINS) sobre energia elétrica residencial — pesquisada via IA com base nos anos das faturas filtradas ({yearsAvailable.join(", ") || "—"}).
+                          </CardDescription>
+                        </div>
+                        <Button size="sm" onClick={fetchTaxes} disabled={taxesLoading || yearsAvailable.length === 0}>
+                          {taxesLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Calculator className="h-4 w-4" />}
+                          {taxesLoading ? "Pesquisando…" : "Pesquisar tributos"}
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {taxes.length === 0 ? (
+                        <p className="py-6 text-center text-sm text-muted-foreground">
+                          Clique em "Pesquisar tributos" para carregar a estimativa por ano.
+                        </p>
+                      ) : (
+                        <>
+                          <div className="h-[300px]">
+                            <ResponsiveContainer>
+                              <BarChart data={taxes}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                                <XAxis dataKey="ano" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `${v}%`} />
+                                <Tooltip
+                                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }}
+                                  formatter={(v: number) => `${v.toFixed(2)}%`}
+                                />
+                                <Legend />
+                                <Bar dataKey="icms_pct" name="ICMS" stackId="a" fill={COLORS[0]} />
+                                <Bar dataKey="pis_pct" name="PIS" stackId="a" fill={COLORS[1]} />
+                                <Bar dataKey="cofins_pct" name="COFINS" stackId="a" fill={COLORS[2]} />
+                                <Bar dataKey="outros_pct" name="Outros" stackId="a" fill={COLORS[3]} />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                          <div className="rounded-lg border border-border overflow-hidden">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Ano</TableHead>
+                                  <TableHead>ICMS</TableHead>
+                                  <TableHead>PIS</TableHead>
+                                  <TableHead>COFINS</TableHead>
+                                  <TableHead>Outros</TableHead>
+                                  <TableHead>Total</TableHead>
+                                  <TableHead>Estimativa de imposto pago</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {taxes.map((t) => {
+                                  const gastoAno = filtered
+                                    .filter((inv) => {
+                                      const ym = parseMesReferencia(inv.mes_referencia);
+                                      return ym && parseInt(ym.slice(0, 4), 10) === t.ano;
+                                    })
+                                    .reduce((s, i) => s + (i.valor_total || 0), 0);
+                                  const imposto = gastoAno * (t.total_pct / 100);
+                                  return (
+                                    <TableRow key={t.ano}>
+                                      <TableCell className="text-sm font-medium">{t.ano}</TableCell>
+                                      <TableCell className="text-sm">{t.icms_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{t.pis_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{t.cofins_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm">{(t.outros_pct || 0).toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm font-semibold">{t.total_pct?.toFixed(2)}%</TableCell>
+                                      <TableCell className="text-sm font-medium text-destructive">{fmtBRL(imposto)}</TableCell>
+                                    </TableRow>
+                                  );
+                                })}
+                              </TableBody>
+                            </Table>
+                          </div>
+                          {taxesFontes && (
+                            <p className="text-xs text-muted-foreground">
+                              <strong>Fontes:</strong> {taxesFontes}
+                            </p>
+                          )}
+                        </>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

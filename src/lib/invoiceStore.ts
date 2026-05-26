@@ -62,6 +62,20 @@ export function archiveInvoices(invoices: StoredInvoice[]) {
   }
 }
 
+export function saveArchived(invoices: StoredInvoice[]) {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(invoices));
+  } catch (err) {
+    console.error("Failed to save archived", err);
+  }
+}
+
+/** Remove uma fatura arquivada por nome de arquivo. */
+export function removeArchived(fileName: string) {
+  const remaining = loadArchived().filter((i) => i.fileName !== fileName);
+  saveArchived(remaining);
+}
+
 // Parse "MM/YYYY" or "Janeiro/2025" or "2025-01" etc. Returns YYYY-MM or null.
 const MESES: Record<string, string> = {
   jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06",

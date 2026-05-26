@@ -10,13 +10,13 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, BarChart3 } from "lucide-react";
+import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, ArchiveRestore, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
-import { loadInvoices, saveInvoices, archiveInvoices } from "@/lib/invoiceStore";
+import { loadInvoices, saveInvoices, archiveInvoices, loadArchived, removeArchived, saveArchived, type StoredInvoice } from "@/lib/invoiceStore";
 import { useConsumptionBills, DUPLICATE_MESSAGE } from "@/hooks/useConsumptionBills";
 import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
 
@@ -51,6 +51,8 @@ export default function Neoenergia() {
   const [invoices, setInvoices] = useState<InvoiceData[]>(() => loadInvoices() as InvoiceData[]);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceData | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [archivedOpen, setArchivedOpen] = useState(false);
+  const [archived, setArchived] = useState<StoredInvoice[]>(() => loadArchived());
   const { insertBill } = useConsumptionBills();
 
   // Persiste fatura no banco (consumption_bills) — usado também por upload e Drive
@@ -95,10 +97,45 @@ export default function Neoenergia() {
   const archiveSelected = () => {
     if (selected.size === 0) return;
     const toArchive = invoices.filter((_, i) => selected.has(i));
+    // Garante que já temos os dados extraídos e persistidos antes de arquivar.
+    const missingData = toArchive.filter((inv) => !inv.numero_instalacao || !inv.valor_total);
+    if (missingData.length > 0) {
+      toast.error(`Não é possível arquivar: ${missingData.length} fatura(s) sem dados extraídos. Reprocesse antes.`);
+      return;
+    }
     archiveInvoices(toArchive);
+    setArchived(loadArchived());
     setInvoices((prev) => prev.filter((_, i) => !selected.has(i)));
     setSelected(new Set());
     toast.success(`${toArchive.length} fatura(s) arquivada(s)`);
+  };
+
+  const unarchiveOne = (fileName: string) => {
+    const item = archived.find((a) => a.fileName === fileName);
+    if (!item) return;
+    const existingKeys = new Set(invoices.map((i) => getInvoiceKey(i)));
+    if (existingKeys.has(getInvoiceKey(item))) {
+      toast.warning("Fatura já está na lista ativa.");
+      return;
+    }
+    setInvoices((prev) => [...prev, item as InvoiceData]);
+    removeArchived(fileName);
+    setArchived(loadArchived());
+    toast.success("Fatura desarquivada");
+  };
+
+  const deleteArchived = (fileName: string) => {
+    if (!confirm("Excluir definitivamente esta fatura arquivada?")) return;
+    removeArchived(fileName);
+    setArchived(loadArchived());
+    toast.success("Fatura arquivada excluída");
+  };
+
+  const clearAllArchived = () => {
+    if (archived.length === 0) return;
+    if (!confirm("Excluir todas as faturas arquivadas?")) return;
+    saveArchived([]);
+    setArchived([]);
   };
   const clearAll = () => {
     if (invoices.length === 0) return;
@@ -330,9 +367,14 @@ export default function Neoenergia() {
                     <CardTitle className="text-lg">Faturas Processadas ({invoices.length})</CardTitle>
                     <CardDescription>Dados extraídos automaticamente via IA</CardDescription>
                   </div>
-                  <Button variant="default" size="sm" onClick={() => navigate("/neoenergia/analytics")}>
-                    <BarChart3 className="h-4 w-4" /> Análises & Projeções
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setArchivedOpen(true)}>
+                      <ArchiveRestore className="h-4 w-4" /> Arquivadas ({archived.length})
+                    </Button>
+                    <Button variant="default" size="sm" onClick={() => navigate("/neoenergia/analytics")}>
+                      <BarChart3 className="h-4 w-4" /> Análises & Projeções
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -520,6 +562,65 @@ export default function Neoenergia() {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archived invoices dialog */}
+      <Dialog open={archivedOpen} onOpenChange={setArchivedOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="h-5 w-5 text-accent" />
+              Faturas Arquivadas ({archived.length})
+            </DialogTitle>
+            <DialogDescription>
+              As informações pertinentes já foram salvas na base. Você pode desarquivar para reanalisar ou excluir definitivamente.
+            </DialogDescription>
+          </DialogHeader>
+          {archived.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma fatura arquivada.</p>
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <Button variant="outline" size="sm" onClick={clearAllArchived} className="text-destructive">
+                  <Trash2 className="h-4 w-4" /> Limpar todas
+                </Button>
+              </div>
+              <div className="rounded-lg border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Arquivo</TableHead>
+                      <TableHead>Instalação</TableHead>
+                      <TableHead>Referência</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead className="w-[140px]">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {archived.map((a) => (
+                      <TableRow key={a.fileName}>
+                        <TableCell className="text-sm max-w-[220px] truncate">{a.fileName}</TableCell>
+                        <TableCell className="text-sm">{a.numero_instalacao || "—"}</TableCell>
+                        <TableCell className="text-sm">{a.mes_referencia || "—"}</TableCell>
+                        <TableCell className="text-sm font-medium text-destructive">{fmt(a.valor_total)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => unarchiveOne(a.fileName)} title="Desarquivar">
+                              <ArchiveRestore className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteArchived(a.fileName)} title="Excluir">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
