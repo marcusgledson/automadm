@@ -88,17 +88,16 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
         const already = existingNames.has((f.name || "").toLowerCase());
         return {
           ...f,
-          status: already ? ("done" as const) : ("pending" as const),
-          errorMsg: already ? "Já importado" : undefined,
+          status: "pending" as const,
+          errorMsg: already ? "Já importado — pode reimportar para atualizar" : undefined,
         };
       });
 
       setFiles(driveFiles);
-      // Pré-selecionar apenas os ainda não importados
-      setSelectedFiles(new Set(driveFiles.filter((f) => f.status === "pending").map((f) => f.id)));
-      const novos = driveFiles.filter((f) => f.status === "pending").length;
-      const repetidos = driveFiles.length - novos;
-      toast.success(`${driveFiles.length} PDF(s) encontrado(s)${repetidos ? ` — ${repetidos} já importado(s)` : ""}.`);
+      // Pré-selecionar todos (reimportação é permitida)
+      setSelectedFiles(new Set(driveFiles.map((f) => f.id)));
+      const reimport = driveFiles.filter((f) => f.errorMsg).length;
+      toast.success(`${driveFiles.length} PDF(s) encontrado(s)${reimport ? ` — ${reimport} já importado(s) anteriormente (serão atualizados se reimportados)` : ""}.`);
     } catch (err: unknown) {
       console.error("Error listing files:", err);
       const message = err instanceof Error ? err.message : "Erro ao listar arquivos.";
