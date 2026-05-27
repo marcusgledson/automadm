@@ -302,8 +302,19 @@ export default function Neoenergia() {
           <GoogleDriveImport
             existingInvoices={invoices}
             onInvoicesImported={(newInvoices) => {
-              setInvoices((prev) => [...prev, ...newInvoices]);
-              // Persiste todas as faturas importadas no banco unificado
+              setInvoices((prev) => {
+                const next = [...prev];
+                let updated = 0;
+                for (const inv of newInvoices) {
+                  const key = getInvoiceKey(inv);
+                  const idx = next.findIndex((x) => getInvoiceKey(x) === key);
+                  if (idx >= 0) { next[idx] = inv; updated++; }
+                  else next.push(inv);
+                }
+                if (updated > 0) toast.info(`${updated} fatura(s) atualizada(s) por reimportação.`);
+                return next;
+              });
+              // Persiste (insert/update) todas as faturas importadas
               newInvoices.forEach((inv) => { void persistToDatabase(inv, "drive"); });
             }}
           />
