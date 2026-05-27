@@ -76,6 +76,24 @@ export function useConsumptionBills() {
     return { ok: true, data: data as unknown as ConsumptionBill };
   }, [user]);
 
+  /** Insere ou atualiza a fatura usando (user_id, codigo_instalacao, data_vencimento) como chave. */
+  const upsertBill = useCallback(async (b: NewBillInput): Promise<{ ok: boolean; updated?: boolean; error?: string; data?: ConsumptionBill }> => {
+    if (!user) return { ok: false, error: "Usuário não autenticado" };
+    const payload = { ...b, user_id: user.id, updated_at: new Date().toISOString() };
+    const { data, error } = await supabase
+      .from("consumption_bills")
+      .upsert(payload as never, { onConflict: "user_id,codigo_instalacao,data_vencimento" })
+      .select()
+      .single();
+    if (error) return { ok: false, error: error.message };
+    const row = data as unknown as ConsumptionBill;
+    setBills((prev) => {
+      const without = prev.filter((x) => x.id !== row.id);
+      return [...without, row].sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento));
+    });
+    return { ok: true, updated: true, data: row };
+  }, [user]);
+
   const deleteBill = useCallback(async (id: string) => {
     const { error } = await supabase.from("consumption_bills").delete().eq("id", id);
     if (!error) setBills((prev) => prev.filter((b) => b.id !== id));
