@@ -189,20 +189,12 @@ export default function Neoenergia() {
     if (!files?.length) return;
 
     setLoading(true);
-    const newInvoices: InvoiceData[] = [];
-    const existingKeys = new Set(invoices.map((i) => getInvoiceKey(i)));
-    const existingNames = new Set(invoices.map((i) => (i.fileName || "").toLowerCase()));
-    let duplicates = 0;
+    const processed: InvoiceData[] = [];
+    let updated = 0;
 
     for (const file of Array.from(files)) {
       if (file.type !== "application/pdf") {
         toast.error(`${file.name} não é um PDF.`);
-        continue;
-      }
-
-      if (existingNames.has(file.name.toLowerCase())) {
-        duplicates++;
-        toast.warning(`${file.name} já foi importado anteriormente.`);
         continue;
       }
 
@@ -222,15 +214,8 @@ export default function Neoenergia() {
           fileName: file.name,
           mes_referencia: normalizeMesReferencia(data.data?.mes_referencia),
         };
-        const key = getInvoiceKey(invoice);
-        if (existingKeys.has(key)) {
-          duplicates++;
-          toast.warning(`${file.name}: já existe fatura desta instalação para ${invoice.mes_referencia}.`);
-          continue;
-        }
-        existingKeys.add(key);
-        newInvoices.push(invoice);
-        // Persiste no banco unificado (consumption_bills)
+        processed.push(invoice);
+        // Persiste (insert/update) no banco unificado
         await persistToDatabase(invoice, "upload");
         toast.success(`${file.name} processado com sucesso!`);
       } catch (err) {
@@ -239,11 +224,18 @@ export default function Neoenergia() {
       }
     }
 
-    if (newInvoices.length > 0) {
-      setInvoices((prev) => [...prev, ...newInvoices]);
-    }
-    if (duplicates > 0 && newInvoices.length === 0) {
-      toast.info(`${duplicates} arquivo(s) ignorado(s) por duplicidade.`);
+    if (processed.length > 0) {
+      setInvoices((prev) => {
+        const next = [...prev];
+        for (const inv of processed) {
+          const key = getInvoiceKey(inv);
+          const idx = next.findIndex((x) => getInvoiceKey(x) === key);
+          if (idx >= 0) { next[idx] = inv; updated++; }
+          else next.push(inv);
+        }
+        return next;
+      });
+      if (updated > 0) toast.info(`${updated} fatura(s) atualizada(s) por reimportação.`);
     }
     setLoading(false);
     e.target.value = "";
