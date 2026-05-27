@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 import { loadInvoices, saveInvoices, archiveInvoices, loadArchived, removeArchived, saveArchived, type StoredInvoice } from "@/lib/invoiceStore";
-import { useConsumptionBills, DUPLICATE_MESSAGE } from "@/hooks/useConsumptionBills";
+import { useConsumptionBills } from "@/hooks/useConsumptionBills";
 import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
 
 interface InvoiceData {
@@ -53,9 +53,9 @@ export default function Neoenergia() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archived, setArchived] = useState<StoredInvoice[]>(() => loadArchived());
-  const { insertBill } = useConsumptionBills();
+  const { upsertBill } = useConsumptionBills();
 
-  // Persiste fatura no banco (consumption_bills) — usado também por upload e Drive
+  // Persiste (insert/update) fatura no banco — reimportações atualizam o registro
   const persistToDatabase = useCallback(async (inv: InvoiceData, source: "upload" | "drive") => {
     const row = toBillRow(inv as ExtractedInvoice, {
       fileName: inv.fileName || "fatura.pdf",
@@ -67,10 +67,9 @@ export default function Neoenergia() {
       toast.warning(`${inv.fileName}: não salva na base (${row.error})`);
       return;
     }
-    const res = await insertBill(row);
-    if (res.duplicate) toast.warning(`${inv.fileName}: ${DUPLICATE_MESSAGE}`);
-    else if (!res.ok) toast.error(`${inv.fileName}: ${res.error}`);
-  }, [insertBill]);
+    const res = await upsertBill(row);
+    if (!res.ok) toast.error(`${inv.fileName}: ${res.error}`);
+  }, [upsertBill]);
 
   useEffect(() => {
     saveInvoices(invoices);
@@ -190,20 +189,12 @@ export default function Neoenergia() {
     if (!files?.length) return;
 
     setLoading(true);
-    const newInvoices: InvoiceData[] = [];
-    const existingKeys = new Set(invoices.map((i) => getInvoiceKey(i)));
-    const existingNames = new Set(invoices.map((i) => (i.fileName || "").toLowerCase()));
-    let duplicates = 0;
+    const processed: InvoiceData[] = [];
+    let updated = 0;
 
     for (const file of Array.from(files)) {
       if (file.type !== "application/pdf") {
         toast.error(`${file.name} não é um PDF.`);
-        continue;
-      }
-
-      if (existingNames.has(file.name.toLowerCase())) {
-        duplicates++;
-        toast.warning(`${file.name} já foi importado anteriormente.`);
         continue;
       }
 
@@ -223,15 +214,8 @@ export default function Neoenergia() {
           fileName: file.name,
           mes_referencia: normalizeMesReferencia(data.data?.mes_referencia),
         };
-        const key = getInvoiceKey(invoice);
-        if (existingKeys.has(key)) {
-          duplicates++;
-          toast.warning(`${file.name}: já existe fatura desta instalação para ${invoice.mes_referencia}.`);
-          continue;
-        }
-        existingKeys.add(key);
-        newInvoices.push(invoice);
-        // Persiste no banco unificado (consumption_bills)
+        processed.push(invoice);
+        // Persiste (insert/update) no banco unificado
         await persistToDatabase(invoice, "upload");
         toast.success(`${file.name} processado com sucesso!`);
       } catch (err) {
@@ -240,11 +224,18 @@ export default function Neoenergia() {
       }
     }
 
-    if (newInvoices.length > 0) {
-      setInvoices((prev) => [...prev, ...newInvoices]);
-    }
-    if (duplicates > 0 && newInvoices.length === 0) {
-      toast.info(`${duplicates} arquivo(s) ignorado(s) por duplicidade.`);
+    if (processed.length > 0) {
+      setInvoices((prev) => {
+        const next = [...prev];
+        for (const inv of processed) {
+          const key = getInvoiceKey(inv);
+          const idx = next.findIndex((x) => getInvoiceKey(x) === key);
+          if (idx >= 0) { next[idx] = inv; updated++; }
+          else next.push(inv);
+        }
+        return next;
+      });
+      if (updated > 0) toast.info(`${updated} fatura(s) atualizada(s) por reimportação.`);
     }
     setLoading(false);
     e.target.value = "";
@@ -311,8 +302,19 @@ export default function Neoenergia() {
           <GoogleDriveImport
             existingInvoices={invoices}
             onInvoicesImported={(newInvoices) => {
-              setInvoices((prev) => [...prev, ...newInvoices]);
-              // Persiste todas as faturas importadas no banco unificado
+              setInvoices((prev) => {
+                const next = [...prev];
+                let updated = 0;
+                for (const inv of newInvoices) {
+                  const key = getInvoiceKey(inv);
+                  const idx = next.findIndex((x) => getInvoiceKey(x) === key);
+                  if (idx >= 0) { next[idx] = inv; updated++; }
+                  else next.push(inv);
+                }
+                if (updated > 0) toast.info(`${updated} fatura(s) atualizada(s) por reimportação.`);
+                return next;
+              });
+              // Persiste (insert/update) todas as faturas importadas
               newInvoices.forEach((inv) => { void persistToDatabase(inv, "drive"); });
             }}
           />

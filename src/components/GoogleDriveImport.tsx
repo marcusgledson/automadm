@@ -88,17 +88,16 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
         const already = existingNames.has((f.name || "").toLowerCase());
         return {
           ...f,
-          status: already ? ("done" as const) : ("pending" as const),
-          errorMsg: already ? "Já importado" : undefined,
+          status: "pending" as const,
+          errorMsg: already ? "Já importado — pode reimportar para atualizar" : undefined,
         };
       });
 
       setFiles(driveFiles);
-      // Pré-selecionar apenas os ainda não importados
-      setSelectedFiles(new Set(driveFiles.filter((f) => f.status === "pending").map((f) => f.id)));
-      const novos = driveFiles.filter((f) => f.status === "pending").length;
-      const repetidos = driveFiles.length - novos;
-      toast.success(`${driveFiles.length} PDF(s) encontrado(s)${repetidos ? ` — ${repetidos} já importado(s)` : ""}.`);
+      // Pré-selecionar todos (reimportação é permitida)
+      setSelectedFiles(new Set(driveFiles.map((f) => f.id)));
+      const reimport = driveFiles.filter((f) => f.errorMsg).length;
+      toast.success(`${driveFiles.length} PDF(s) encontrado(s)${reimport ? ` — ${reimport} já importado(s) anteriormente (serão atualizados se reimportados)` : ""}.`);
     } catch (err: unknown) {
       console.error("Error listing files:", err);
       const message = err instanceof Error ? err.message : "Erro ao listar arquivos.";
@@ -163,18 +162,13 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     }
 
     const importedInvoices: InvoiceData[] = [];
-    // Chaves já existentes (instalação + mês/ano) para evitar duplicidade
+    // Chaves existentes (instalação + mês/ano) — reimport substituirá ao invés de ignorar
     const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
-    let duplicates = 0;
+    let reimported = 0;
 
     for (const file of toProcess) {
-      if (file.status === "done") {
-        duplicates++;
-        continue;
-      }
-
       setFiles((prev) =>
-        prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const } : f))
+        prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: undefined } : f))
       );
 
       // Retry com backoff em caso de rate-limit (429) da IA
@@ -198,23 +192,17 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
             mes_referencia: normalizeMesReferencia(data.data?.mes_referencia as string | undefined),
           };
           const key = getInvoiceKey(invoice);
-
-          if (existingKeys.has(key)) {
-            duplicates++;
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === file.id
-                  ? { ...f, status: "done" as const, errorMsg: "Duplicado (instalação/mês)" }
-                  : f
-              )
-            );
-          } else {
-            existingKeys.add(key);
-            importedInvoices.push(invoice);
-            setFiles((prev) =>
-              prev.map((f) => (f.id === file.id ? { ...f, status: "done" as const } : f))
-            );
-          }
+          const isReimport = existingKeys.has(key);
+          if (isReimport) reimported++;
+          existingKeys.add(key);
+          importedInvoices.push(invoice);
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id
+                ? { ...f, status: "done" as const, errorMsg: isReimport ? "Atualizado (reimportado)" : undefined }
+                : f
+            )
+          );
           succeeded = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Erro";
@@ -250,10 +238,8 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     if (importedInvoices.length > 0) {
       onInvoicesImported(importedInvoices);
       toast.success(
-        `${importedInvoices.length} fatura(s) importada(s)${duplicates ? ` — ${duplicates} ignorada(s) por duplicidade` : ""}.`
+        `${importedInvoices.length} fatura(s) importada(s)${reimported ? ` — ${reimported} atualizada(s) por reimportação` : ""}.`
       );
-    } else if (duplicates > 0) {
-      toast.info(`Nenhuma nova fatura — ${duplicates} já estavam importadas.`);
     }
 
     setImporting(false);
