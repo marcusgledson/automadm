@@ -171,10 +171,6 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
         prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: undefined } : f))
       );
 
-      setFiles((prev) =>
-        prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const } : f))
-      );
-
       // Retry com backoff em caso de rate-limit (429) da IA
       const MAX_ATTEMPTS = 4;
       let attempt = 0;
@@ -196,23 +192,17 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
             mes_referencia: normalizeMesReferencia(data.data?.mes_referencia as string | undefined),
           };
           const key = getInvoiceKey(invoice);
-
-          if (existingKeys.has(key)) {
-            duplicates++;
-            setFiles((prev) =>
-              prev.map((f) =>
-                f.id === file.id
-                  ? { ...f, status: "done" as const, errorMsg: "Duplicado (instalação/mês)" }
-                  : f
-              )
-            );
-          } else {
-            existingKeys.add(key);
-            importedInvoices.push(invoice);
-            setFiles((prev) =>
-              prev.map((f) => (f.id === file.id ? { ...f, status: "done" as const } : f))
-            );
-          }
+          const isReimport = existingKeys.has(key);
+          if (isReimport) reimported++;
+          existingKeys.add(key);
+          importedInvoices.push(invoice);
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id
+                ? { ...f, status: "done" as const, errorMsg: isReimport ? "Atualizado (reimportado)" : undefined }
+                : f
+            )
+          );
           succeeded = true;
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Erro";
