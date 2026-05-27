@@ -17,7 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import GoogleDriveImport from "@/components/GoogleDriveImport";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 import { loadInvoices, saveInvoices, archiveInvoices, loadArchived, removeArchived, saveArchived, type StoredInvoice } from "@/lib/invoiceStore";
-import { useConsumptionBills, DUPLICATE_MESSAGE } from "@/hooks/useConsumptionBills";
+import { useConsumptionBills } from "@/hooks/useConsumptionBills";
 import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
 
 interface InvoiceData {
