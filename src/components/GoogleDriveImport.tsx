@@ -238,10 +238,8 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     if (importedInvoices.length > 0) {
       onInvoicesImported(importedInvoices);
       toast.success(
-        `${importedInvoices.length} fatura(s) importada(s)${duplicates ? ` — ${duplicates} ignorada(s) por duplicidade` : ""}.`
+        `${importedInvoices.length} fatura(s) importada(s)${reimported ? ` — ${reimported} atualizada(s) por reimportação` : ""}.`
       );
-    } else if (duplicates > 0) {
-      toast.info(`Nenhuma nova fatura — ${duplicates} já estavam importadas.`);
     }
 
     setImporting(false);
