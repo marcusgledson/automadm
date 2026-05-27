@@ -162,15 +162,14 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     }
 
     const importedInvoices: InvoiceData[] = [];
-    // Chaves já existentes (instalação + mês/ano) para evitar duplicidade
+    // Chaves existentes (instalação + mês/ano) — reimport substituirá ao invés de ignorar
     const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
-    let duplicates = 0;
+    let reimported = 0;
 
     for (const file of toProcess) {
-      if (file.status === "done") {
-        duplicates++;
-        continue;
-      }
+      setFiles((prev) =>
+        prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: undefined } : f))
+      );
 
       setFiles((prev) =>
         prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const } : f))
