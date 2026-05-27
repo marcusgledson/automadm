@@ -107,5 +107,5 @@ export function useConsumptionBills() {
     return !error;
   }, []);
 
-  return { bills, loading, fetchAll, insertBill, deleteBill, deleteMany };
+  return { bills, loading, fetchAll, insertBill, upsertBill, deleteBill, deleteMany };
 }
