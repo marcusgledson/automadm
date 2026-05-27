@@ -53,9 +53,9 @@ export default function Neoenergia() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [archivedOpen, setArchivedOpen] = useState(false);
   const [archived, setArchived] = useState<StoredInvoice[]>(() => loadArchived());
-  const { insertBill } = useConsumptionBills();
+  const { upsertBill } = useConsumptionBills();
 
-  // Persiste fatura no banco (consumption_bills) — usado também por upload e Drive
+  // Persiste (insert/update) fatura no banco — reimportações atualizam o registro
   const persistToDatabase = useCallback(async (inv: InvoiceData, source: "upload" | "drive") => {
     const row = toBillRow(inv as ExtractedInvoice, {
       fileName: inv.fileName || "fatura.pdf",
@@ -67,10 +67,9 @@ export default function Neoenergia() {
       toast.warning(`${inv.fileName}: não salva na base (${row.error})`);
       return;
     }
-    const res = await insertBill(row);
-    if (res.duplicate) toast.warning(`${inv.fileName}: ${DUPLICATE_MESSAGE}`);
-    else if (!res.ok) toast.error(`${inv.fileName}: ${res.error}`);
-  }, [insertBill]);
+    const res = await upsertBill(row);
+    if (!res.ok) toast.error(`${inv.fileName}: ${res.error}`);
+  }, [upsertBill]);
 
   useEffect(() => {
     saveInvoices(invoices);
