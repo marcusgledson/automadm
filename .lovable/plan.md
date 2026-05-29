@@ -1,117 +1,58 @@
-## Visão Geral
+# Plano de Evolução
 
-Vou transformar o módulo Neoenergia em uma **Central de Contas de Consumo** completa, com base de dados persistente no Lovable Cloud, suporte a múltiplos tipos de contas (Energia, Internet, Água, IPTU, IPVA, Taxas, etc.), validação de duplicidade, filtros avançados e análises/projeções enriquecidas com IA + pesquisa Google.
+## 1. Visual moderno + PWA mobile
 
----
+- Refinar `index.css` / `tailwind.config.ts` com gradientes suaves, sombras elegantes, tipografia mais leve e espaçamento mais arejado.
+- Tornar **Dashboard**, **Central de Contas e Despesas**, **Neoenergia** e **Analytics** totalmente responsivos (cards empilháveis, header colapsando ações em menu, tabelas com scroll horizontal + cartões em mobile).
+- Adicionar suporte **PWA instalável** (manifest + ícones + meta tags). Sem service worker / cache (evita travar preview do Lovable). Aviso: instalação só funciona no app publicado.
 
-## 1. Base de dados (Lovable Cloud)
+## 2. Renomear & unificar
 
-Criar tabela `consumption_bills` para persistir todas as faturas (importadas via Drive ou Upload):
+- Renomear "Central de Contas" → **"Central de Contas e Despesas"** em rotas, dashboard e títulos.
+- Integrar Faturas Neoenergia ao mesmo cadastro: faturas Neoenergia já gravam em `consumption_bills` (tipo `energia`); manter o módulo Neoenergia como **importador especializado** e fazer a Central listar tudo unificadamente, incluindo um filtro "Origem" (Neoenergia / Upload / Manual / OFX).
+
+## 3. Persistência do Extrato OFX
+
+Nova tabela `bank_statements`:
 
 ```text
-consumption_bills
-├── id, user_id
-├── tipo_conta         (energia | internet | agua | iptu | ipva | taxa | outro)
-├── fornecedor         (Neoenergia, Vivo, Sabesp, Prefeitura...)
-├── codigo_instalacao  (chave principal — ou número do contrato/matrícula)
-├── titular, cpf_cnpj, endereco
-├── mes_referencia     (YYYY-MM padronizado)
-├── data_vencimento    (date)
-├── valor_total
-├── consumo_kwh / consumo_m3 / consumo (genérico)
-├── impostos_json      (icms, pis, cofins, iss, etc.)
-├── itens_json         (itens da fatura)
-├── historico_json     (histórico de consumo quando disponível)
-├── raw_data           (dump completo da IA)
-├── file_name, source  (drive | upload)
-└── created_at, updated_at
+user_id, agencia, conta, data, lancamento, descricao,
+valor, tipo, tipo_lancamento, categoria, documento,
+codigo_operacao, fitid, raw jsonb, created_at, updated_at
 ```
 
-- **RLS**: cada usuário enxerga apenas suas próprias faturas.
-- **Índice único**: `(user_id, codigo_instalacao, data_vencimento)` → garante duplicidade zero.
+- Chave única: `(user_id, agencia, conta, fitid)` para evitar duplicidade real de transação (FITID é o ID único OFX).
+- Operação **UPSERT**: novas linhas inseridas; existentes recebem UPDATE dos campos atualizados.
+- Header do OFX (`<BANKACCTFROM>`) extraído para capturar **Agência (BRANCHID) + Conta (ACCTID)** e exibido no topo da tela de Extrato.
+- Tela `/extrato` ganha botão **"Salvar na Base"** + listagem dos extratos salvos com filtro por Agência/Conta.
 
----
+## 4. Gravar Despesas (Débitos) na Central
 
-## 2. Validação de duplicidade
+Nova tabela `expenses`:
 
-Regra única para Drive **e** Upload:
-- Chave = `codigo_instalacao + data_vencimento`
-- Se já existe → toast/erro: **"Fatura com Código Instalação e Data Vencimento já carregados na Base"**
-- Vale para qualquer tipo de conta (não só Neoenergia)
+```text
+user_id, tipo_lancamento, categoria, numero_documento,
+detalhes, valor, data_vencimento, data_pagamento, origem
+```
 
----
+- Ao salvar o OFX, transações com `tipo = Débito` viram registros automáticos em `expenses` (origem `ofx`).
+- Na Central de Contas e Despesas, nova aba **"Despesas"** com:
+  - **Toggle**: "📎 Carregar arquivo" ou "✍️ Lançar manualmente".
+  - Modo arquivo → upload PDF/OFX (reaproveita `UniversalBillUpload` + parser OFX).
+  - Modo manual → formulário com os campos pedidos (Tipo, Categoria, Nº Documento, Detalhes, Valor, Vencimento, Pagamento).
+- Lista ordenada por vencimento crescente, filtros (tipo, categoria, período), edição/exclusão.
 
-## 3. Importação universal (multi-conta)
+## 5. Detalhes técnicos
 
-Novo componente `UniversalBillUpload`:
-- Aceita PDF de qualquer fornecedor (Energia / Internet / Água / IPTU / IPVA / Taxas)
-- Usuário escolhe o **tipo de conta** antes de subir
-- Edge function `parse-bill` usa Lovable AI (Gemini) com prompt adaptado ao tipo
-- Mesma validação de duplicidade da importação via Drive
+- 2 migrations: `bank_statements` e `expenses` com RLS por `auth.uid()` e GRANTs.
+- Novo hook `useBankStatements` (upsert por FITID) e `useExpenses` (CRUD).
+- Atualizar `fileParser.ts` para extrair `BRANCHID` e `ACCTID` do header OFX.
+- Reaproveitar mapeamento existente para classificar categoria automaticamente nas despesas vindas do OFX.
+- Manter Faturas Neoenergia funcionando exatamente como hoje, apenas refletindo na Central unificada.
 
-Drive import continua funcionando, agora gravando no banco em vez de só `localStorage`.
+## Arquivos principais
+- **Migrations:** `bank_statements`, `expenses`
+- **Criados:** `src/hooks/useBankStatements.ts`, `src/hooks/useExpenses.ts`, `src/components/ExpenseForm.tsx`, `src/pages/ContasDespesas.tsx` (substitui ContasCentral), `public/manifest.json`, `public/icon-*.png`
+- **Editados:** `src/lib/fileParser.ts`, `src/pages/Index.tsx` (Extrato), `src/pages/Dashboard.tsx`, `src/App.tsx`, `index.html`, `src/index.css`, `tailwind.config.ts`
 
----
-
-## 4. Nova tela: Central de Contas (`/contas`)
-
-Padrão visual idêntico ao **Análise de Extrato**:
-- Tabela ordenada por **data de vencimento crescente**
-- Filtros: Código Instalação · Mês Referência · Tipo de Conta · Fornecedor · Período
-- Busca textual (titular, endereço)
-- Badges por tipo de conta com cores semânticas
-- Ações por linha: ver detalhe, excluir, exportar
-- Export XLSX/CSV reutilizando `exportXlsx.ts`
-
----
-
-## 5. Análises & Projeções evoluídas
-
-Nova aba **"Análises & Projeções"** em `NeoenergiaAnalytics` (renomeado para "Análises de Consumo"):
-
-**a) Média histórica (até 5 anos)**
-- Slider: 1 → 5 anos de janela
-- Média mensal, anual, por tipo de conta
-- Comparativo ano-a-ano com variação %
-
-**b) Projeção 12 meses**
-- Baseado em média + tendência (regressão linear simples)
-- Considera inflação setorial estimada
-
-**c) Impostos por ano (com pesquisa Google via IA)**
-- Edge function `tax-research` que chama Lovable AI (Gemini 2.5 Pro com Google grounding) para buscar:
-  - Carga tributária média de energia/água/internet no Brasil por ano
-  - ICMS, PIS, COFINS, ISS aplicáveis
-- Resultado mostrado em card com fonte e ano
-- Cache local (24h) para evitar chamadas repetidas
-
-**d) Cenário "What-if"**
-- Inputs: aumento tarifa %, mudança de consumo %
-- Recalcula projeção dinamicamente
-
----
-
-## 6. Detalhes técnicos
-
-- **Migration** criando tabela + RLS + índice único
-- **Edge functions** novas: `parse-bill` (genérico) e `tax-research`
-- **Edge function existente** `download-drive-file` adaptada para gravar no banco
-- **Hook** `useConsumptionBills` para CRUD + realtime
-- **Auth obrigatória** já existe no projeto
-
----
-
-## 7. Ordem de implementação
-
-1. Migration da tabela `consumption_bills`
-2. Hook `useConsumptionBills` + tipos
-3. Adaptar Drive import para gravar no banco com validação
-4. Componente `UniversalBillUpload` + edge `parse-bill`
-5. Nova página `/contas` (Central de Contas) com filtros
-6. Evoluir analytics: médias até 5 anos + projeção + cenário
-7. Edge `tax-research` + card de impostos por ano
-8. Link no Dashboard para a nova Central
-
----
-
-Quer que eu siga com **tudo de uma vez**, ou prefere que eu **divida em fases** (ex.: começar pela base de dados + duplicidade e depois a Central + análises)?
+Confirma para eu seguir? Se quiser priorizar parte (ex: só visual+PWA primeiro, ou só persistência), me diga.
