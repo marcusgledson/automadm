@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileSpreadsheet, Zap, Receipt, LogOut, Minimize2, Maximize2, X } from "lucide-react";
+import { FileSpreadsheet, Zap, Receipt, Minimize2, Maximize2, X, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -22,85 +22,82 @@ export default function Dashboard() {
   }, []);
 
   const handleClose = useCallback(() => {
-    if (confirm("Deseja realmente sair do aplicativo?")) {
-      signOut();
-    }
+    if (confirm("Deseja realmente sair do aplicativo?")) signOut();
   }, [signOut]);
 
   const modules = [
     {
       title: "Análise de Extrato",
-      description: "Importe arquivos OFX e analise seus extratos bancários com filtros, resumos e exportação.",
+      description: "Importe OFX, analise transações e salve seu extrato bancário na base por agência e conta.",
       icon: FileSpreadsheet,
       path: "/extrato",
-      color: "text-primary",
-      bgColor: "bg-primary/10",
+      gradient: "from-primary/15 to-primary/0",
+      iconBg: "bg-primary/12 text-primary",
     },
     {
       title: "Faturas Neoenergia",
-      description: "Consulte e baixe suas faturas de energia elétrica da Neoenergia.",
+      description: "Importação especializada de faturas de energia (Drive ou upload). Tudo é consolidado na Central.",
       icon: Zap,
       path: "/neoenergia",
-      color: "text-accent",
-      bgColor: "bg-accent/10",
+      gradient: "from-accent/15 to-accent/0",
+      iconBg: "bg-accent/12 text-accent",
     },
     {
-      title: "Central de Contas",
-      description: "Energia, Internet, Água, IPTU, IPVA, Taxas. Base unificada com filtros e análises.",
+      title: "Central de Contas e Despesas",
+      description: "Energia, Internet, Água, IPTU, IPVA, Taxas, Boletos. Carregue arquivos ou lance manualmente.",
       icon: Receipt,
       path: "/contas",
-      color: "text-emerald-600 dark:text-emerald-400",
-      bgColor: "bg-emerald-500/10",
+      gradient: "from-emerald-500/15 to-emerald-500/0",
+      iconBg: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
     },
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      {/* Title bar */}
-      <header className="flex h-12 items-center justify-between border-b border-border bg-card px-4 select-none">
-        <div className="flex items-center gap-2">
-          <FileSpreadsheet className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Painel Financeiro</span>
+    <div className="flex min-h-screen flex-col app-surface">
+      <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4 select-none">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="rounded-lg bg-primary/10 p-1.5">
+            <FileSpreadsheet className="h-4 w-4 text-primary" />
+          </div>
+          <span className="truncate text-sm font-semibold text-foreground">Painel Financeiro</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="mr-3 flex items-center gap-2 text-xs text-muted-foreground">
-            {user?.email}
-          </div>
+          <div className="mr-2 hidden text-xs text-muted-foreground sm:block">{user?.email}</div>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")} title="Minimizar">
             <Minimize2 className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={isFullscreen ? "Restaurar" : "Maximizar"}>
             <Maximize2 className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose} title="Fechar">
+          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose} title="Sair">
             <X className="h-4 w-4" />
           </Button>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-3xl space-y-8">
-          <div className="text-center space-y-2 opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>
-            <h1 className="text-3xl font-bold text-foreground">Bem-vindo ao Painel Financeiro</h1>
-            <p className="text-muted-foreground">Selecione um módulo para começar</p>
+      <main className="safe-bottom flex flex-1 items-start justify-center p-4 sm:p-8">
+        <div className="w-full max-w-5xl space-y-6 sm:space-y-10">
+          <div className="space-y-3 pt-2 text-center opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+              <Sparkles className="h-3 w-3 text-accent" /> Edição moderna · pronto para mobile
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
+            <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modules.map((mod, i) => (
               <Card
                 key={mod.path}
-                className="cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] opacity-0 animate-fade-up"
-                style={{ animationDelay: `${150 + i * 100}ms` }}
                 onClick={() => navigate(mod.path)}
+                className={`card-elevated group relative cursor-pointer overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-xl opacity-0 animate-fade-up bg-gradient-to-br ${mod.gradient}`}
+                style={{ animationDelay: `${150 + i * 100}ms` }}
               >
-                <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                  <div className={`rounded-lg p-3 ${mod.bgColor}`}>
-                    <mod.icon className={`h-6 w-6 ${mod.color}`} />
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                  <div className={`rounded-xl p-3 ${mod.iconBg} transition-transform group-hover:scale-110`}>
+                    <mod.icon className="h-6 w-6" />
                   </div>
-                  <div>
-                    <CardTitle className="text-lg">{mod.title}</CardTitle>
-                  </div>
+                  <CardTitle className="text-base sm:text-lg leading-tight">{mod.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm">{mod.description}</CardDescription>
