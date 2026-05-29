@@ -1,0 +1,17 @@
+{
+  "name": "Painel Financeiro",
+  "short_name": "Financeiro",
+  "description": "Painel Financeiro — Extrato OFX, Faturas Neoenergia e Central de Contas e Despesas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fafaf7",
+  "theme_color": "#3f8c70",
+  "lang": "pt-BR",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
