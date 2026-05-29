@@ -82,10 +82,31 @@
 
 @layer utilities {
   .auth-gradient {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--auth-gradient-start)) 0%,
-      hsl(var(--auth-gradient-end)) 100%
-    );
+    background:
+      radial-gradient(1200px 600px at 10% -10%, hsl(var(--primary) / 0.10), transparent 60%),
+      radial-gradient(1000px 500px at 110% 10%, hsl(var(--accent) / 0.10), transparent 60%),
+      linear-gradient(135deg, hsl(var(--auth-gradient-start)) 0%, hsl(var(--auth-gradient-end)) 100%);
   }
+  .app-surface {
+    background:
+      radial-gradient(1100px 500px at -10% -10%, hsl(var(--primary) / 0.06), transparent 55%),
+      radial-gradient(900px 400px at 110% 0%, hsl(var(--accent) / 0.06), transparent 55%),
+      hsl(var(--background));
+  }
+  .card-elevated {
+    @apply rounded-2xl border border-border/60 bg-card/80 backdrop-blur-sm shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.10)];
+  }
+  .gradient-text {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  /* Safe-area for installed PWA on iOS */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@layer base {
+  html, body { -webkit-tap-highlight-color: transparent; }
 }
