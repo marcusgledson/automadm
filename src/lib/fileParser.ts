@@ -101,13 +101,35 @@ export function parseOFX(text: string): FinancialRecord[] {
       categoria: classifyCategory(descricao),
       documento: get("FITID") || undefined,
       codigoOperacao,
+      fitid: get("FITID") || undefined,
       raw: { TRNTYPE: trnType, DTPOSTED: dtStr, TRNAMT: get("TRNAMT"), NAME: name, MEMO: memo, FITID: get("FITID"), CHECKNUM: get("CHECKNUM"), REFNUM: get("REFNUM") },
     });
   }
   return records;
 }
 
+export function parseOFXAccount(text: string): OFXAccountInfo {
+  const get = (tag: string) => {
+    const m = new RegExp(`<${tag}>([^<\\n]+)`, "i").exec(text);
+    return m ? m[1].trim() : "";
+  };
+  return {
+    banco: get("BANKID") || get("ORG") || undefined,
+    agencia: get("BRANCHID") || undefined,
+    conta: get("ACCTID") || undefined,
+  };
+}
+
+export function parseOFXFull(text: string): ParsedOFX {
+  return { account: parseOFXAccount(text), records: parseOFX(text) };
+}
+
 export async function parseFile(file: File): Promise<FinancialRecord[]> {
   const text = await file.text();
   return parseOFX(text);
+}
+
+export async function parseFileFull(file: File): Promise<ParsedOFX> {
+  const text = await file.text();
+  return parseOFXFull(text);
 }
