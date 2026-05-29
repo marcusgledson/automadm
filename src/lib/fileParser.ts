@@ -8,7 +8,19 @@ export interface FinancialRecord {
   categoria: string;
   documento?: string;
   codigoOperacao?: string;
+  fitid?: string;
   raw: Record<string, unknown>;
+}
+
+export interface OFXAccountInfo {
+  banco?: string;
+  agencia?: string;
+  conta?: string;
+}
+
+export interface ParsedOFX {
+  account: OFXAccountInfo;
+  records: FinancialRecord[];
 }
 
 function classifyType(valor: number): string {
