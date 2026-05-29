@@ -14,6 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_statements: {
+        Row: {
+          agencia: string
+          banco: string | null
+          categoria: string | null
+          codigo_operacao: string | null
+          conta: string
+          created_at: string
+          data: string | null
+          data_raw: string | null
+          descricao: string | null
+          documento: string | null
+          file_name: string | null
+          fitid: string
+          id: string
+          lancamento: string | null
+          raw: Json
+          tipo: string | null
+          tipo_lancamento: string | null
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          agencia?: string
+          banco?: string | null
+          categoria?: string | null
+          codigo_operacao?: string | null
+          conta?: string
+          created_at?: string
+          data?: string | null
+          data_raw?: string | null
+          descricao?: string | null
+          documento?: string | null
+          file_name?: string | null
+          fitid: string
+          id?: string
+          lancamento?: string | null
+          raw?: Json
+          tipo?: string | null
+          tipo_lancamento?: string | null
+          updated_at?: string
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          agencia?: string
+          banco?: string | null
+          categoria?: string | null
+          codigo_operacao?: string | null
+          conta?: string
+          created_at?: string
+          data?: string | null
+          data_raw?: string | null
+          descricao?: string | null
+          documento?: string | null
+          file_name?: string | null
+          fitid?: string
+          id?: string
+          lancamento?: string | null
+          raw?: Json
+          tipo?: string | null
+          tipo_lancamento?: string | null
+          updated_at?: string
+          user_id?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       consumption_bills: {
         Row: {
           codigo_instalacao: string
@@ -83,6 +152,57 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_total?: number | null
+        }
+        Relationships: []
+      }
+      expenses: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string | null
+          detalhes: string | null
+          id: string
+          numero_documento: string | null
+          origem: string
+          raw: Json
+          source_ref: string | null
+          tipo_lancamento: string
+          updated_at: string
+          user_id: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          detalhes?: string | null
+          id?: string
+          numero_documento?: string | null
+          origem?: string
+          raw?: Json
+          source_ref?: string | null
+          tipo_lancamento?: string
+          updated_at?: string
+          user_id: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string | null
+          detalhes?: string | null
+          id?: string
+          numero_documento?: string | null
+          origem?: string
+          raw?: Json
+          source_ref?: string | null
+          tipo_lancamento?: string
+          updated_at?: string
+          user_id?: string
+          valor?: number
         }
         Relationships: []
       }
