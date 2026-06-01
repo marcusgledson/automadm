@@ -1,4 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +31,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Require authenticated user
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+  const { data: userData, error: userErr } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
+  if (userErr || !userData?.user) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
 
   try {
     const { folderLink } = await req.json();
@@ -127,8 +145,8 @@ serve(async (req) => {
       name: f.name,
       size: f.size ? parseInt(f.size) : null,
       modifiedTime: f.modifiedTime || null,
-      downloadUrl: `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media${API_KEY ? `&key=${API_KEY}` : ""}`,
     }));
+
 
     return new Response(
       JSON.stringify({ success: true, files, folderId }),
