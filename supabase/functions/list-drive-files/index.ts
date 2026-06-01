@@ -145,8 +145,8 @@ serve(async (req) => {
       name: f.name,
       size: f.size ? parseInt(f.size) : null,
       modifiedTime: f.modifiedTime || null,
-      downloadUrl: `https://www.googleapis.com/drive/v3/files/${f.id}?alt=media${API_KEY ? `&key=${API_KEY}` : ""}`,
     }));
+
 
     return new Response(
       JSON.stringify({ success: true, files, folderId }),
