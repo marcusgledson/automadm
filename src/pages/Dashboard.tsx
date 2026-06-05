@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import UserMenu from "@/components/UserMenu";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  useAuth();
   const navigate = useNavigate();
 
   const modules = [
