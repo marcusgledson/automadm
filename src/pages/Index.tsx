@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, Minimize2, Maximize2, X, ArrowLeft, Database, Loader2, Landmark } from "lucide-react";
+import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
@@ -108,10 +109,7 @@ export default function Index() {
               <FolderOpen className="h-4 w-4" /> Abrir OFX
             </Button>
           )}
-          <div className="mr-2 hidden text-xs text-muted-foreground sm:block">{user?.email}</div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")}><Minimize2 className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen}><Maximize2 className="h-4 w-4" /></Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose}><X className="h-4 w-4" /></Button>
+          <UserMenu />
         </div>
       </header>
 

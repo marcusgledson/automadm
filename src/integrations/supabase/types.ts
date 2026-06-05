@@ -155,6 +155,33 @@ export type Database = {
         }
         Relationships: []
       }
+      drive_links: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          updated_at: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       expenses: {
         Row: {
           categoria: string | null

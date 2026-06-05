@@ -17,6 +17,7 @@ import {
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
 import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter, Calculator, Loader2 } from "lucide-react";
+import UserMenu from "@/components/UserMenu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { loadInvoices, parseMesReferencia, formatMesLabel, type StoredInvoice } from "@/lib/invoiceStore";
@@ -290,18 +291,7 @@ export default function NeoenergiaAnalytics() {
           <BarChart3 className="h-5 w-5 text-accent" />
           <span className="text-sm font-semibold text-foreground">Neoenergia · Análises</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="mr-3 text-xs text-muted-foreground">{user?.email}</div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")} title="Minimizar">
-            <Minimize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={isFullscreen ? "Restaurar" : "Maximizar"}>
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose} title="Fechar">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <UserMenu />
       </header>
 
       <main className="flex-1 overflow-auto p-6">
