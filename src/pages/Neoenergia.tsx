@@ -281,18 +281,7 @@ export default function Neoenergia() {
           <Zap className="h-5 w-5 text-accent" />
           <span className="text-sm font-semibold text-foreground">Faturas Neoenergia</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="mr-3 flex items-center gap-2 text-xs text-muted-foreground">{user?.email}</div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")} title="Minimizar">
-            <Minimize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={isFullscreen ? "Restaurar" : "Maximizar"}>
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose} title="Fechar">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <UserMenu />
       </header>
 
       {/* Content */}
