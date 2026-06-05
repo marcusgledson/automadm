@@ -150,18 +150,7 @@ export default function ContasCentral() {
           <Receipt className="h-5 w-5 text-accent" />
           <span className="truncate text-sm font-semibold text-foreground">Central de Contas e Despesas</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="mr-2 hidden text-xs text-muted-foreground sm:block">{user?.email}</div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")}>
-            <Minimize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen}>
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <UserMenu />
       </header>
 
       <main className="safe-bottom flex-1 overflow-auto p-3 sm:p-6">
