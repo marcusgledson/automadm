@@ -5,23 +5,8 @@ import { useNavigate } from "react-router-dom";
 import UserMenu from "@/components/UserMenu";
 
 export default function Dashboard() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  }, []);
-
-  const handleClose = useCallback(() => {
-    if (confirm("Deseja realmente sair do aplicativo?")) signOut();
-  }, [signOut]);
 
   const modules = [
     {
@@ -59,19 +44,9 @@ export default function Dashboard() {
           </div>
           <span className="truncate text-sm font-semibold text-foreground">Painel Financeiro</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="mr-2 hidden text-xs text-muted-foreground sm:block">{user?.email}</div>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info("Aplicativo minimizado")} title="Minimizar">
-            <Minimize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleFullscreen} title={isFullscreen ? "Restaurar" : "Maximizar"}>
-            <Maximize2 className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-destructive hover:text-destructive-foreground" onClick={handleClose} title="Sair">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+        <UserMenu />
       </header>
+
 
       <main className="safe-bottom flex flex-1 items-start justify-center p-4 sm:p-8">
         <div className="w-full max-w-5xl space-y-6 sm:space-y-10">
