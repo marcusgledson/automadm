@@ -1,11 +1,10 @@
-import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileSpreadsheet, Zap, Receipt, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import UserMenu from "@/components/UserMenu";
 
 export default function Dashboard() {
-  useAuth();
+  const navigate = useNavigate();
   const navigate = useNavigate();
 
   const modules = [
