@@ -17,6 +17,7 @@ import {
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
 import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter, Calculator, Loader2 } from "lucide-react";
+import UserMenu from "@/components/UserMenu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { loadInvoices, parseMesReferencia, formatMesLabel, type StoredInvoice } from "@/lib/invoiceStore";
