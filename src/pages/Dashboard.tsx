@@ -5,7 +5,6 @@ import UserMenu from "@/components/UserMenu";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const navigate = useNavigate();
 
   const modules = [
     {
