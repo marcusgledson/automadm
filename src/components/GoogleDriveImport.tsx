@@ -9,10 +9,11 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle, Trash2, Archive } from "lucide-react";
+import { FolderOpen, Loader2, FileText, Download, CheckCircle2, AlertCircle, Trash2, Archive, Save, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
+import { useDriveLinks } from "@/hooks/useDriveLinks";
 
 interface DriveFile {
   id: string;
