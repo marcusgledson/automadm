@@ -18,6 +18,7 @@ import UniversalBillUpload from "@/components/UniversalBillUpload";
 import ExpenseForm from "@/components/ExpenseForm";
 import { useConsumptionBills, type BillType } from "@/hooks/useConsumptionBills";
 import { useExpenses } from "@/hooks/useExpenses";
+import UserMenu from "@/components/UserMenu";
 
 const TIPO_LABEL: Record<BillType, string> = {
   energia: "Energia", internet: "Internet", agua: "Água", gas: "Gás",
