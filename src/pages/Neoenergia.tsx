@@ -19,6 +19,7 @@ import { getInvoiceKey, normalizeMesReferencia } from "@/lib/invoiceKey";
 import { loadInvoices, saveInvoices, archiveInvoices, loadArchived, removeArchived, saveArchived, type StoredInvoice } from "@/lib/invoiceStore";
 import { useConsumptionBills } from "@/hooks/useConsumptionBills";
 import { toBillRow, type ExtractedInvoice } from "@/lib/billMapper";
+import UserMenu from "@/components/UserMenu";
 
 interface InvoiceData {
   fileName: string;
