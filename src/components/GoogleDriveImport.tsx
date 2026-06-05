@@ -284,7 +284,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             placeholder="https://drive.google.com/drive/folders/..."
             value={folderLink}
@@ -292,11 +292,70 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
             disabled={loading || importing}
             className="flex-1"
           />
-          <Button onClick={listFiles} disabled={loading || importing || !folderLink.trim()}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Listar PDFs
-          </Button>
+          <Input
+            placeholder="Apelido (opcional)"
+            value={linkLabel}
+            onChange={(e) => setLinkLabel(e.target.value)}
+            disabled={loading || importing}
+            className="sm:max-w-[180px]"
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={saveCurrentLink}
+              disabled={loading || importing || !folderLink.trim()}
+              title="Salvar este link na lista"
+            >
+              <Save className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Salvar link</span>
+            </Button>
+            <Button onClick={listFiles} disabled={loading || importing || !folderLink.trim()}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Listar PDFs
+            </Button>
+          </div>
         </div>
+
+        {savedLinks.length > 0 && (
+          <div className="rounded-lg border border-border bg-muted/20 p-2">
+            <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">
+              Links salvos ({savedLinks.length})
+            </p>
+            <ul className="space-y-1">
+              {savedLinks.map((l) => (
+                <li
+                  key={l.id}
+                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted/60"
+                >
+                  <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <button
+                    type="button"
+                    className="flex-1 truncate text-left text-foreground hover:underline"
+                    onClick={() => setFolderLink(l.url)}
+                    title={l.url}
+                    disabled={loading || importing}
+                  >
+                    {l.label ? (
+                      <span><span className="font-medium">{l.label}</span> <span className="text-xs text-muted-foreground">— {l.url}</span></span>
+                    ) : (
+                      <span className="text-xs">{l.url}</span>
+                    )}
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                    onClick={() => deleteSavedLink(l.id)}
+                    disabled={loading || importing}
+                    title="Excluir link salvo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {files.length > 0 && (
           <div className="space-y-3">
