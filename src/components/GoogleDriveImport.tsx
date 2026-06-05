@@ -54,11 +54,29 @@ interface GoogleDriveImportProps {
 
 export default function GoogleDriveImport({ onInvoicesImported, existingInvoices = [] }: GoogleDriveImportProps) {
   const [folderLink, setFolderLink] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [pdfPassword, setPdfPassword] = useState("");
+  const { links: savedLinks, addLink, removeLink } = useDriveLinks();
+
+  const saveCurrentLink = useCallback(async () => {
+    const res = await addLink(folderLink, linkLabel);
+    if (!res.ok) toast.error(res.error || "Falha ao salvar o link.");
+    else {
+      toast.success("Link salvo na lista.");
+      setLinkLabel("");
+    }
+  }, [folderLink, linkLabel, addLink]);
+
+  const deleteSavedLink = useCallback(async (id: string) => {
+    if (!confirm("Excluir este link salvo?")) return;
+    const res = await removeLink(id);
+    if (!res.ok) toast.error(res.error || "Falha ao excluir.");
+    else toast.success("Link excluído.");
+  }, [removeLink]);
 
   const listFiles = useCallback(async () => {
     if (!folderLink.trim()) {
