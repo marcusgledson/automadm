@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, Minimize2, Maximize2, X, ArrowLeft, Database, Loader2, Landmark } from "lucide-react";
+import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
