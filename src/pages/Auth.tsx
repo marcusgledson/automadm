@@ -57,6 +57,7 @@ export default function Auth() {
             {isSignUp ? "Entrar" : "Cadastrar"}
           </button>
         </p>
+        </div>
       </div>
     </div>
   );
