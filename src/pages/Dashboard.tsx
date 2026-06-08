@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { FileSpreadsheet, Zap, Receipt, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import UserMenu from "@/components/UserMenu";
+import FinanceHero from "@/components/FinanceHero";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -48,12 +49,15 @@ export default function Dashboard() {
 
       <main className="safe-bottom flex flex-1 items-start justify-center p-4 sm:p-8">
         <div className="w-full max-w-5xl space-y-6 sm:space-y-10">
-          <div className="space-y-3 pt-2 text-center opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
-              <Sparkles className="h-3 w-3 text-accent" /> Edição moderna · pronto para mobile
+          <div className="grid items-center gap-6 md:grid-cols-[1.1fr_1fr]">
+            <div className="space-y-3 text-center md:text-left opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+                <Sparkles className="h-3 w-3 text-accent" /> Edição moderna · pronto para mobile
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
+              <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
-            <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
+            <FinanceHero className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

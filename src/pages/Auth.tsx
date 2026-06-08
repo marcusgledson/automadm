@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, User } from "lucide-react";
+import FinanceHero from "@/components/FinanceHero";
 
 export default function Auth() {
   const { user, loading } = useAuth();
@@ -22,11 +23,13 @@ export default function Auth() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="flex min-h-screen items-center justify-center auth-gradient px-4">
-      <div
-        className="w-full max-w-[400px] opacity-0 animate-fade-up"
-        style={{ animationDelay: "100ms" }}
-      >
+    <div className="flex min-h-screen items-center justify-center auth-gradient px-4 py-8">
+      <div className="grid w-full max-w-5xl items-center gap-8 md:grid-cols-2">
+        <FinanceHero priority className="hidden aspect-[4/3] md:block" />
+        <div
+          className="w-full max-w-[400px] justify-self-center opacity-0 animate-fade-up"
+          style={{ animationDelay: "100ms" }}
+        >
         <div className="mb-8 text-center">
           <h1
             className="text-3xl font-bold tracking-tight text-foreground"
@@ -54,6 +57,7 @@ export default function Auth() {
             {isSignUp ? "Entrar" : "Cadastrar"}
           </button>
         </p>
+        </div>
       </div>
     </div>
   );
