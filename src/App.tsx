@@ -12,11 +12,13 @@ import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
 import ContasCentral from "./pages/ContasCentral";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
+import { useIdleLogout } from "@/hooks/useIdleLogout";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
+  useIdleLogout(15 * 60 * 1000);
 
   if (loading) {
     return (
