@@ -41,6 +41,11 @@ interface PendingAction {
   label?: string;
 }
 
+interface ExportSummaryItem {
+  label: string;
+  count: number;
+}
+
 export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
