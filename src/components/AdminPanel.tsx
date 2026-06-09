@@ -174,7 +174,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           <div className="space-y-5">
             <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
-              <Button variant="outline" className="w-full justify-start" onClick={exportAll} disabled={busy !== null}>
+              <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
               </Button>
