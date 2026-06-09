@@ -60,13 +60,35 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [exportSummary, setExportSummary] = useState<ExportSummaryItem[]>([]);
   const [exportBusy, setExportBusy] = useState(false);
 
-  const exportAll = async () => {
+  const prepareExport = async () => {
     if (!user) return;
     setBusy("export");
     try {
+      const summary: ExportSummaryItem[] = [];
+      for (const t of TABLES) {
+        const { count, error } = await supabase
+          .from(t.key)
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if (error) throw error;
+        summary.push({ label: t.label, count: count ?? 0 });
+      }
+      setExportSummary(summary);
+      setExportConfirmOpen(true);
+    } catch (e) {
+      toast.error("Falha ao preparar exportação: " + (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const doExport = async () => {
+    if (!user) return;
+    setExportBusy(true);
+    try {
       const dump: Record<string, unknown[]> = {};
       for (const t of TABLES) {
-        const { data } = await supabase.from(t.key).select("*");
+        const { data } = await supabase.from(t.key).select("*").eq("user_id", user.id);
         dump[t.key] = data ?? [];
       }
       const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
@@ -76,10 +98,12 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
       a.click();
       URL.revokeObjectURL(a.href);
       toast.success("Backup exportado.");
+      setExportConfirmOpen(false);
+      setExportSummary([]);
     } catch (e) {
       toast.error("Falha ao exportar: " + (e as Error).message);
     } finally {
-      setBusy(null);
+      setExportBusy(false);
     }
   };
 
