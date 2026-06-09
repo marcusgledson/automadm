@@ -57,7 +57,7 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
               <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
             </div>
-            <FinanceHero className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
+            <FinanceHero editable className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
