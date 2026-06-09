@@ -89,23 +89,37 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const doExport = async () => {
     if (!user) return;
     setExportBusy(true);
+    setExportError(null);
+    setExportProgress(0);
+    setExportStage("Iniciando...");
     try {
       const dump: Record<string, unknown[]> = {};
-      for (const t of TABLES) {
-        const { data } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+      const total = TABLES.length + 1; // +1 for file generation step
+      for (let i = 0; i < TABLES.length; i++) {
+        const t = TABLES[i];
+        setExportStage(`Lendo ${t.label}...`);
+        const { data, error } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+        if (error) throw new Error(`Falha ao ler "${t.label}": ${error.message}`);
         dump[t.key] = data ?? [];
+        setExportProgress(Math.round(((i + 1) / total) * 100));
       }
+      setExportStage("Gerando arquivo JSON...");
       const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
+      if (blob.size === 0) throw new Error("Arquivo gerado está vazio.");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast.success("Backup exportado.");
+      setExportProgress(100);
+      setExportStage("Concluído");
+      toast.success("Backup exportado com sucesso.");
       setExportConfirmOpen(false);
       setExportSummary([]);
     } catch (e) {
-      toast.error("Falha ao exportar: " + (e as Error).message);
+      const msg = (e as Error).message || "Erro desconhecido";
+      setExportError(msg);
+      toast.error("Falha ao exportar backup: " + msg);
     } finally {
       setExportBusy(false);
     }
