@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle } from "lucide-react";
+import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
 
 interface Props {
   open: boolean;
