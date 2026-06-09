@@ -56,6 +56,10 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
 
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exportSummary, setExportSummary] = useState<ExportSummaryItem[]>([]);
+  const [exportBusy, setExportBusy] = useState(false);
+
   const exportAll = async () => {
     if (!user) return;
     setBusy("export");
