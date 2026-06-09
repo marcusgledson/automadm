@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle } from "lucide-react";
+import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -41,6 +41,11 @@ interface PendingAction {
   label?: string;
 }
 
+interface ExportSummaryItem {
+  label: string;
+  count: number;
+}
+
 export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const [busy, setBusy] = useState<string | null>(null);
@@ -51,13 +56,39 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
 
-  const exportAll = async () => {
+  const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+  const [exportSummary, setExportSummary] = useState<ExportSummaryItem[]>([]);
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const prepareExport = async () => {
     if (!user) return;
     setBusy("export");
     try {
+      const summary: ExportSummaryItem[] = [];
+      for (const t of TABLES) {
+        const { count, error } = await supabase
+          .from(t.key)
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        if (error) throw error;
+        summary.push({ label: t.label, count: count ?? 0 });
+      }
+      setExportSummary(summary);
+      setExportConfirmOpen(true);
+    } catch (e) {
+      toast.error("Falha ao preparar exportação: " + (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const doExport = async () => {
+    if (!user) return;
+    setExportBusy(true);
+    try {
       const dump: Record<string, unknown[]> = {};
       for (const t of TABLES) {
-        const { data } = await supabase.from(t.key).select("*");
+        const { data } = await supabase.from(t.key).select("*").eq("user_id", user.id);
         dump[t.key] = data ?? [];
       }
       const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
@@ -67,10 +98,12 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
       a.click();
       URL.revokeObjectURL(a.href);
       toast.success("Backup exportado.");
+      setExportConfirmOpen(false);
+      setExportSummary([]);
     } catch (e) {
       toast.error("Falha ao exportar: " + (e as Error).message);
     } finally {
-      setBusy(null);
+      setExportBusy(false);
     }
   };
 
@@ -141,7 +174,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           <div className="space-y-5">
             <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
-              <Button variant="outline" className="w-full justify-start" onClick={exportAll} disabled={busy !== null}>
+              <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
               </Button>
@@ -234,6 +267,44 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
             <Button variant="destructive" onClick={executeDelete} disabled={verifying || !password}>
               {verifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
               Confirmar exclusão
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={exportConfirmOpen} onOpenChange={setExportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              Confirmar exportação de backup
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Resumo do que será exportado:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2">
+            {exportSummary.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2"
+              >
+                <span className="text-sm">{item.label}</span>
+                <span className="text-sm font-semibold">
+                  {item.count} {item.count === 1 ? "registro" : "registros"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setExportConfirmOpen(false)} disabled={exportBusy}>
+              Cancelar
+            </Button>
+            <Button onClick={doExport} disabled={exportBusy}>
+              {exportBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Confirmar e exportar
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
