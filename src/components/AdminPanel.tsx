@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
 
@@ -59,6 +60,9 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
   const [exportSummary, setExportSummary] = useState<ExportSummaryItem[]>([]);
   const [exportBusy, setExportBusy] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportStage, setExportStage] = useState<string>("");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const prepareExport = async () => {
     if (!user) return;
