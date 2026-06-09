@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
 
@@ -59,6 +60,9 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
   const [exportSummary, setExportSummary] = useState<ExportSummaryItem[]>([]);
   const [exportBusy, setExportBusy] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportStage, setExportStage] = useState<string>("");
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const prepareExport = async () => {
     if (!user) return;
@@ -85,23 +89,37 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const doExport = async () => {
     if (!user) return;
     setExportBusy(true);
+    setExportError(null);
+    setExportProgress(0);
+    setExportStage("Iniciando...");
     try {
       const dump: Record<string, unknown[]> = {};
-      for (const t of TABLES) {
-        const { data } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+      const total = TABLES.length + 1; // +1 for file generation step
+      for (let i = 0; i < TABLES.length; i++) {
+        const t = TABLES[i];
+        setExportStage(`Lendo ${t.label}...`);
+        const { data, error } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+        if (error) throw new Error(`Falha ao ler "${t.label}": ${error.message}`);
         dump[t.key] = data ?? [];
+        setExportProgress(Math.round(((i + 1) / total) * 100));
       }
+      setExportStage("Gerando arquivo JSON...");
       const blob = new Blob([JSON.stringify(dump, null, 2)], { type: "application/json" });
+      if (blob.size === 0) throw new Error("Arquivo gerado está vazio.");
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `backup-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      toast.success("Backup exportado.");
+      setExportProgress(100);
+      setExportStage("Concluído");
+      toast.success("Backup exportado com sucesso.");
       setExportConfirmOpen(false);
       setExportSummary([]);
     } catch (e) {
-      toast.error("Falha ao exportar: " + (e as Error).message);
+      const msg = (e as Error).message || "Erro desconhecido";
+      setExportError(msg);
+      toast.error("Falha ao exportar backup: " + msg);
     } finally {
       setExportBusy(false);
     }
@@ -272,7 +290,17 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={exportConfirmOpen} onOpenChange={setExportConfirmOpen}>
+      <AlertDialog
+        open={exportConfirmOpen}
+        onOpenChange={(v) => {
+          if (!v && !exportBusy) {
+            setExportConfirmOpen(false);
+            setExportError(null);
+            setExportProgress(0);
+            setExportStage("");
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
@@ -298,13 +326,38 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
             ))}
           </div>
 
+          {(exportBusy || exportProgress > 0) && !exportError && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{exportStage || "Processando..."}</span>
+                <span>{exportProgress}%</span>
+              </div>
+              <Progress value={exportProgress} className="h-2" />
+            </div>
+          )}
+
+          {exportError && (
+            <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-semibold">Não foi possível concluir a exportação.</p>
+                  <p className="mt-1 text-xs opacity-90">{exportError}</p>
+                  <p className="mt-2 text-xs opacity-80">
+                    Verifique sua conexão e tente novamente. Se o problema persistir, contate o suporte.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <AlertDialogFooter>
             <Button variant="outline" onClick={() => setExportConfirmOpen(false)} disabled={exportBusy}>
-              Cancelar
+              {exportError ? "Fechar" : "Cancelar"}
             </Button>
             <Button onClick={doExport} disabled={exportBusy}>
               {exportBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-              Confirmar e exportar
+              {exportError ? "Tentar novamente" : "Confirmar e exportar"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

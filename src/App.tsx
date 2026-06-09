@@ -13,12 +13,23 @@ import ContasCentral from "./pages/ContasCentral";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
+import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
+  const { noticeOpen, dismissNotice } = useMobileFullscreen();
 
   if (loading) {
     return (
@@ -29,7 +40,26 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Modo tela cheia ativado</AlertDialogTitle>
+            <AlertDialogDescription>
+              Em dispositivos móveis, o aplicativo abre em tela cheia para uma melhor experiência.
+              Você pode sair da tela cheia a qualquer momento pelo menu do usuário (canto superior direito),
+              na opção <strong>Restaurar tela</strong>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={dismissNotice}>Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }
 
 const App = () => (
