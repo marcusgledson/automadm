@@ -271,6 +271,44 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={exportConfirmOpen} onOpenChange={setExportConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <FileJson className="h-5 w-5" />
+              Confirmar exportação de backup
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Resumo do que será exportado:
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-2">
+            {exportSummary.map((item) => (
+              <div
+                key={item.label}
+                className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2"
+              >
+                <span className="text-sm">{item.label}</span>
+                <span className="text-sm font-semibold">
+                  {item.count} {item.count === 1 ? "registro" : "registros"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setExportConfirmOpen(false)} disabled={exportBusy}>
+              Cancelar
+            </Button>
+            <Button onClick={doExport} disabled={exportBusy}>
+              {exportBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Confirmar e exportar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
