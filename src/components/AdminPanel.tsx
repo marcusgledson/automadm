@@ -197,6 +197,126 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
     toast.success("Link copiado. Compartilhe com sua equipe de testes.");
   };
 
+  // === Backup criptografado ===
+  const openEncBackup = (dest: EncDest) => {
+    setEncDest(dest);
+    setEncPwd("");
+    setEncError(null);
+    setEncOpen(true);
+  };
+
+  const runEncryptedBackup = async () => {
+    if (!user || !user.email) return;
+    if (!encPwd) { setEncError("Informe sua senha de login."); return; }
+    setEncBusy(true);
+    setEncError(null);
+    try {
+      // 1) Valida senha
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: user.email, password: encPwd });
+      if (authErr) throw new Error("Senha incorreta.");
+
+      // 2) Coleta dados de todas as tabelas do usuário
+      const dump: Record<string, unknown[]> = {};
+      for (const t of TABLES) {
+        const { data, error } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+        if (error) throw new Error(`Falha ao ler "${t.label}": ${error.message}`);
+        dump[t.key] = data ?? [];
+      }
+
+      // 3) Criptografa
+      const envelope = await encryptBackup(
+        { app: "automadm", userEmail: user.email, data: dump },
+        encPwd,
+        user.id,
+      );
+      const blob = envelopeToBlob(envelope);
+      const fname = defaultFileName(user.id);
+
+      // 4) Destino
+      if (encDest === "download") {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = fname;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Backup criptografado salvo no seu dispositivo.");
+      } else {
+        if (!isDriveBackupConfigured()) {
+          throw new Error("Google Drive não configurado. Defina VITE_GOOGLE_CLIENT_ID.");
+        }
+        const result = await uploadBackupToDrive(blob, fname);
+        toast.success(`Enviado ao Google Drive: ${result.name}`);
+      }
+      setEncOpen(false);
+    } catch (e) {
+      setEncError((e as Error).message);
+    } finally {
+      setEncBusy(false);
+    }
+  };
+
+  // === Restore ===
+  const onRestoreFileChosen = async (file: File) => {
+    setRestoreError(null);
+    setRestorePwd("");
+    setRestoreFile(file);
+    try {
+      const text = await file.text();
+      const env = JSON.parse(text) as BackupEnvelope;
+      if (env.app !== "automadm" || env.v !== 1) throw new Error("Arquivo de backup inválido.");
+      if (!user || env.ownerUserId !== user.id) {
+        throw new Error("Este backup não pertence à conta logada. Restore bloqueado.");
+      }
+      setRestoreEnv(env);
+      setRestoreOpen(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+      setRestoreFile(null);
+    }
+  };
+
+  const runRestore = async () => {
+    if (!user || !restoreEnv) return;
+    if (!restorePwd) { setRestoreError("Informe sua senha de login."); return; }
+    setRestoreBusy(true);
+    setRestoreError(null);
+    try {
+      const payload = await decryptBackup<{ data: Record<string, Record<string, unknown>[]> }>(
+        restoreEnv, restorePwd, user.id,
+      );
+      // Limpa tabelas e reinsere — chaves primárias preservadas garantem unicidade
+      for (const t of TABLES) {
+        const { error: delErr } = await supabase.from(t.key).delete().eq("user_id", user.id);
+        if (delErr) throw new Error(`Limpando ${t.label}: ${delErr.message}`);
+        const rows = (payload.data?.[t.key] ?? []).map((r) => ({ ...r, user_id: user.id }));
+        if (rows.length === 0) continue;
+        const { error: insErr } = await supabase.from(t.key).insert(rows as never);
+        if (insErr) throw new Error(`Restaurando ${t.label}: ${insErr.message}`);
+      }
+      toast.success("Backup restaurado com sucesso.");
+      setRestoreOpen(false);
+      setRestoreEnv(null);
+      setRestoreFile(null);
+      setRestorePwd("");
+      setPostRestoreOpen(true);
+    } catch (e) {
+      setRestoreError((e as Error).message);
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
+  const openRestorePicker = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,.enc,application/json,application/octet-stream";
+    input.onchange = (e) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      if (f) onRestoreFileChosen(f);
+    };
+    input.click();
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
