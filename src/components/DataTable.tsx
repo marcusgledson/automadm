@@ -206,11 +206,11 @@ export default function DataTable({ records }: DataTableProps) {
       {/* Table */}
       <div className="rounded-lg border border-border overflow-hidden">
         <div className="max-h-[calc(100vh-420px)] overflow-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader className="sticky top-0 bg-card z-10">
               <TableRow>
                 {(["data", "lancamento", "descricao", "documento", "valor", "tipoLancamento"] as SortField[]).map((f) => (
-                  <TableHead key={f}>
+                  <TableHead key={f} className="whitespace-nowrap">
                     <Button variant="ghost" size="sm" onClick={() => toggleSort(f)} className="gap-1 -ml-2 font-medium">
                       {{ data: "Data", lancamento: "Lançamento", descricao: "Detalhes", documento: "N° Documento", valor: "Valor", tipoLancamento: "Tipo Lançamento" }[f]}
                       <ArrowUpDown className="h-3 w-3" />
@@ -231,10 +231,10 @@ export default function DataTable({ records }: DataTableProps) {
                     <TableCell className="whitespace-nowrap text-sm">
                       <Badge variant="outline">{r.lancamento}</Badge>
                     </TableCell>
-                    <TableCell className="max-w-[300px] truncate text-sm">{r.descricao}</TableCell>
+                    <TableCell className="min-w-[260px] text-sm">{r.descricao}</TableCell>
                     <TableCell className="whitespace-nowrap text-sm font-mono text-xs">{r.documento || "—"}</TableCell>
                     <TableCell className={`whitespace-nowrap text-sm font-medium ${r.valor >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(r.valor)}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <Badge variant={r.tipo === "Crédito" ? "default" : r.tipo === "Débito" ? "destructive" : "secondary"}>{r.tipoLancamento}</Badge>
                     </TableCell>
                   </TableRow>
