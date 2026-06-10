@@ -534,6 +534,106 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Backup criptografado - senha */}
+      <AlertDialog open={encOpen} onOpenChange={(v) => !encBusy && setEncOpen(v)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              {encDest === "drive" ? "Backup criptografado → Google Drive" : "Backup criptografado → Download"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Digite sua senha de login. Ela é usada para derivar a chave AES-GCM 256-bit que protege o arquivo.
+              {encDest === "drive" && " Em seguida será aberto o consentimento do Google para enviar ao seu Drive."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="password"
+            placeholder="Sua senha"
+            value={encPwd}
+            onChange={(e) => setEncPwd(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runEncryptedBackup(); }}
+            autoFocus
+          />
+          {encError && (
+            <p className="text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {encError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setEncOpen(false)} disabled={encBusy}>Cancelar</Button>
+            <Button onClick={runEncryptedBackup} disabled={encBusy || !encPwd}>
+              {encBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : encDest === "drive" ? <Cloud className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+              {encDest === "drive" ? "Criptografar e enviar" : "Criptografar e baixar"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore */}
+      <AlertDialog open={restoreOpen} onOpenChange={(v) => !restoreBusy && setRestoreOpen(v)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" /> Restaurar backup criptografado
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Arquivo: <strong>{restoreFile?.name}</strong>
+              <br />
+              Esta operação substitui os dados atuais da sua conta pelos do backup. Digite sua senha de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="password"
+            placeholder="Sua senha"
+            value={restorePwd}
+            onChange={(e) => setRestorePwd(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runRestore(); }}
+            autoFocus
+          />
+          {restoreError && (
+            <p className="text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {restoreError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setRestoreOpen(false)} disabled={restoreBusy}>Cancelar</Button>
+            <Button onClick={runRestore} disabled={restoreBusy || !restorePwd}>
+              {restoreBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              Validar e restaurar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Pós-restauração */}
+      <AlertDialog open={postRestoreOpen} onOpenChange={setPostRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Restauração concluída
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Os dados do backup foram aplicados à sua conta. Deseja revisar/alterar suas credenciais agora
+              (e-mail e nome de exibição)? Esta etapa é opcional.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setPostRestoreOpen(false)}>Manter como está</Button>
+            <Button
+              onClick={() => {
+                setPostRestoreOpen(false);
+                onOpenChange(false);
+                navigate("/dashboard");
+                toast.info("Acesse o menu do usuário para alterar e-mail/senha.");
+              }}
+            >
+              <Settings className="h-4 w-4" /> Alterar credenciais
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
