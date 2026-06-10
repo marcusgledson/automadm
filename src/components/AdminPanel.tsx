@@ -20,7 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
+import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings } from "lucide-react";
+import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
+import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   open: boolean;
@@ -49,6 +52,7 @@ interface ExportSummaryItem {
 
 export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [previewUrl] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
 
@@ -63,6 +67,23 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportStage, setExportStage] = useState<string>("");
   const [exportError, setExportError] = useState<string | null>(null);
+
+  // ===== Backup criptografado =====
+  type EncDest = "download" | "drive";
+  const [encOpen, setEncOpen] = useState(false);
+  const [encDest, setEncDest] = useState<EncDest>("download");
+  const [encPwd, setEncPwd] = useState("");
+  const [encBusy, setEncBusy] = useState(false);
+  const [encError, setEncError] = useState<string | null>(null);
+
+  // Restore
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreEnv, setRestoreEnv] = useState<BackupEnvelope | null>(null);
+  const [restorePwd, setRestorePwd] = useState("");
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [postRestoreOpen, setPostRestoreOpen] = useState(false);
 
   const prepareExport = async () => {
     if (!user) return;
@@ -176,6 +197,126 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
     toast.success("Link copiado. Compartilhe com sua equipe de testes.");
   };
 
+  // === Backup criptografado ===
+  const openEncBackup = (dest: EncDest) => {
+    setEncDest(dest);
+    setEncPwd("");
+    setEncError(null);
+    setEncOpen(true);
+  };
+
+  const runEncryptedBackup = async () => {
+    if (!user || !user.email) return;
+    if (!encPwd) { setEncError("Informe sua senha de login."); return; }
+    setEncBusy(true);
+    setEncError(null);
+    try {
+      // 1) Valida senha
+      const { error: authErr } = await supabase.auth.signInWithPassword({ email: user.email, password: encPwd });
+      if (authErr) throw new Error("Senha incorreta.");
+
+      // 2) Coleta dados de todas as tabelas do usuário
+      const dump: Record<string, unknown[]> = {};
+      for (const t of TABLES) {
+        const { data, error } = await supabase.from(t.key).select("*").eq("user_id", user.id);
+        if (error) throw new Error(`Falha ao ler "${t.label}": ${error.message}`);
+        dump[t.key] = data ?? [];
+      }
+
+      // 3) Criptografa
+      const envelope = await encryptBackup(
+        { app: "automadm", userEmail: user.email, data: dump },
+        encPwd,
+        user.id,
+      );
+      const blob = envelopeToBlob(envelope);
+      const fname = defaultFileName(user.id);
+
+      // 4) Destino
+      if (encDest === "download") {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = fname;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        toast.success("Backup criptografado salvo no seu dispositivo.");
+      } else {
+        if (!isDriveBackupConfigured()) {
+          throw new Error("Google Drive não configurado. Defina VITE_GOOGLE_CLIENT_ID.");
+        }
+        const result = await uploadBackupToDrive(blob, fname);
+        toast.success(`Enviado ao Google Drive: ${result.name}`);
+      }
+      setEncOpen(false);
+    } catch (e) {
+      setEncError((e as Error).message);
+    } finally {
+      setEncBusy(false);
+    }
+  };
+
+  // === Restore ===
+  const onRestoreFileChosen = async (file: File) => {
+    setRestoreError(null);
+    setRestorePwd("");
+    setRestoreFile(file);
+    try {
+      const text = await file.text();
+      const env = JSON.parse(text) as BackupEnvelope;
+      if (env.app !== "automadm" || env.v !== 1) throw new Error("Arquivo de backup inválido.");
+      if (!user || env.ownerUserId !== user.id) {
+        throw new Error("Este backup não pertence à conta logada. Restore bloqueado.");
+      }
+      setRestoreEnv(env);
+      setRestoreOpen(true);
+    } catch (e) {
+      toast.error((e as Error).message);
+      setRestoreFile(null);
+    }
+  };
+
+  const runRestore = async () => {
+    if (!user || !restoreEnv) return;
+    if (!restorePwd) { setRestoreError("Informe sua senha de login."); return; }
+    setRestoreBusy(true);
+    setRestoreError(null);
+    try {
+      const payload = await decryptBackup<{ data: Record<string, Record<string, unknown>[]> }>(
+        restoreEnv, restorePwd, user.id,
+      );
+      // Limpa tabelas e reinsere — chaves primárias preservadas garantem unicidade
+      for (const t of TABLES) {
+        const { error: delErr } = await supabase.from(t.key).delete().eq("user_id", user.id);
+        if (delErr) throw new Error(`Limpando ${t.label}: ${delErr.message}`);
+        const rows = (payload.data?.[t.key] ?? []).map((r) => ({ ...r, user_id: user.id }));
+        if (rows.length === 0) continue;
+        const { error: insErr } = await supabase.from(t.key).insert(rows as never);
+        if (insErr) throw new Error(`Restaurando ${t.label}: ${insErr.message}`);
+      }
+      toast.success("Backup restaurado com sucesso.");
+      setRestoreOpen(false);
+      setRestoreEnv(null);
+      setRestoreFile(null);
+      setRestorePwd("");
+      setPostRestoreOpen(true);
+    } catch (e) {
+      setRestoreError((e as Error).message);
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
+  const openRestorePicker = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json,.enc,application/json,application/octet-stream";
+    input.onchange = (e) => {
+      const f = (e.target as HTMLInputElement).files?.[0];
+      if (f) onRestoreFileChosen(f);
+    };
+    input.click();
+  };
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,13 +330,44 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
               <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
               </Button>
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" /> Backup criptografado (estilo WhatsApp)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                AES-GCM 256 com chave derivada da sua senha de login. Apenas o dono do login conseguirá restaurar.
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button variant="outline" className="justify-start" onClick={() => openEncBackup("download")} disabled={encBusy}>
+                  <Download className="h-4 w-4" /> Baixar .enc local
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => openEncBackup("drive")}
+                  disabled={encBusy || !isDriveBackupConfigured()}
+                  title={isDriveBackupConfigured() ? "" : "Defina VITE_GOOGLE_CLIENT_ID para habilitar"}
+                >
+                  <Cloud className="h-4 w-4" /> Salvar no Google Drive
+                </Button>
+              </div>
+              <Button variant="outline" className="w-full justify-start" onClick={openRestorePicker} disabled={restoreBusy}>
+                <Upload className="h-4 w-4" /> Restaurar backup criptografado
+              </Button>
+              {!isDriveBackupConfigured() && (
+                <p className="text-[11px] text-muted-foreground">
+                  Para habilitar o envio direto ao Google Drive, configure <code>VITE_GOOGLE_CLIENT_ID</code> (OAuth Web Client ID com escopo <code>drive.file</code>) e adicione a origem do app nas URLs autorizadas.
+                </p>
+              )}
             </section>
 
             <section className="space-y-2">
@@ -358,6 +530,106 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
             <Button onClick={doExport} disabled={exportBusy}>
               {exportBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
               {exportError ? "Tentar novamente" : "Confirmar e exportar"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Backup criptografado - senha */}
+      <AlertDialog open={encOpen} onOpenChange={(v) => !encBusy && setEncOpen(v)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+              {encDest === "drive" ? "Backup criptografado → Google Drive" : "Backup criptografado → Download"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Digite sua senha de login. Ela é usada para derivar a chave AES-GCM 256-bit que protege o arquivo.
+              {encDest === "drive" && " Em seguida será aberto o consentimento do Google para enviar ao seu Drive."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="password"
+            placeholder="Sua senha"
+            value={encPwd}
+            onChange={(e) => setEncPwd(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runEncryptedBackup(); }}
+            autoFocus
+          />
+          {encError && (
+            <p className="text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {encError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setEncOpen(false)} disabled={encBusy}>Cancelar</Button>
+            <Button onClick={runEncryptedBackup} disabled={encBusy || !encPwd}>
+              {encBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : encDest === "drive" ? <Cloud className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+              {encDest === "drive" ? "Criptografar e enviar" : "Criptografar e baixar"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore */}
+      <AlertDialog open={restoreOpen} onOpenChange={(v) => !restoreBusy && setRestoreOpen(v)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" /> Restaurar backup criptografado
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Arquivo: <strong>{restoreFile?.name}</strong>
+              <br />
+              Esta operação substitui os dados atuais da sua conta pelos do backup. Digite sua senha de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            type="password"
+            placeholder="Sua senha"
+            value={restorePwd}
+            onChange={(e) => setRestorePwd(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") runRestore(); }}
+            autoFocus
+          />
+          {restoreError && (
+            <p className="text-xs text-destructive flex items-start gap-2">
+              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {restoreError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setRestoreOpen(false)} disabled={restoreBusy}>Cancelar</Button>
+            <Button onClick={runRestore} disabled={restoreBusy || !restorePwd}>
+              {restoreBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              Validar e restaurar
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Pós-restauração */}
+      <AlertDialog open={postRestoreOpen} onOpenChange={setPostRestoreOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-primary" /> Restauração concluída
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Os dados do backup foram aplicados à sua conta. Deseja revisar/alterar suas credenciais agora
+              (e-mail e nome de exibição)? Esta etapa é opcional.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" onClick={() => setPostRestoreOpen(false)}>Manter como está</Button>
+            <Button
+              onClick={() => {
+                setPostRestoreOpen(false);
+                onOpenChange(false);
+                navigate("/dashboard");
+                toast.info("Acesse o menu do usuário para alterar e-mail/senha.");
+              }}
+            >
+              <Settings className="h-4 w-4" /> Alterar credenciais
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
