@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
+import AccountKeyDialog from "@/components/AccountKeyDialog";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
 import { useExpenses } from "@/hooks/useExpenses";
