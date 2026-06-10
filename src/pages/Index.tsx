@@ -155,6 +155,22 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      <AccountKeyDialog
+        open={!!pendingParsed}
+        defaultBanco={pendingParsed?.account.banco}
+        defaultAgencia={pendingParsed?.account.agencia}
+        defaultConta={pendingParsed?.account.conta}
+        onCancel={() => setPendingParsed(null)}
+        onConfirm={({ banco, agencia, conta }) => {
+          if (!pendingParsed) return;
+          setRecords(pendingParsed.records);
+          setAccount({ banco, agencia, conta });
+          setFileName(pendingParsed.fileName);
+          toast.success(`${pendingParsed.records.length} registros carregados de ${pendingParsed.fileName}`);
+          setPendingParsed(null);
+        }}
+      />
     </div>
   );
 }
