@@ -37,13 +37,13 @@ function fromB64(s: string): Uint8Array {
 async function deriveKey(password: string, salt: Uint8Array, userId: string): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
     "raw",
-    enc.encode(`${password}:${userId}`),
+    enc.encode(`${password}:${userId}`) as BufferSource,
     "PBKDF2",
     false,
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: ITERATIONS, hash: "SHA-256" },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -100,7 +100,7 @@ export async function decryptBackup<T = unknown>(
   const key = await deriveKey(password, salt, expectedUserId);
   let plain: ArrayBuffer;
   try {
-    plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
+    plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, ct as BufferSource);
   } catch {
     throw new Error("Senha incorreta ou arquivo corrompido.");
   }
