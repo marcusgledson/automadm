@@ -71,7 +71,7 @@ export async function encryptBackup(
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(password, salt, userId);
   const plaintext = enc.encode(JSON.stringify(payload));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, plaintext as BufferSource);
   return {
     v: 1,
     app: "automadm",
