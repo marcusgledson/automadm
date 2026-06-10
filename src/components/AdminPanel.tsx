@@ -20,7 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson } from "lucide-react";
+import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings } from "lucide-react";
+import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
+import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
+import { useNavigate } from "react-router-dom";
 
 interface Props {
   open: boolean;
@@ -49,6 +52,7 @@ interface ExportSummaryItem {
 
 export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
   const [previewUrl] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
 
@@ -63,6 +67,23 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportStage, setExportStage] = useState<string>("");
   const [exportError, setExportError] = useState<string | null>(null);
+
+  // ===== Backup criptografado =====
+  type EncDest = "download" | "drive";
+  const [encOpen, setEncOpen] = useState(false);
+  const [encDest, setEncDest] = useState<EncDest>("download");
+  const [encPwd, setEncPwd] = useState("");
+  const [encBusy, setEncBusy] = useState(false);
+  const [encError, setEncError] = useState<string | null>(null);
+
+  // Restore
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
+  const [restoreEnv, setRestoreEnv] = useState<BackupEnvelope | null>(null);
+  const [restorePwd, setRestorePwd] = useState("");
+  const [restoreBusy, setRestoreBusy] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [postRestoreOpen, setPostRestoreOpen] = useState(false);
 
   const prepareExport = async () => {
     if (!user) return;
