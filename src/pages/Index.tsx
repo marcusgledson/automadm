@@ -21,6 +21,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [savingDB, setSavingDB] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [pendingParsed, setPendingParsed] = useState<{ records: FinancialRecord[]; account: OFXAccountInfo; fileName: string } | null>(null);
 
   const { upsertMany } = useBankStatements();
   const { upsertManyFromOFX } = useExpenses();
@@ -36,6 +37,10 @@ export default function Index() {
       const parsed = parseOFXFull(text);
       if (parsed.records.length === 0) {
         toast.error("Nenhum registro encontrado no arquivo OFX");
+      } else if (!parsed.account.agencia || !parsed.account.conta) {
+        // OFX sem agência/conta - solicita confirmação manual
+        setPendingParsed({ records: parsed.records, account: parsed.account, fileName: file.name });
+        toast.info("Informe a agência e conta manualmente para continuar.");
       } else {
         setRecords(parsed.records);
         setAccount(parsed.account);
