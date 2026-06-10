@@ -330,13 +330,44 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-5">
+          <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
               <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
               </Button>
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-primary" /> Backup criptografado (estilo WhatsApp)
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                AES-GCM 256 com chave derivada da sua senha de login. Apenas o dono do login conseguirá restaurar.
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button variant="outline" className="justify-start" onClick={() => openEncBackup("download")} disabled={encBusy}>
+                  <Download className="h-4 w-4" /> Baixar .enc local
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-start"
+                  onClick={() => openEncBackup("drive")}
+                  disabled={encBusy || !isDriveBackupConfigured()}
+                  title={isDriveBackupConfigured() ? "" : "Defina VITE_GOOGLE_CLIENT_ID para habilitar"}
+                >
+                  <Cloud className="h-4 w-4" /> Salvar no Google Drive
+                </Button>
+              </div>
+              <Button variant="outline" className="w-full justify-start" onClick={openRestorePicker} disabled={restoreBusy}>
+                <Upload className="h-4 w-4" /> Restaurar backup criptografado
+              </Button>
+              {!isDriveBackupConfigured() && (
+                <p className="text-[11px] text-muted-foreground">
+                  Para habilitar o envio direto ao Google Drive, configure <code>VITE_GOOGLE_CLIENT_ID</code> (OAuth Web Client ID com escopo <code>drive.file</code>) e adicione a origem do app nas URLs autorizadas.
+                </p>
+              )}
             </section>
 
             <section className="space-y-2">
