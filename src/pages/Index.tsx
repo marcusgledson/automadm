@@ -125,12 +125,15 @@ export default function Index() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden p-3 sm:p-5">
+      <main className="flex-1 overflow-auto p-3 sm:p-5">
         {records.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="w-full max-w-lg opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
+          <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-stretch justify-center gap-4 py-4">
+            <div className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
               <FileUploader onFileSelected={handleFile} loading={loading} />
             </div>
+            <GoogleDriveOFXImport
+              onOFXLoaded={({ text, fileName: fn }) => processOFXText(text, fn)}
+            />
           </div>
         ) : (
           <div className="h-full opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>
