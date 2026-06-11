@@ -109,14 +109,46 @@ export function parseOFX(text: string): FinancialRecord[] {
 }
 
 export function parseOFXAccount(text: string): OFXAccountInfo {
-  const get = (tag: string) => {
-    const m = new RegExp(`<${tag}>([^<\\n]+)`, "i").exec(text);
-    return m ? m[1].trim() : "";
+  // Suporta tanto OFX 1 (SGML) quanto OFX 2 (XML), com ou sem tags de fechamento,
+  // e tolera espaços/quebras de linha antes do valor.
+  const get = (tag: string, scope?: string): string => {
+    const haystack = scope ?? text;
+    const xml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+?)\\s*</${tag}>`, "i").exec(haystack);
+    if (xml) return xml[1].trim();
+    const sgml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+)`, "i").exec(haystack);
+    return sgml ? sgml[1].trim() : "";
   };
+
+  // Isola os blocos da conta/instituição para reduzir colisões.
+  const bankBlock = /<BANKACCTFROM>([\s\S]*?)<\/BANKACCTFROM>/i.exec(text)?.[1]
+    ?? /<CCACCTFROM>([\s\S]*?)<\/CCACCTFROM>/i.exec(text)?.[1]
+    ?? undefined;
+  const fiBlock = /<FI>([\s\S]*?)<\/FI>/i.exec(text)?.[1] ?? undefined;
+
+  const banco =
+    get("ORG", fiBlock) ||
+    get("BANKID", bankBlock) ||
+    get("BANKID") ||
+    get("ORG") ||
+    get("FID", fiBlock) ||
+    undefined;
+
+  const agencia =
+    get("BRANCHID", bankBlock) ||
+    get("BRANCHID") ||
+    get("AGENCIA") ||
+    undefined;
+
+  const conta =
+    get("ACCTID", bankBlock) ||
+    get("ACCTID") ||
+    get("CONTA") ||
+    undefined;
+
   return {
-    banco: get("BANKID") || get("ORG") || undefined,
-    agencia: get("BRANCHID") || undefined,
-    conta: get("ACCTID") || undefined,
+    banco: banco?.replace(/\s+/g, " ").trim() || undefined,
+    agencia: agencia?.replace(/\D/g, "") || undefined,
+    conta: conta?.trim() || undefined,
   };
 }
 
