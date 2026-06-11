@@ -8,6 +8,7 @@ import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser"
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
+import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
 import { useExpenses } from "@/hooks/useExpenses";
@@ -26,6 +27,23 @@ export default function Index() {
   const { upsertMany } = useBankStatements();
   const { upsertManyFromOFX } = useExpenses();
 
+  const processOFXText = useCallback((text: string, originFileName: string) => {
+    const parsed = parseOFXFull(text);
+    if (parsed.records.length === 0) {
+      toast.error("Nenhum registro encontrado no arquivo OFX");
+      return;
+    }
+    if (!parsed.account.agencia || !parsed.account.conta) {
+      setPendingParsed({ records: parsed.records, account: parsed.account, fileName: originFileName });
+      toast.info("Informe a agência e conta manualmente para continuar.");
+      return;
+    }
+    setRecords(parsed.records);
+    setAccount(parsed.account);
+    setFileName(originFileName);
+    toast.success(`${parsed.records.length} registros carregados de ${originFileName}`);
+  }, []);
+
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".ofx")) {
       toast.error("Formato inválido. Apenas arquivos OFX são aceitos.");
@@ -34,26 +52,14 @@ export default function Index() {
     setLoading(true);
     try {
       const text = await file.text();
-      const parsed = parseOFXFull(text);
-      if (parsed.records.length === 0) {
-        toast.error("Nenhum registro encontrado no arquivo OFX");
-      } else if (!parsed.account.agencia || !parsed.account.conta) {
-        // OFX sem agência/conta - solicita confirmação manual
-        setPendingParsed({ records: parsed.records, account: parsed.account, fileName: file.name });
-        toast.info("Informe a agência e conta manualmente para continuar.");
-      } else {
-        setRecords(parsed.records);
-        setAccount(parsed.account);
-        setFileName(file.name);
-        toast.success(`${parsed.records.length} registros carregados de ${file.name}`);
-      }
+      processOFXText(text, file.name);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao processar o arquivo OFX.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [processOFXText]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -119,12 +125,15 @@ export default function Index() {
         </div>
       </header>
 
-      <main className="flex-1 overflow-hidden p-3 sm:p-5">
+      <main className="flex-1 overflow-auto p-3 sm:p-5">
         {records.length === 0 ? (
-          <div className="flex h-full items-center justify-center">
-            <div className="w-full max-w-lg opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
+          <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-stretch justify-center gap-4 py-4">
+            <div className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
               <FileUploader onFileSelected={handleFile} loading={loading} />
             </div>
+            <GoogleDriveOFXImport
+              onOFXLoaded={({ text, fileName: fn }) => processOFXText(text, fn)}
+            />
           </div>
         ) : (
           <div className="h-full opacity-0 animate-fade-up" style={{ animationDelay: "50ms" }}>

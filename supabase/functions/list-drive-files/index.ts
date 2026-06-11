@@ -49,7 +49,7 @@ serve(async (req) => {
 
 
   try {
-    const { folderLink } = await req.json();
+    const { folderLink, fileType } = await req.json();
 
     if (!folderLink || typeof folderLink !== "string") {
       return new Response(
@@ -70,13 +70,21 @@ serve(async (req) => {
     // This works for folders shared as "anyone with the link can view"
     const API_KEY = Deno.env.get("GOOGLE_API_KEY");
 
-    let apiUrl: string;
-    const query = `'${folderId}' in parents and mimeType='application/pdf' and trashed=false`;
+    // Tipo de arquivo a listar (default: pdf, p/ retrocompatibilidade)
+    const type = (typeof fileType === "string" ? fileType : "pdf").toLowerCase();
+    let typeFilter: string;
+    if (type === "ofx") {
+      // OFX raramente tem MIME registrado; filtramos por nome.
+      typeFilter = `(name contains '.ofx' or name contains '.OFX')`;
+    } else {
+      typeFilter = `mimeType='application/pdf'`;
+    }
+    const query = `'${folderId}' in parents and ${typeFilter} and trashed=false`;
 
+    let apiUrl: string;
     if (API_KEY) {
       apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,size,modifiedTime)&orderBy=name&key=${API_KEY}&supportsAllDrives=true&includeItemsFromAllDrives=true`;
     } else {
-      // Fallback: use the public endpoint without API key (limited but works for public folders)
       apiUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,size,modifiedTime)&orderBy=name&supportsAllDrives=true&includeItemsFromAllDrives=true`;
     }
 
