@@ -27,6 +27,23 @@ export default function Index() {
   const { upsertMany } = useBankStatements();
   const { upsertManyFromOFX } = useExpenses();
 
+  const processOFXText = useCallback((text: string, originFileName: string) => {
+    const parsed = parseOFXFull(text);
+    if (parsed.records.length === 0) {
+      toast.error("Nenhum registro encontrado no arquivo OFX");
+      return;
+    }
+    if (!parsed.account.agencia || !parsed.account.conta) {
+      setPendingParsed({ records: parsed.records, account: parsed.account, fileName: originFileName });
+      toast.info("Informe a agência e conta manualmente para continuar.");
+      return;
+    }
+    setRecords(parsed.records);
+    setAccount(parsed.account);
+    setFileName(originFileName);
+    toast.success(`${parsed.records.length} registros carregados de ${originFileName}`);
+  }, []);
+
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".ofx")) {
       toast.error("Formato inválido. Apenas arquivos OFX são aceitos.");
@@ -35,26 +52,14 @@ export default function Index() {
     setLoading(true);
     try {
       const text = await file.text();
-      const parsed = parseOFXFull(text);
-      if (parsed.records.length === 0) {
-        toast.error("Nenhum registro encontrado no arquivo OFX");
-      } else if (!parsed.account.agencia || !parsed.account.conta) {
-        // OFX sem agência/conta - solicita confirmação manual
-        setPendingParsed({ records: parsed.records, account: parsed.account, fileName: file.name });
-        toast.info("Informe a agência e conta manualmente para continuar.");
-      } else {
-        setRecords(parsed.records);
-        setAccount(parsed.account);
-        setFileName(file.name);
-        toast.success(`${parsed.records.length} registros carregados de ${file.name}`);
-      }
+      processOFXText(text, file.name);
     } catch (err) {
       console.error(err);
       toast.error("Erro ao processar o arquivo OFX.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [processOFXText]);
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
