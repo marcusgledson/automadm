@@ -2,10 +2,11 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet } from "lucide-react";
+import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useDriveLinks } from "@/hooks/useDriveLinks";
