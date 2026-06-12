@@ -35,16 +35,26 @@ export default function Index() {
       toast.error("Nenhum registro encontrado no arquivo OFX");
       return;
     }
-    if (!parsed.account.agencia || !parsed.account.conta) {
-      setPendingParsed({ records: parsed.records, account: parsed.account, fileName: originFileName });
+    // Sempre passa pelo pré-visualizador (mostra agência/conta detectadas; permite escolher conta se houver várias).
+    setPendingPreview({ statements: parsed.statements, fileName: originFileName });
+  }, []);
+
+  const confirmPreview = useCallback((idx: number) => {
+    if (!pendingPreview) return;
+    const stmt = pendingPreview.statements[idx];
+    const fn = pendingPreview.fileName;
+    setPendingPreview(null);
+    if (!stmt.account.agencia || !stmt.account.conta) {
+      setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn });
       toast.info("Informe a agência e conta manualmente para continuar.");
       return;
     }
-    setRecords(parsed.records);
-    setAccount(parsed.account);
-    setFileName(originFileName);
-    toast.success(`${parsed.records.length} registros carregados de ${originFileName}`);
-  }, []);
+    setRecords(stmt.records);
+    setAccount(stmt.account);
+    setFileName(fn);
+    toast.success(`${stmt.records.length} registros carregados de ${fn}`);
+  }, [pendingPreview]);
+
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".ofx")) {
