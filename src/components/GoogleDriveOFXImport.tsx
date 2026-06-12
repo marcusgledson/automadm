@@ -171,6 +171,48 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
           </div>
         </div>
 
+        {downloadError && (
+          <Alert variant="destructive" className="relative">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="pr-8">Falha ao baixar “{downloadError.file.name}”</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>{downloadError.message}</p>
+              {downloadError.hint && <p className="text-xs opacity-90">{downloadError.hint}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={retryDownload}
+                  disabled={!!importingId}
+                  className="h-7 gap-1.5"
+                >
+                  {importingId === downloadError.file.id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <RotateCcw className="h-3.5 w-3.5" />}
+                  Tentar novamente
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDownloadError(null)}
+                  className="h-7"
+                >
+                  Dispensar
+                </Button>
+              </div>
+            </AlertDescription>
+            <button
+              type="button"
+              onClick={() => setDownloadError(null)}
+              className="absolute right-2 top-2 rounded-md p-1 opacity-70 hover:opacity-100"
+              aria-label="Fechar"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Alert>
+        )}
+
+
         {savedLinks.length > 0 && (
           <div className="rounded-lg border border-border bg-muted/20 p-2">
             <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">
