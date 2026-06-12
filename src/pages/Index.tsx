@@ -177,6 +177,14 @@ export default function Index() {
         )}
       </main>
 
+      <OFXPreviewDialog
+        open={!!pendingPreview}
+        fileName={pendingPreview?.fileName}
+        statements={pendingPreview?.statements ?? []}
+        onCancel={() => setPendingPreview(null)}
+        onConfirm={confirmPreview}
+      />
+
       <AccountKeyDialog
         open={!!pendingParsed}
         defaultBanco={pendingParsed?.account.banco}
