@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, Minimize2, Maximize2, X, ArrowLeft, Database, Loader2, Landmark } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
-import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser";
+import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
+import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
@@ -22,6 +23,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [savingDB, setSavingDB] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [pendingPreview, setPendingPreview] = useState<{ statements: ParsedOFXStatement[]; fileName: string } | null>(null);
   const [pendingParsed, setPendingParsed] = useState<{ records: FinancialRecord[]; account: OFXAccountInfo; fileName: string } | null>(null);
 
   const { upsertMany } = useBankStatements();
