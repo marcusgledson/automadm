@@ -18,9 +18,18 @@ export interface OFXAccountInfo {
   conta?: string;
 }
 
-export interface ParsedOFX {
+export interface ParsedOFXStatement {
   account: OFXAccountInfo;
   records: FinancialRecord[];
+}
+
+export interface ParsedOFX {
+  /** Conta principal (primeira detectada). Mantido para compatibilidade. */
+  account: OFXAccountInfo;
+  /** Todos os registros agregados de todos os blocos de conta. */
+  records: FinancialRecord[];
+  /** Cada bloco de conta encontrado no arquivo OFX, com seus próprios registros. */
+  statements: ParsedOFXStatement[];
 }
 
 function classifyType(valor: number): string {
