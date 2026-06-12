@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, Minimize2, Maximize2, X, ArrowLeft, Database, Loader2, Landmark } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
-import { parseOFXFull, FinancialRecord, OFXAccountInfo } from "@/lib/fileParser";
+import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
+import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
@@ -22,6 +23,7 @@ export default function Index() {
   const [loading, setLoading] = useState(false);
   const [savingDB, setSavingDB] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [pendingPreview, setPendingPreview] = useState<{ statements: ParsedOFXStatement[]; fileName: string } | null>(null);
   const [pendingParsed, setPendingParsed] = useState<{ records: FinancialRecord[]; account: OFXAccountInfo; fileName: string } | null>(null);
 
   const { upsertMany } = useBankStatements();
@@ -33,16 +35,26 @@ export default function Index() {
       toast.error("Nenhum registro encontrado no arquivo OFX");
       return;
     }
-    if (!parsed.account.agencia || !parsed.account.conta) {
-      setPendingParsed({ records: parsed.records, account: parsed.account, fileName: originFileName });
+    // Sempre passa pelo pré-visualizador (mostra agência/conta detectadas; permite escolher conta se houver várias).
+    setPendingPreview({ statements: parsed.statements, fileName: originFileName });
+  }, []);
+
+  const confirmPreview = useCallback((idx: number) => {
+    if (!pendingPreview) return;
+    const stmt = pendingPreview.statements[idx];
+    const fn = pendingPreview.fileName;
+    setPendingPreview(null);
+    if (!stmt.account.agencia || !stmt.account.conta) {
+      setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn });
       toast.info("Informe a agência e conta manualmente para continuar.");
       return;
     }
-    setRecords(parsed.records);
-    setAccount(parsed.account);
-    setFileName(originFileName);
-    toast.success(`${parsed.records.length} registros carregados de ${originFileName}`);
-  }, []);
+    setRecords(stmt.records);
+    setAccount(stmt.account);
+    setFileName(fn);
+    toast.success(`${stmt.records.length} registros carregados de ${fn}`);
+  }, [pendingPreview]);
+
 
   const handleFile = useCallback(async (file: File) => {
     if (!file.name.toLowerCase().endsWith(".ofx")) {
@@ -164,6 +176,14 @@ export default function Index() {
           </div>
         )}
       </main>
+
+      <OFXPreviewDialog
+        open={!!pendingPreview}
+        fileName={pendingPreview?.fileName}
+        statements={pendingPreview?.statements ?? []}
+        onCancel={() => setPendingPreview(null)}
+        onConfirm={confirmPreview}
+      />
 
       <AccountKeyDialog
         open={!!pendingParsed}

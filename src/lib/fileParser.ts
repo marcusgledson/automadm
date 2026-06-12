@@ -18,9 +18,18 @@ export interface OFXAccountInfo {
   conta?: string;
 }
 
-export interface ParsedOFX {
+export interface ParsedOFXStatement {
   account: OFXAccountInfo;
   records: FinancialRecord[];
+}
+
+export interface ParsedOFX {
+  /** Conta principal (primeira detectada). Mantido para compatibilidade. */
+  account: OFXAccountInfo;
+  /** Todos os registros agregados de todos os blocos de conta. */
+  records: FinancialRecord[];
+  /** Cada bloco de conta encontrado no arquivo OFX, com seus próprios registros. */
+  statements: ParsedOFXStatement[];
 }
 
 function classifyType(valor: number): string {
@@ -69,7 +78,6 @@ export function parseOFX(text: string): FinancialRecord[] {
     const codigoOperacao = get("CHECKNUM") || get("REFNUM") || undefined;
     const trnType = get("TRNTYPE") || "";
 
-    // Map OFX TRNTYPE to readable label
     const trnTypeMap: Record<string, string> = {
       CREDIT: "Crédito",
       DEBIT: "Débito",
@@ -108,21 +116,25 @@ export function parseOFX(text: string): FinancialRecord[] {
   return records;
 }
 
-export function parseOFXAccount(text: string): OFXAccountInfo {
-  // Suporta tanto OFX 1 (SGML) quanto OFX 2 (XML), com ou sem tags de fechamento,
-  // e tolera espaços/quebras de linha antes do valor.
-  const get = (tag: string, scope?: string): string => {
-    const haystack = scope ?? text;
-    const xml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+?)\\s*</${tag}>`, "i").exec(haystack);
+/**
+ * Extrai dados de identificação da conta (banco, agência, conta).
+ * Aceita `scope` opcional para parsear apenas um bloco específico
+ * (ex.: um único <STMTTRNRS> dentro de um OFX com várias contas).
+ */
+export function parseOFXAccount(text: string, scope?: string): OFXAccountInfo {
+  const haystack = scope ?? text;
+  const get = (tag: string, localScope?: string): string => {
+    const hs = localScope ?? haystack;
+    const xml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+?)\\s*</${tag}>`, "i").exec(hs);
     if (xml) return xml[1].trim();
-    const sgml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+)`, "i").exec(haystack);
+    const sgml = new RegExp(`<${tag}>\\s*([^<\\r\\n]+)`, "i").exec(hs);
     return sgml ? sgml[1].trim() : "";
   };
 
-  // Isola os blocos da conta/instituição para reduzir colisões.
-  const bankBlock = /<BANKACCTFROM>([\s\S]*?)<\/BANKACCTFROM>/i.exec(text)?.[1]
-    ?? /<CCACCTFROM>([\s\S]*?)<\/CCACCTFROM>/i.exec(text)?.[1]
+  const bankBlock = /<BANKACCTFROM>([\s\S]*?)<\/BANKACCTFROM>/i.exec(haystack)?.[1]
+    ?? /<CCACCTFROM>([\s\S]*?)<\/CCACCTFROM>/i.exec(haystack)?.[1]
     ?? undefined;
+  // FI normalmente está no envelope, fora do bloco da conta — busca no texto completo.
   const fiBlock = /<FI>([\s\S]*?)<\/FI>/i.exec(text)?.[1] ?? undefined;
 
   const banco =
@@ -152,8 +164,39 @@ export function parseOFXAccount(text: string): OFXAccountInfo {
   };
 }
 
+/**
+ * Divide o OFX em um ou mais "statements" (um por conta) usando <STMTTRNRS>/<CCSTMTTRNRS>.
+ * Cada statement traz sua própria conta e registros. Se nenhum envelope for encontrado,
+ * o arquivo inteiro é tratado como um único statement.
+ */
+export function parseOFXStatements(text: string): ParsedOFXStatement[] {
+  const statements: ParsedOFXStatement[] = [];
+  const blockRegex = /<(STMTTRNRS|CCSTMTTRNRS|STMTRS|CCSTMTRS)>([\s\S]*?)<\/\1>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = blockRegex.exec(text)) !== null) {
+    const block = m[2];
+    statements.push({
+      account: parseOFXAccount(text, block),
+      records: parseOFX(block),
+    });
+  }
+  if (statements.length === 0) {
+    statements.push({ account: parseOFXAccount(text), records: parseOFX(text) });
+  }
+  // Remove statements completamente vazios (sem conta e sem registros).
+  const filtered = statements.filter(
+    (s) => s.records.length > 0 || s.account.agencia || s.account.conta || s.account.banco
+  );
+  return filtered.length > 0 ? filtered : statements;
+}
+
 export function parseOFXFull(text: string): ParsedOFX {
-  return { account: parseOFXAccount(text), records: parseOFX(text) };
+  const statements = parseOFXStatements(text);
+  return {
+    account: statements[0]?.account ?? {},
+    records: statements.flatMap((s) => s.records),
+    statements,
+  };
 }
 
 export async function parseFile(file: File): Promise<FinancialRecord[]> {
@@ -165,3 +208,4 @@ export async function parseFileFull(file: File): Promise<ParsedOFX> {
   const text = await file.text();
   return parseOFXFull(text);
 }
+

@@ -2,10 +2,11 @@ import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet } from "lucide-react";
+import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useDriveLinks } from "@/hooks/useDriveLinks";
@@ -27,6 +28,7 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const [loading, setLoading] = useState(false);
   const [importingId, setImportingId] = useState<string | null>(null);
   const [files, setFiles] = useState<DriveFile[]>([]);
+  const [downloadError, setDownloadError] = useState<{ file: DriveFile; message: string; hint?: string } | null>(null);
   const { links: savedLinks, addLink, removeLink } = useDriveLinks();
 
   const saveCurrentLink = useCallback(async () => {
@@ -49,6 +51,7 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
     }
     setLoading(true);
     setFiles([]);
+    setDownloadError(null);
     try {
       const { data, error } = await supabase.functions.invoke("list-drive-files", {
         body: { folderLink: folderLink.trim(), fileType: "ofx" },
@@ -62,8 +65,15 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
         toast.success(`${data.files.length} arquivo(s) OFX encontrado(s).`);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao listar arquivos.";
-      toast.error(msg);
+      const raw = err instanceof Error ? err.message : "Erro ao listar arquivos.";
+      const friendly = /401|unauth/i.test(raw)
+        ? "Sessão expirada. Faça login novamente."
+        : /403|perm|share|compart/i.test(raw)
+          ? "Sem permissão para acessar a pasta. Compartilhe como 'Qualquer pessoa com o link'."
+          : /404|not.?found/i.test(raw)
+            ? "Pasta não encontrada. Confira o link."
+            : raw;
+      toast.error(friendly);
     } finally {
       setLoading(false);
     }
@@ -71,6 +81,7 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
 
   const importOne = useCallback(async (file: DriveFile) => {
     setImportingId(file.id);
+    setDownloadError(null);
     try {
       const { data, error } = await supabase.functions.invoke("download-drive-ofx", {
         body: { fileId: file.id },
@@ -79,12 +90,35 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
       if (!data?.success) throw new Error(data?.error || "Falha ao baixar OFX");
       await onOFXLoaded({ text: data.text as string, fileName: file.name });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro ao importar OFX.";
-      toast.error(msg);
+      const raw = err instanceof Error ? err.message : "Erro ao importar OFX.";
+      let message = raw;
+      let hint: string | undefined;
+      if (/401|unauth/i.test(raw)) {
+        message = "Sessão expirada.";
+        hint = "Faça login novamente e tente outra vez.";
+      } else if (/403|perm|share|compart/i.test(raw)) {
+        message = "Sem permissão para baixar este arquivo.";
+        hint = "Compartilhe a pasta como 'Qualquer pessoa com o link' no Google Drive.";
+      } else if (/404|not.?found/i.test(raw)) {
+        message = "Arquivo não encontrado no Drive.";
+        hint = "Talvez tenha sido movido ou excluído. Liste a pasta novamente.";
+      } else if (/vaz|empty/i.test(raw)) {
+        message = "Arquivo OFX vazio.";
+      } else if (/network|fetch|timeout|tempo/i.test(raw)) {
+        message = "Falha de rede ao baixar o OFX.";
+        hint = "Verifique sua conexão e tente novamente.";
+      }
+      setDownloadError({ file, message, hint });
+      toast.error(`${file.name}: ${message}`);
     } finally {
       setImportingId(null);
     }
   }, [onOFXLoaded]);
+
+  const retryDownload = useCallback(() => {
+    if (downloadError) importOne(downloadError.file);
+  }, [downloadError, importOne]);
+
 
   const formatSize = (bytes: number | null) => {
     if (!bytes) return "—";
@@ -136,6 +170,48 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
             </Button>
           </div>
         </div>
+
+        {downloadError && (
+          <Alert variant="destructive" className="relative">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle className="pr-8">Falha ao baixar “{downloadError.file.name}”</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>{downloadError.message}</p>
+              {downloadError.hint && <p className="text-xs opacity-90">{downloadError.hint}</p>}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={retryDownload}
+                  disabled={!!importingId}
+                  className="h-7 gap-1.5"
+                >
+                  {importingId === downloadError.file.id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    : <RotateCcw className="h-3.5 w-3.5" />}
+                  Tentar novamente
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDownloadError(null)}
+                  className="h-7"
+                >
+                  Dispensar
+                </Button>
+              </div>
+            </AlertDescription>
+            <button
+              type="button"
+              onClick={() => setDownloadError(null)}
+              className="absolute right-2 top-2 rounded-md p-1 opacity-70 hover:opacity-100"
+              aria-label="Fechar"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </Alert>
+        )}
+
 
         {savedLinks.length > 0 && (
           <div className="rounded-lg border border-border bg-muted/20 p-2">
