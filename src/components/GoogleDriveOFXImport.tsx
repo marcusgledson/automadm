@@ -213,6 +213,32 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
           </div>
         </div>
 
+        {importingId && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2" data-testid="drive-progress">
+            <div className="flex items-center justify-between text-xs">
+              <span className="inline-flex items-center gap-2 font-medium">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                Baixando do Google Drive… {elapsed.toFixed(0)}s
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={cancelDownload}
+                className="h-7 gap-1.5 text-destructive hover:bg-destructive/10"
+              >
+                <Ban className="h-3.5 w-3.5" /> Cancelar
+              </Button>
+            </div>
+            <Progress value={progress} className="h-2" />
+            {elapsed > 15 && (
+              <p className="text-[11px] text-muted-foreground">
+                O Drive está demorando mais que o normal. Você pode cancelar e tentar novamente.
+              </p>
+            )}
+          </div>
+        )}
+
+
         {downloadError && (
           <Alert variant="destructive" className="relative">
             <AlertCircle className="h-4 w-4" />
