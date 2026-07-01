@@ -104,18 +104,36 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const importOne = useCallback(async (file: DriveFile) => {
     setImportingId(file.id);
     setDownloadError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const { data, error } = await supabase.functions.invoke("download-drive-ofx", {
-        body: { fileId: file.id },
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("401 Unauthorized");
+      const res = await fetch(FN_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+        body: JSON.stringify({ fileId: file.id }),
+        signal: controller.signal,
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Falha ao baixar OFX");
-      await onOFXLoaded({ text: data.text as string, fileName: file.name });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.success) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+      setProgress(100);
+      await onOFXLoaded({ text: payload.text as string, fileName: file.name });
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Erro ao importar OFX.";
       let message = raw;
       let hint: string | undefined;
-      if (/401|unauth/i.test(raw)) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        message = "Download cancelado.";
+        hint = "Você interrompeu a requisição. Tente novamente quando quiser.";
+      } else if (/401|unauth/i.test(raw)) {
         message = "Sessão expirada.";
         hint = "Faça login novamente e tente outra vez.";
       } else if (/403|perm|share|compart/i.test(raw)) {
@@ -134,8 +152,10 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
       toast.error(`${file.name}: ${message}`);
     } finally {
       setImportingId(null);
+      abortRef.current = null;
     }
   }, [onOFXLoaded]);
+
 
   const retryDownload = useCallback(() => {
     if (downloadError) importOne(downloadError.file);
