@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FolderOpen, Minimize2, Maximize2, X, ArrowLeft, Database, Loader2, Landmark } from "lucide-react";
+import { FileSpreadsheet, FolderOpen, ArrowLeft, Database, Loader2, Landmark, PencilLine } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
@@ -9,22 +9,25 @@ import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
 import OFXPreviewDialog from "@/components/OFXPreviewDialog";
+import EditableRecordsDialog from "@/components/EditableRecordsDialog";
+import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
 import { useExpenses } from "@/hooks/useExpenses";
 
 export default function Index() {
-  const { user, signOut } = useAuth();
+  const { user: _user } = useAuth();
   const navigate = useNavigate();
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [account, setAccount] = useState<OFXAccountInfo>({});
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [savingDB, setSavingDB] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [pendingPreview, setPendingPreview] = useState<{ statements: ParsedOFXStatement[]; fileName: string } | null>(null);
   const [pendingParsed, setPendingParsed] = useState<{ records: FinancialRecord[]; account: OFXAccountInfo; fileName: string } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [summary, setSummary] = useState<{ mode: "pre" | "post"; saved?: number; expenses?: number } | null>(null);
 
   const { upsertMany } = useBankStatements();
   const { upsertManyFromOFX } = useExpenses();
@@ -35,7 +38,6 @@ export default function Index() {
       toast.error("Nenhum registro encontrado no arquivo OFX");
       return;
     }
-    // Sempre passa pelo pré-visualizador (mostra agência/conta detectadas; permite escolher conta se houver várias).
     setPendingPreview({ statements: parsed.statements, fileName: originFileName });
   }, []);
 
@@ -73,20 +75,6 @@ export default function Index() {
     }
   }, [processOFXText]);
 
-  const toggleFullscreen = useCallback(() => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  }, []);
-
-  const handleClose = useCallback(() => {
-    if (confirm("Deseja realmente sair do aplicativo?")) signOut();
-  }, [signOut]);
-
   const openFilePicker = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -98,7 +86,7 @@ export default function Index() {
     input.click();
   };
 
-  const saveToDatabase = async () => {
+  const doPersist = useCallback(async () => {
     if (records.length === 0) return;
     if (!account.agencia || !account.conta) {
       toast.error("OFX sem Agência/Conta no cabeçalho. Não é possível gravar.");
@@ -110,10 +98,15 @@ export default function Index() {
     const accountRef = `${account.agencia}/${account.conta}`;
     const b = await upsertManyFromOFX(records, accountRef);
     setSavingDB(false);
-    if (!a.ok) toast.error(`Extrato: ${a.error}`);
-    else toast.success(`Extrato salvo (${a.count} linhas).`);
+    if (!a.ok) { toast.error(`Extrato: ${a.error}`); return; }
     if (!b.ok) toast.error(`Despesas: ${b.error}`);
-    else if (b.count > 0) toast.success(`${b.count} débito(s) replicado(s) em Despesas.`);
+    setSummary({ mode: "post", saved: a.count, expenses: b.ok ? b.count : 0 });
+    toast.success(`Extrato salvo (${a.count} linhas).`);
+  }, [records, account, fileName, upsertMany, upsertManyFromOFX]);
+
+  const saveToDatabase = () => {
+    if (records.length === 0) return;
+    setSummary({ mode: "pre" });
   };
 
   return (
@@ -159,10 +152,16 @@ export default function Index() {
                       {account.banco ? `${account.banco} · ` : ""}
                       Ag {account.agencia || "—"} / Conta {account.conta || "—"}
                     </span>
+                    <span className="rounded-md border border-border/60 bg-card/70 px-2 py-1">
+                      {records.length} lançamento{records.length === 1 ? "" : "s"}
+                    </span>
                   </div>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setEditing(true)} className="gap-2">
+                  <PencilLine className="h-4 w-4" /> Revisar / Editar
+                </Button>
                 <Button size="sm" onClick={saveToDatabase} disabled={savingDB} className="gap-2">
                   {savingDB ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
                   Salvar na Base
@@ -199,6 +198,32 @@ export default function Index() {
           toast.success(`${pendingParsed.records.length} registros carregados de ${pendingParsed.fileName}`);
           setPendingParsed(null);
         }}
+      />
+
+      <EditableRecordsDialog
+        open={editing}
+        records={records}
+        onCancel={() => setEditing(false)}
+        onConfirm={(edited) => {
+          setRecords(edited);
+          setEditing(false);
+          toast.success(`${edited.length} lançamento(s) atualizado(s).`);
+        }}
+      />
+
+      <ImportSummaryDialog
+        open={!!summary}
+        mode={summary?.mode ?? "pre"}
+        banco={account.banco}
+        agencia={account.agencia}
+        conta={account.conta}
+        fileName={fileName}
+        totalRecords={records.length}
+        savedCount={summary?.saved}
+        expensesCount={summary?.expenses}
+        onReview={() => { setSummary(null); setEditing(true); }}
+        onConfirm={() => { setSummary(null); void doPersist(); }}
+        onClose={() => setSummary(null)}
       />
     </div>
   );
