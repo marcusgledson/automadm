@@ -58,7 +58,15 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
 - numero_instalacao: código da unidade consumidora, matrícula, contrato, inscrição imobiliária ou RENAVAM, conforme o tipo.
 - data_vencimento: SEMPRE obrigatória — procure "Vencimento", "Pague até".
 - valor_total: valor total a pagar. Nunca 0.
-- mes_referencia: mês de referência ou competência.`;
+- mes_referencia: mês de referência ou competência.
+- IDENTIFICAÇÃO DO EMISSOR/SACADOR (prioridade alta): em boletos e faturas,
+  o "sacador"/"beneficiário"/"cedente"/"emissor" é quem VAI RECEBER o dinheiro
+  (ex.: "Neoenergia Coelba", "Sabesp", "Prefeitura de X", "Vivo S.A.").
+  Este NUNCA é o cliente/pagador. Se houver empresa de cobrança intermediária
+  (ex.: "Assaí Cobrança", cartório), retorne o sacador ORIGINAL nesse caso.
+- fornecedor: preencha com o sacador/beneficiário identificado.
+- emissor_documento: CNPJ do sacador/beneficiário, se disponível.
+- linha_digitavel/codigo_barras: quando visíveis no boleto.`;
 
     const body = JSON.stringify({
       model: "google/gemini-2.5-flash",
@@ -74,8 +82,12 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
           parameters: {
             type: "object",
             properties: {
-              fornecedor: { type: "string" },
-              titular: { type: "string" },
+              fornecedor: { type: "string", description: "Sacador/beneficiário do boleto (quem recebe)" },
+              sacador: { type: "string", description: "Alias de fornecedor. Nome exato do beneficiário/cedente." },
+              emissor_documento: { type: "string", description: "CNPJ do sacador/beneficiário" },
+              linha_digitavel: { type: "string" },
+              codigo_barras: { type: "string" },
+              titular: { type: "string", description: "Pagador/cliente" },
               cpf_cnpj: { type: "string" },
               endereco: { type: "string" },
               numero_instalacao: { type: "string" },
@@ -117,6 +129,7 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
       }],
       tool_choice: { type: "function", function: { name: "extract_bill_data" } },
     });
+
 
     let resp: Response | null = null;
     let lastStatus = 0, lastText = "";

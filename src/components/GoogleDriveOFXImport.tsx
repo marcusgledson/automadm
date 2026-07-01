@@ -1,12 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X } from "lucide-react";
+import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useDriveLinks } from "@/hooks/useDriveLinks";
@@ -22,6 +23,8 @@ interface GoogleDriveOFXImportProps {
   onOFXLoaded: (payload: { text: string; fileName: string }) => void | Promise<void>;
 }
 
+const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-drive-ofx`;
+
 export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImportProps) {
   const [folderLink, setFolderLink] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
@@ -29,7 +32,26 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const [importingId, setImportingId] = useState<string | null>(null);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [downloadError, setDownloadError] = useState<{ file: DriveFile; message: string; hint?: string } | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
   const { links: savedLinks, addLink, removeLink } = useDriveLinks();
+
+  useEffect(() => {
+    if (!importingId) { setProgress(0); setElapsed(0); return; }
+    const started = Date.now();
+    const iv = setInterval(() => {
+      const secs = (Date.now() - started) / 1000;
+      setElapsed(secs);
+      // Curva assintótica até 95% em ~30s enquanto aguarda a resposta.
+      setProgress(Math.min(95, Math.round(100 * (1 - Math.exp(-secs / 8)))));
+    }, 200);
+    return () => clearInterval(iv);
+  }, [importingId]);
+
+  const cancelDownload = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const saveCurrentLink = useCallback(async () => {
     const res = await addLink(folderLink, linkLabel);
@@ -82,18 +104,36 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const importOne = useCallback(async (file: DriveFile) => {
     setImportingId(file.id);
     setDownloadError(null);
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      const { data, error } = await supabase.functions.invoke("download-drive-ofx", {
-        body: { fileId: file.id },
+      const { data: sess } = await supabase.auth.getSession();
+      const token = sess.session?.access_token;
+      if (!token) throw new Error("401 Unauthorized");
+      const res = await fetch(FN_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string,
+        },
+        body: JSON.stringify({ fileId: file.id }),
+        signal: controller.signal,
       });
-      if (error) throw new Error(error.message);
-      if (!data?.success) throw new Error(data?.error || "Falha ao baixar OFX");
-      await onOFXLoaded({ text: data.text as string, fileName: file.name });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok || !payload?.success) {
+        throw new Error(payload?.error || `HTTP ${res.status}`);
+      }
+      setProgress(100);
+      await onOFXLoaded({ text: payload.text as string, fileName: file.name });
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Erro ao importar OFX.";
       let message = raw;
       let hint: string | undefined;
-      if (/401|unauth/i.test(raw)) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        message = "Download cancelado.";
+        hint = "Você interrompeu a requisição. Tente novamente quando quiser.";
+      } else if (/401|unauth/i.test(raw)) {
         message = "Sessão expirada.";
         hint = "Faça login novamente e tente outra vez.";
       } else if (/403|perm|share|compart/i.test(raw)) {
@@ -112,8 +152,10 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
       toast.error(`${file.name}: ${message}`);
     } finally {
       setImportingId(null);
+      abortRef.current = null;
     }
   }, [onOFXLoaded]);
+
 
   const retryDownload = useCallback(() => {
     if (downloadError) importOne(downloadError.file);
@@ -170,6 +212,32 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
             </Button>
           </div>
         </div>
+
+        {importingId && (
+          <div className="rounded-lg border bg-muted/30 p-3 space-y-2" data-testid="drive-progress">
+            <div className="flex items-center justify-between text-xs">
+              <span className="inline-flex items-center gap-2 font-medium">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
+                Baixando do Google Drive… {elapsed.toFixed(0)}s
+              </span>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={cancelDownload}
+                className="h-7 gap-1.5 text-destructive hover:bg-destructive/10"
+              >
+                <Ban className="h-3.5 w-3.5" /> Cancelar
+              </Button>
+            </div>
+            <Progress value={progress} className="h-2" />
+            {elapsed > 15 && (
+              <p className="text-[11px] text-muted-foreground">
+                O Drive está demorando mais que o normal. Você pode cancelar e tentar novamente.
+              </p>
+            )}
+          </div>
+        )}
+
 
         {downloadError && (
           <Alert variant="destructive" className="relative">

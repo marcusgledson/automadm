@@ -44,6 +44,8 @@ export function normalizeRef(raw?: string | null): string | null {
 }
 
 export interface ExtractedInvoice {
+  fornecedor?: string; sacador?: string; emissor_documento?: string;
+  linha_digitavel?: string; codigo_barras?: string;
   titular?: string; cpf_cnpj?: string; endereco?: string;
   numero_instalacao?: string;
   mes_referencia?: string; data_vencimento?: string;
@@ -55,6 +57,16 @@ export interface ExtractedInvoice {
   itens_fatura?: Array<Record<string, unknown>>;
   historico_consumo?: Array<Record<string, unknown>>;
   [k: string]: unknown;
+}
+
+/** Prioriza sacador/beneficiário como fornecedor (organização por emissor). */
+export function pickFornecedor(inv: ExtractedInvoice, override?: string): string | null {
+  const clean = (v?: string | null) => {
+    if (!v) return null;
+    const s = String(v).trim();
+    return s.length > 1 ? s : null;
+  };
+  return clean(override) ?? clean(inv.sacador) ?? clean(inv.fornecedor) ?? null;
 }
 
 export function toBillRow(
@@ -81,7 +93,7 @@ export function toBillRow(
 
   return {
     tipo_conta: opts.tipo_conta,
-    fornecedor: opts.fornecedor ?? null,
+    fornecedor: pickFornecedor(inv, opts.fornecedor),
     codigo_instalacao: codigo,
     titular: inv.titular ?? null,
     cpf_cnpj: inv.cpf_cnpj ?? null,
@@ -100,3 +112,4 @@ export function toBillRow(
     source: opts.source,
   };
 }
+
