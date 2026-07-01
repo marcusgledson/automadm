@@ -1,12 +1,13 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X } from "lucide-react";
+import { FolderOpen, Loader2, Download, Trash2, Save, Link as LinkIcon, FileSpreadsheet, AlertCircle, RotateCcw, X, Ban } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useDriveLinks } from "@/hooks/useDriveLinks";
@@ -22,6 +23,8 @@ interface GoogleDriveOFXImportProps {
   onOFXLoaded: (payload: { text: string; fileName: string }) => void | Promise<void>;
 }
 
+const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-drive-ofx`;
+
 export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImportProps) {
   const [folderLink, setFolderLink] = useState("");
   const [linkLabel, setLinkLabel] = useState("");
@@ -29,7 +32,26 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const [importingId, setImportingId] = useState<string | null>(null);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [downloadError, setDownloadError] = useState<{ file: DriveFile; message: string; hint?: string } | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [elapsed, setElapsed] = useState(0);
+  const abortRef = useRef<AbortController | null>(null);
   const { links: savedLinks, addLink, removeLink } = useDriveLinks();
+
+  useEffect(() => {
+    if (!importingId) { setProgress(0); setElapsed(0); return; }
+    const started = Date.now();
+    const iv = setInterval(() => {
+      const secs = (Date.now() - started) / 1000;
+      setElapsed(secs);
+      // Curva assintótica até 95% em ~30s enquanto aguarda a resposta.
+      setProgress(Math.min(95, Math.round(100 * (1 - Math.exp(-secs / 8)))));
+    }, 200);
+    return () => clearInterval(iv);
+  }, [importingId]);
+
+  const cancelDownload = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
 
   const saveCurrentLink = useCallback(async () => {
     const res = await addLink(folderLink, linkLabel);
