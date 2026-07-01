@@ -67,10 +67,13 @@ export default function EditableRecordsDialog({ open, records, onCancel, onConfi
             <Pencil className="h-4 w-4 text-primary" />
             Revisar lançamentos antes de importar
           </DialogTitle>
-          <DialogDescription className="flex items-center gap-2">
-            <Badge variant="secondary" className="gap-1"><ListChecks className="h-3 w-3" /> {included} de {rows.length} selecionado(s)</Badge>
-            Edite descrição e categoria, ou desmarque linhas que não devem ser importadas.
+          <DialogDescription asChild>
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <Badge variant="secondary" className="gap-1"><ListChecks className="h-3 w-3" /> {included} de {rows.length} selecionado(s)</Badge>
+              <span>Edite descrição e categoria, ou desmarque linhas que não devem ser importadas.</span>
+            </div>
           </DialogDescription>
+
         </DialogHeader>
 
         <div className="mb-2 flex items-center justify-between gap-2">
