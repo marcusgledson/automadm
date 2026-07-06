@@ -138,9 +138,9 @@ describe("Index — fluxo completo Drive → preview → editar → confirmar", 
 
     // 7) Persistência chamada com o registro remanescente
     await waitFor(() => expect(upsertMany).toHaveBeenCalledTimes(1));
-    const [records, ctx] = upsertMany.mock.calls[0];
-    expect(records).toHaveLength(1);
-    expect(ctx).toMatchObject({ agencia: "5678", conta: "22222-2", fileName: "multi.ofx" });
+    const call = upsertMany.mock.calls[0] as unknown as [unknown[], Record<string, unknown>];
+    expect(call[0]).toHaveLength(1);
+    expect(call[1]).toMatchObject({ agencia: "5678", conta: "22222-2", fileName: "multi.ofx" });
     expect(upsertManyFromOFX).toHaveBeenCalledTimes(1);
 
     // 8) Resumo pós-importação aparece
