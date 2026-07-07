@@ -9,13 +9,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Maximize2, Minimize2, Settings, UserRound } from "lucide-react";
+import { HelpCircle, LogOut, Maximize2, Minimize2, Settings, UserRound } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
+import HelpDialog from "@/components/HelpDialog";
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
