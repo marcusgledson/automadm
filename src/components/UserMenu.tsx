@@ -59,6 +59,10 @@ export default function UserMenu() {
             {isFullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />}
             {isFullscreen ? "Restaurar tela" : "Tela cheia"}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            Ajuda / Passo a passo
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setAdminOpen(true)}>
             <Settings className="mr-2 h-4 w-4" />
             Menu Gerencial
@@ -74,6 +78,7 @@ export default function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
       <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} />
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </>
   );
 }
