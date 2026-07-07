@@ -1,11 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileSpreadsheet, Zap, Receipt, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileSpreadsheet, Zap, Receipt, Sparkles, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import FinanceHero from "@/components/FinanceHero";
+import HelpDialog from "@/components/HelpDialog";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const modules = [
     {
@@ -43,8 +47,15 @@ export default function Dashboard() {
           </div>
           <span className="truncate text-sm font-semibold text-foreground">Painel Financeiro</span>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setHelpOpen(true)}>
+            <HelpCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Ajuda</span>
+          </Button>
+          <UserMenu />
+        </div>
       </header>
+
 
 
       <main className="safe-bottom flex flex-1 items-start justify-center p-4 sm:p-8">
@@ -82,6 +93,8 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </div>
   );
 }
+

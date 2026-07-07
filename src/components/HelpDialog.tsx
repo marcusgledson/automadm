@@ -1,0 +1,178 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  LogIn,
+  LayoutDashboard,
+  FileSpreadsheet,
+  FolderOpen,
+  Landmark,
+  PencilLine,
+  Database,
+  CheckCircle2,
+  LogOut,
+  Lightbulb,
+  Zap,
+  Receipt,
+} from "lucide-react";
+
+interface HelpDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+type Step = {
+  icon: React.ElementType;
+  title: string;
+  body: React.ReactNode;
+  tip?: string;
+};
+
+const steps: Step[] = [
+  {
+    icon: LogIn,
+    title: "1. Fazer login",
+    body: (
+      <>
+        Acesse a tela inicial e informe seu <strong>e-mail</strong> e <strong>senha</strong>.
+        Se ainda não tiver conta, use a aba <em>Cadastrar</em> para criar uma nova.
+      </>
+    ),
+    tip: "Após 15 minutos sem atividade, o sistema encerra a sessão automaticamente por segurança.",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "2. Escolher o módulo no Painel",
+    body: (
+      <>
+        No painel principal você verá os módulos disponíveis:
+        <ul className="mt-2 space-y-1 pl-4">
+          <li className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5 text-primary" /> <strong>Análise de Extrato</strong> — importar OFX.</li>
+          <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-accent" /> <strong>Faturas Neoenergia</strong> — importar contas de energia.</li>
+          <li className="flex items-center gap-2"><Receipt className="h-3.5 w-3.5 text-emerald-600" /> <strong>Central de Contas</strong> — despesas consolidadas.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    icon: FolderOpen,
+    title: "3. Importar o arquivo OFX",
+    body: (
+      <>
+        No módulo <strong>Análise de Extrato</strong>, você pode:
+        <ul className="mt-2 space-y-1 pl-4 list-disc">
+          <li>Arrastar um arquivo <code>.ofx</code> na área indicada, ou</li>
+          <li>Clicar em <em>Selecionar Arquivo OFX</em>, ou</li>
+          <li>Buscar direto de uma <strong>pasta pública do Google Drive</strong>.</li>
+        </ul>
+      </>
+    ),
+    tip: "Se o download do Drive travar, use o botão Cancelar e Tentar novamente.",
+  },
+  {
+    icon: Landmark,
+    title: "4. Confirmar Agência e Conta",
+    body: (
+      <>
+        O sistema detecta automaticamente <strong>Banco, Agência e Conta</strong> do OFX.
+        Quando o arquivo contém <strong>mais de uma conta</strong>, uma pré-visualização permite
+        escolher qual bloco importar. Se faltarem dados, você pode informá-los manualmente.
+      </>
+    ),
+  },
+  {
+    icon: PencilLine,
+    title: "5. Revisar e editar lançamentos",
+    body: (
+      <>
+        Antes de salvar, clique em <strong>Revisar / Editar</strong> para:
+        <ul className="mt-2 space-y-1 pl-4 list-disc">
+          <li>Ajustar <strong>descrição</strong> e <strong>categoria</strong>;</li>
+          <li>Marcar linhas para <strong>ignorar</strong> na importação;</li>
+          <li>Conferir valores e datas.</li>
+        </ul>
+      </>
+    ),
+  },
+  {
+    icon: Database,
+    title: "6. Salvar na base",
+    body: (
+      <>
+        Clique em <strong>Salvar na Base</strong>. Um resumo aparece com o banco, agência,
+        conta e quantidade de lançamentos. Confirme para gravar — os dados vão para o
+        extrato e também para a Central de Despesas.
+      </>
+    ),
+  },
+  {
+    icon: CheckCircle2,
+    title: "7. Conferir o resumo final",
+    body: (
+      <>
+        Ao concluir, você verá quantos lançamentos foram salvos no <strong>extrato</strong> e
+        quantos foram vinculados como <strong>despesas</strong>. A partir daí, é possível
+        exportar em XLSX ou seguir para outros módulos.
+      </>
+    ),
+  },
+  {
+    icon: LogOut,
+    title: "8. Sair com segurança",
+    body: (
+      <>
+        No menu de usuário (canto superior direito), use <strong>Sair da conta</strong> para
+        encerrar a sessão. Em dispositivos móveis, é possível também restaurar a tela cheia
+        pelo mesmo menu.
+      </>
+    ),
+  },
+];
+
+export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl p-0">
+        <DialogHeader className="border-b border-border/60 px-6 pb-4 pt-6">
+          <DialogTitle className="flex items-center gap-2 text-lg">
+            <Lightbulb className="h-5 w-5 text-primary" />
+            Ajuda — Passo a passo
+          </DialogTitle>
+          <DialogDescription>
+            Do login até o salvamento do extrato na base. Siga na ordem sugerida.
+          </DialogDescription>
+        </DialogHeader>
+        <ScrollArea className="max-h-[70vh] px-6 py-4">
+          <ol className="space-y-4">
+            {steps.map((s, i) => (
+              <li
+                key={i}
+                className="relative rounded-lg border border-border/60 bg-card/60 p-4 transition-colors hover:bg-card"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <s.icon className="h-4 w-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-foreground">{s.title}</h3>
+                    <div className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {s.body}
+                    </div>
+                    {s.tip && (
+                      <div className="mt-2 rounded-md border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-foreground/80">
+                        <strong className="text-accent">Dica: </strong>
+                        {s.tip}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            Precisa de mais detalhes? Solicite o <em>Manual do Usuário</em> em DOCX.
+          </p>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}

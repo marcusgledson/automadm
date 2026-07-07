@@ -9,13 +9,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Maximize2, Minimize2, Settings, UserRound } from "lucide-react";
+import { HelpCircle, LogOut, Maximize2, Minimize2, Settings, UserRound } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
+import HelpDialog from "@/components/HelpDialog";
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
@@ -57,6 +59,10 @@ export default function UserMenu() {
             {isFullscreen ? <Minimize2 className="mr-2 h-4 w-4" /> : <Maximize2 className="mr-2 h-4 w-4" />}
             {isFullscreen ? "Restaurar tela" : "Tela cheia"}
           </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            Ajuda / Passo a passo
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setAdminOpen(true)}>
             <Settings className="mr-2 h-4 w-4" />
             Menu Gerencial
@@ -72,6 +78,7 @@ export default function UserMenu() {
         </DropdownMenuContent>
       </DropdownMenu>
       <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} />
+      <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
     </>
   );
 }
