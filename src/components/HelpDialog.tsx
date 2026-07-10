@@ -1,5 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import {
   LogIn,
   LayoutDashboard,
@@ -13,6 +15,10 @@ import {
   Lightbulb,
   Zap,
   Receipt,
+  Download,
+  FileText,
+  BookOpen,
+  ArrowRight,
 } from "lucide-react";
 
 interface HelpDialogProps {
@@ -25,6 +31,7 @@ type Step = {
   title: string;
   body: React.ReactNode;
   tip?: string;
+  jumpTo?: { label: string; path: string };
 };
 
 const steps: Step[] = [
@@ -52,6 +59,7 @@ const steps: Step[] = [
         </ul>
       </>
     ),
+    jumpTo: { label: "Ir para o Painel", path: "/" },
   },
   {
     icon: FolderOpen,
@@ -67,6 +75,7 @@ const steps: Step[] = [
       </>
     ),
     tip: "Se o download do Drive travar, use o botão Cancelar e Tentar novamente.",
+    jumpTo: { label: "Abrir Análise de Extrato", path: "/extrato" },
   },
   {
     icon: Landmark,
@@ -78,6 +87,7 @@ const steps: Step[] = [
         escolher qual bloco importar. Se faltarem dados, você pode informá-los manualmente.
       </>
     ),
+    jumpTo: { label: "Ir para importação", path: "/extrato" },
   },
   {
     icon: PencilLine,
@@ -92,6 +102,7 @@ const steps: Step[] = [
         </ul>
       </>
     ),
+    jumpTo: { label: "Ir para revisão", path: "/extrato" },
   },
   {
     icon: Database,
@@ -103,6 +114,7 @@ const steps: Step[] = [
         extrato e também para a Central de Despesas.
       </>
     ),
+    jumpTo: { label: "Ir para salvamento", path: "/extrato" },
   },
   {
     icon: CheckCircle2,
@@ -114,6 +126,7 @@ const steps: Step[] = [
         exportar em XLSX ou seguir para outros módulos.
       </>
     ),
+    jumpTo: { label: "Ver Central de Contas", path: "/contas" },
   },
   {
     icon: LogOut,
@@ -129,6 +142,12 @@ const steps: Step[] = [
 ];
 
 export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
+  const navigate = useNavigate();
+  const jump = (path: string) => {
+    onOpenChange(false);
+    navigate(path);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl p-0">
@@ -141,7 +160,38 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
             Do login até o salvamento do extrato na base. Siga na ordem sugerida.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[70vh] px-6 py-4">
+
+        <div className="flex flex-wrap items-center gap-2 border-b border-border/60 bg-muted/30 px-6 py-3">
+          <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+            <a href="/manual-do-usuario.pdf" target="_blank" rel="noopener noreferrer">
+              <FileText className="h-3.5 w-3.5" />
+              Visualizar Manual (PDF)
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+            <a href="/manual-do-usuario.pdf" download="manual-do-usuario.pdf">
+              <Download className="h-3.5 w-3.5" />
+              Baixar PDF
+            </a>
+          </Button>
+          <Button asChild variant="outline" size="sm" className="h-8 gap-1.5">
+            <a href="/manual-do-usuario.docx" download="manual-do-usuario.docx">
+              <Download className="h-3.5 w-3.5" />
+              Baixar DOCX
+            </a>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 gap-1.5"
+            onClick={() => jump("/faq")}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            FAQ &amp; Problemas
+          </Button>
+        </div>
+
+        <ScrollArea className="max-h-[60vh] px-6 py-4">
           <ol className="space-y-4">
             {steps.map((s, i) => (
               <li
@@ -163,14 +213,22 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                         {s.tip}
                       </div>
                     )}
+                    {s.jumpTo && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="mt-2 h-7 gap-1 px-2 text-xs text-primary hover:text-primary"
+                        onClick={() => jump(s.jumpTo!.path)}
+                      >
+                        {s.jumpTo.label}
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </li>
             ))}
           </ol>
-          <p className="mt-4 text-center text-xs text-muted-foreground">
-            Precisa de mais detalhes? Solicite o <em>Manual do Usuário</em> em DOCX.
-          </p>
         </ScrollArea>
       </DialogContent>
     </Dialog>
