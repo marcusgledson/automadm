@@ -359,13 +359,7 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                     href="/manual-do-usuario.pdf"
                     file="manual-do-usuario.pdf"
                   />
-                  <DownloadRow
-                    icon={FileText}
-                    title="Manual do Usuário — DOCX"
-                    desc="Formato editável, para adaptação interna ou impressão."
-                    href="/manual-do-usuario.docx"
-                    file="manual-do-usuario.docx"
-                  />
+
                 </div>
               </ScrollArea>
             )}
