@@ -263,6 +263,119 @@ export type Database = {
         }
         Relationships: []
       }
+      sms_bank_configs: {
+        Row: {
+          agencia: string | null
+          amount_regex: string | null
+          bank_name: string
+          conta: string | null
+          created_at: string
+          credit_keywords: string[]
+          debit_keywords: string[]
+          id: string
+          is_active: boolean
+          is_preset: boolean
+          senders: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agencia?: string | null
+          amount_regex?: string | null
+          bank_name: string
+          conta?: string | null
+          created_at?: string
+          credit_keywords?: string[]
+          debit_keywords?: string[]
+          id?: string
+          is_active?: boolean
+          is_preset?: boolean
+          senders?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agencia?: string | null
+          amount_regex?: string | null
+          bank_name?: string
+          conta?: string | null
+          created_at?: string
+          credit_keywords?: string[]
+          debit_keywords?: string[]
+          id?: string
+          is_active?: boolean
+          is_preset?: boolean
+          senders?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      sms_review_queue: {
+        Row: {
+          agencia: string | null
+          amount: number | null
+          bank_config_id: string | null
+          bank_name: string | null
+          conta: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          kind: Database["public"]["Enums"]["sms_txn_kind"]
+          raw_message: string
+          received_at: string | null
+          sender: string | null
+          status: Database["public"]["Enums"]["sms_review_status"]
+          target_ref: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agencia?: string | null
+          amount?: number | null
+          bank_config_id?: string | null
+          bank_name?: string | null
+          conta?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["sms_txn_kind"]
+          raw_message: string
+          received_at?: string | null
+          sender?: string | null
+          status?: Database["public"]["Enums"]["sms_review_status"]
+          target_ref?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agencia?: string | null
+          amount?: number | null
+          bank_config_id?: string | null
+          bank_name?: string | null
+          conta?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["sms_txn_kind"]
+          raw_message?: string
+          received_at?: string | null
+          sender?: string | null
+          status?: Database["public"]["Enums"]["sms_review_status"]
+          target_ref?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_review_queue_bank_config_id_fkey"
+            columns: ["bank_config_id"]
+            isOneToOne: false
+            referencedRelation: "sms_bank_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -282,6 +395,8 @@ export type Database = {
         | "gas"
         | "telefone"
         | "outro"
+      sms_review_status: "pending" | "approved" | "rejected"
+      sms_txn_kind: "debit" | "credit" | "unknown"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -421,6 +536,8 @@ export const Constants = {
         "telefone",
         "outro",
       ],
+      sms_review_status: ["pending", "approved", "rejected"],
+      sms_txn_kind: ["debit", "credit", "unknown"],
     },
   },
 } as const
