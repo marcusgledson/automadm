@@ -71,7 +71,7 @@ export function useSmsReviewQueue() {
       const iso = dt.toISOString().slice(0, 10);
       try {
         if (r.kind === "debit") {
-          const { error } = await supabase.from("expenses").insert({
+          const { error } = await (supabase.from("expenses") as any).insert({
             user_id: user.id,
             valor: r.amount,
             data_pagamento: iso,
