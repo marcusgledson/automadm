@@ -89,7 +89,7 @@ export function useSmsReviewQueue() {
           const agencia = r.agencia ?? "SMS";
           const conta = r.conta ?? "SMS";
           const fitid = `SMS-${r.id}`;
-          const { error } = await supabase.from("bank_statements").insert({
+          const { error } = await (supabase.from("bank_statements") as any).insert({
             user_id: user.id,
             fitid,
             agencia,
