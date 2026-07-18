@@ -122,6 +122,22 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/sms/config"
+              element={
+                <ProtectedRoute>
+                  <SmsConfig />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/sms/revisao"
+              element={
+                <ProtectedRoute>
+                  <SmsReview />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
