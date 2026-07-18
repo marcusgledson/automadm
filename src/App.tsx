@@ -12,6 +12,8 @@ import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
 import ContasCentral from "./pages/ContasCentral";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
+import SmsConfig from "./pages/SmsConfig";
+import SmsReview from "./pages/SmsReview";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
