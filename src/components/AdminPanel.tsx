@@ -24,26 +24,24 @@ import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle,
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
+import DeleteImpactDialog from "@/components/DeleteImpactDialog";
+import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }
 
-type TableKey = "bank_statements" | "consumption_bills" | "expenses" | "drive_links";
+type TableKey = ImpactTableKey;
 
 const TABLES: { key: TableKey; label: string }[] = [
   { key: "bank_statements", label: "Extratos Bancários" },
   { key: "consumption_bills", label: "Faturas / Contas de Consumo" },
   { key: "expenses", label: "Despesas / Boletos" },
   { key: "drive_links", label: "Links do Google Drive" },
+  { key: "sms_bank_configs", label: "Bancos configurados (SMS)" },
+  { key: "sms_review_queue", label: "Fila de revisão de SMS" },
 ];
-
-interface PendingAction {
-  type: "table" | "all";
-  key?: TableKey;
-  label?: string;
-}
 
 interface ExportSummaryItem {
   label: string;
@@ -57,7 +55,9 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const [previewUrl] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
 
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [pending, setPending] = useState<PendingAction | null>(null);
+  const [impactOpen, setImpactOpen] = useState(false);
+  const [impactTarget, setImpactTarget] = useState<TableKey | "all" | null>(null);
+  const [pendingPlan, setPendingPlan] = useState<ImpactPlan | null>(null);
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
 
@@ -146,14 +146,21 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
     }
   };
 
-  const requestDelete = (action: PendingAction) => {
-    setPending(action);
+  const requestDelete = (target: TableKey | "all") => {
+    setImpactTarget(target);
+    setPendingPlan(null);
+    setImpactOpen(true);
+  };
+
+  const onImpactConfirmed = (plan: ImpactPlan) => {
+    setPendingPlan(plan);
+    setImpactOpen(false);
     setPassword("");
     setConfirmOpen(true);
   };
 
   const executeDelete = async () => {
-    if (!user || !pending) return;
+    if (!user || !pendingPlan) return;
     if (!password) {
       toast.error("Digite sua senha para confirmar.");
       return;
@@ -171,24 +178,22 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
       return;
     }
 
-    if (pending.type === "table" && pending.key) {
-      setBusy(pending.key);
-      const { error } = await supabase.from(pending.key).delete().eq("user_id", user.id);
+    setBusy(impactTarget ?? "all");
+    try {
+      await executeImpactPlan(pendingPlan, user.id);
+      toast.success(
+        `${pendingPlan.targetLabel}: ${pendingPlan.totalRows} registro(s) excluído(s). Recarregue para atualizar.`,
+      );
+    } catch (e) {
+      toast.error("Falha na exclusão: " + (e as Error).message);
+    } finally {
       setBusy(null);
-      if (error) toast.error("Falha: " + error.message);
-      else toast.success(`${pending.label} limpo. Recarregue para atualizar.`);
-    } else if (pending.type === "all") {
-      setBusy("all");
-      for (const t of TABLES) {
-        await supabase.from(t.key).delete().eq("user_id", user.id);
-      }
-      setBusy(null);
-      toast.success("Base limpa. Recarregue a página.");
     }
 
     setVerifying(false);
     setConfirmOpen(false);
-    setPending(null);
+    setPendingPlan(null);
+    setImpactTarget(null);
     setPassword("");
   };
 
@@ -383,7 +388,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
                       size="sm"
                       variant="ghost"
                       className="shrink-0 text-destructive hover:bg-destructive/10"
-                      onClick={() => requestDelete({ type: "table", key: t.key, label: t.label })}
+                      onClick={() => requestDelete(t.key)}
                       disabled={busy !== null}
                     >
                       {busy === t.key ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -394,7 +399,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
                 <Button
                   variant="destructive"
                   className="w-full"
-                  onClick={() => requestDelete({ type: "all" })}
+                  onClick={() => requestDelete("all")}
                   disabled={busy !== null}
                 >
                   {busy === "all" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
@@ -421,6 +426,14 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
         </DialogContent>
       </Dialog>
 
+      <DeleteImpactDialog
+        open={impactOpen}
+        onOpenChange={setImpactOpen}
+        target={impactTarget}
+        userId={user?.id}
+        onConfirm={onImpactConfirmed}
+      />
+
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -429,9 +442,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
               Confirmar exclusão
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pending?.type === "all"
-                ? "Você está prestes a apagar TODOS os seus dados de TODAS as bases."
-                : `Você está prestes a apagar TODOS os registros de "${pending?.label}".`}
+              {`Você está prestes a apagar ${pendingPlan?.totalRows ?? 0} registro(s) de "${pendingPlan?.targetLabel ?? ""}"${pendingPlan?.hasDependents ? ", incluindo toda a cadeia de dados relacionados" : ""}.`}
               <br />
               Digite sua senha para confirmar.
             </AlertDialogDescription>
