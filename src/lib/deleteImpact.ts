@@ -96,7 +96,7 @@ async function loadGroup(
   userId: string,
   dependent: boolean,
   reason?: string,
-  filter?: (q: ReturnType<typeof buildQuery>) => ReturnType<typeof buildQuery>,
+  filter?: (q: LooseQuery) => LooseQuery,
 ): Promise<ImpactGroup> {
   let q = buildQuery(key, userId);
   if (filter) q = filter(q);
@@ -105,8 +105,12 @@ async function loadGroup(
   return { key, label: IMPACT_LABELS[key], count: count ?? rows.length, rows, dependent, reason };
 }
 
-function buildQuery(key: ImpactTableKey, userId: string) {
-  return supabase.from(key).select("*", { count: "exact" }).eq("user_id", userId);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type LooseQuery = any;
+
+function buildQuery(key: ImpactTableKey, userId: string): LooseQuery {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (supabase.from(key) as any).select("*", { count: "exact" }).eq("user_id", userId);
 }
 
 /**
@@ -202,7 +206,8 @@ function loadPlaceholder(key: ImpactTableKey): ImpactGroup {
 export async function executeImpactPlan(plan: ImpactPlan, userId: string): Promise<void> {
   for (const key of plan.order) {
     const group = plan.groups.find((g) => g.key === key && g.dependent);
-    let q = supabase.from(key).delete().eq("user_id", userId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let q: LooseQuery = (supabase.from(key) as any).delete().eq("user_id", userId);
     if (group) {
       if (key === "expenses") {
         const origem =
