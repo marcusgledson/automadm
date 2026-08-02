@@ -20,6 +20,7 @@ import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter, Calc
 import UserMenu from "@/components/UserMenu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import AdvancedFinanceAnalysis from "@/components/AdvancedFinanceAnalysis";
 import { loadInvoices, parseMesReferencia, formatMesLabel, type StoredInvoice } from "@/lib/invoiceStore";
 
 const COLORS = [
@@ -41,6 +42,7 @@ export default function NeoenergiaAnalytics() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mode, setMode] = useState<"simples" | "avancado">("simples");
   const [dbInvoices, setDbInvoices] = useState<StoredInvoice[]>([]);
   const allInvoices = useMemo<StoredInvoice[]>(() => {
     const local = loadInvoices();
@@ -296,7 +298,33 @@ export default function NeoenergiaAnalytics() {
 
       <main className="flex-1 overflow-auto p-6">
         <div className="mx-auto max-w-7xl space-y-6">
-          {allInvoices.length === 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-md border border-border p-1">
+              <Button
+                size="sm"
+                variant={mode === "simples" ? "default" : "ghost"}
+                onClick={() => setMode("simples")}
+              >
+                Análise simples
+              </Button>
+              <Button
+                size="sm"
+                variant={mode === "avancado" ? "default" : "ghost"}
+                onClick={() => setMode("avancado")}
+              >
+                <Calculator className="h-4 w-4" /> Análise avançada
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              {mode === "simples"
+                ? "Visão direta das faturas de energia."
+                : "Filtros, comparações, projeções e simuladores sobre toda a base financeira."}
+            </span>
+          </div>
+
+          {mode === "avancado" ? (
+            <AdvancedFinanceAnalysis />
+          ) : allInvoices.length === 0 ? (
             <Card>
               <CardHeader>
                 <CardTitle>Sem dados disponíveis</CardTitle>
