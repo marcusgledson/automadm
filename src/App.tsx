@@ -17,6 +17,8 @@ import SmsReview from "./pages/SmsReview";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
+import { useBiometricLock } from "@/hooks/useBiometricLock";
+import BiometricLockScreen from "@/components/BiometricLockScreen";
 import {
   AlertDialog,
   AlertDialogAction,
