@@ -136,6 +136,7 @@ export default function UserMenu() {
       </DropdownMenu>
       <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <PinSetupDialog open={pinOpen} onOpenChange={setPinOpen} onConfirm={definePin} />
     </>
   );
 }
