@@ -87,6 +87,21 @@ export default function UserMenu() {
             Menu Gerencial
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={toggleBiometric} disabled={!bioAvailable}>
+            <Fingerprint className="mr-2 h-4 w-4" />
+            {!bioAvailable
+              ? "Biometria indisponível"
+              : bioEnabled
+                ? "Desativar biometria"
+                : "Ativar biometria / Face ID"}
+          </DropdownMenuItem>
+          {bioAvailable && bioEnabled && (
+            <DropdownMenuItem onClick={bioLock}>
+              <ShieldCheck className="mr-2 h-4 w-4" />
+              Bloquear agora
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={handleSignOut}
             className="text-destructive focus:bg-destructive focus:text-destructive-foreground"
