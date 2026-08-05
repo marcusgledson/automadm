@@ -9,9 +9,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Fingerprint, HelpCircle, LogOut, Maximize2, Minimize2, Settings, ShieldCheck, UserRound } from "lucide-react";
+import { Fingerprint, HelpCircle, KeyRound, LogOut, Maximize2, Minimize2, Settings, ShieldCheck, UserRound } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import HelpDialog from "@/components/HelpDialog";
+import PinSetupDialog from "@/components/PinSetupDialog";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
 import { toast } from "sonner";
 
@@ -20,8 +21,17 @@ export default function UserMenu() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
-  const { available: bioAvailable, enabled: bioEnabled, enable: bioEnable, disable: bioDisable, lock: bioLock } =
-    useBiometricLock();
+  const [pinOpen, setPinOpen] = useState(false);
+  const {
+    available: bioAvailable,
+    enabled: bioEnabled,
+    pinEnabled,
+    enable: bioEnable,
+    disable: bioDisable,
+    definePin,
+    clearPin,
+    lock: bioLock,
+  } = useBiometricLock();
 
   const toggleBiometric = useCallback(async () => {
     if (bioEnabled) {
@@ -36,6 +46,15 @@ export default function UserMenu() {
       toast.error(e instanceof Error ? e.message : "Não foi possível ativar a biometria.");
     }
   }, [bioEnabled, bioEnable, bioDisable]);
+
+  const togglePin = useCallback(() => {
+    if (pinEnabled) {
+      clearPin();
+      toast.success("PIN de acesso removido.");
+      return;
+    }
+    setPinOpen(true);
+  }, [pinEnabled, clearPin]);
 
 
   useEffect(() => {
@@ -95,7 +114,11 @@ export default function UserMenu() {
                 ? "Desativar biometria"
                 : "Ativar biometria / Face ID"}
           </DropdownMenuItem>
-          {bioAvailable && bioEnabled && (
+          <DropdownMenuItem onClick={togglePin}>
+            <KeyRound className="mr-2 h-4 w-4" />
+            {pinEnabled ? "Remover PIN de acesso" : "Ativar PIN de acesso"}
+          </DropdownMenuItem>
+          {((bioAvailable && bioEnabled) || pinEnabled) && (
             <DropdownMenuItem onClick={bioLock}>
               <ShieldCheck className="mr-2 h-4 w-4" />
               Bloquear agora
@@ -113,6 +136,7 @@ export default function UserMenu() {
       </DropdownMenu>
       <AdminPanel open={adminOpen} onOpenChange={setAdminOpen} />
       <HelpDialog open={helpOpen} onOpenChange={setHelpOpen} />
+      <PinSetupDialog open={pinOpen} onOpenChange={setPinOpen} onConfirm={definePin} />
     </>
   );
 }

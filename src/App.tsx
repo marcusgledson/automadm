@@ -35,7 +35,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
   const { noticeOpen, dismissNotice } = useMobileFullscreen();
-  const { locked, checking, unlock } = useBiometricLock();
+  const { locked, checking, unlock, unlockWithPin, enabled: bioEnabled, pinEnabled } = useBiometricLock();
 
   if (loading || checking) {
     return (
@@ -46,7 +46,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (locked) return <BiometricLockScreen onUnlock={unlock} />;
+  if (locked)
+    return (
+      <BiometricLockScreen
+        onUnlock={unlock}
+        onUnlockWithPin={unlockWithPin}
+        biometricEnabled={bioEnabled}
+        pinEnabled={pinEnabled}
+      />
+    );
   return (
     <>
       {children}
