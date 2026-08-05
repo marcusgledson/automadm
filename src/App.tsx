@@ -35,7 +35,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
   const { noticeOpen, dismissNotice } = useMobileFullscreen();
-  const { locked, checking, unlock } = useBiometricLock();
+  const { locked, checking, unlock, unlockWithPin, enabled: bioEnabled, pinEnabled } = useBiometricLock();
 
   if (loading || checking) {
     return (
