@@ -17,6 +17,8 @@ import SmsReview from "./pages/SmsReview";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
+import { useBiometricLock } from "@/hooks/useBiometricLock";
+import BiometricLockScreen from "@/components/BiometricLockScreen";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,8 +35,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
   const { noticeOpen, dismissNotice } = useMobileFullscreen();
+  const { locked, checking, unlock } = useBiometricLock();
 
-  if (loading) {
+  if (loading || checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -43,6 +46,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (locked) return <BiometricLockScreen onUnlock={unlock} />;
   return (
     <>
       {children}
