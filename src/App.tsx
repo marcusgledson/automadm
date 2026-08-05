@@ -46,7 +46,15 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
-  if (locked) return <BiometricLockScreen onUnlock={unlock} />;
+  if (locked)
+    return (
+      <BiometricLockScreen
+        onUnlock={unlock}
+        onUnlockWithPin={unlockWithPin}
+        biometricEnabled={bioEnabled}
+        pinEnabled={pinEnabled}
+      />
+    );
   return (
     <>
       {children}
