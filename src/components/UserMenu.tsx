@@ -114,7 +114,11 @@ export default function UserMenu() {
                 ? "Desativar biometria"
                 : "Ativar biometria / Face ID"}
           </DropdownMenuItem>
-          {bioAvailable && bioEnabled && (
+          <DropdownMenuItem onClick={togglePin}>
+            <KeyRound className="mr-2 h-4 w-4" />
+            {pinEnabled ? "Remover PIN de acesso" : "Ativar PIN de acesso"}
+          </DropdownMenuItem>
+          {((bioAvailable && bioEnabled) || pinEnabled) && (
             <DropdownMenuItem onClick={bioLock}>
               <ShieldCheck className="mr-2 h-4 w-4" />
               Bloquear agora
