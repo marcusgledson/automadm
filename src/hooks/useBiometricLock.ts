@@ -55,7 +55,14 @@ export function useBiometricLock() {
     setLocked(false);
   }, [user?.id]);
 
-  const lock = useCallback(() => setLocked(true), []);
+  // Sincroniza o bloqueio entre instâncias do hook (menu ↔ rota protegida).
+  useEffect(() => {
+    const onLock = () => setLocked(true);
+    window.addEventListener("biometric:lock", onLock);
+    return () => window.removeEventListener("biometric:lock", onLock);
+  }, []);
+
+  const lock = useCallback(() => window.dispatchEvent(new Event("biometric:lock")), []);
 
   return { available, enabled, locked, checking, unlock, enable, disable, lock };
 }
