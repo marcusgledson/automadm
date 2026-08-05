@@ -23,9 +23,8 @@ async function nativePlugin(): Promise<any | null> {
   try {
     const { Capacitor } = await import("@capacitor/core");
     if (!Capacitor.isNativePlatform?.()) return null;
-    const mod: any = await import(
-      /* @vite-ignore */ "@capgo/capacitor-native-biometric"
-    ).catch(() => null);
+    const spec = "@capgo/capacitor-native-biometric";
+    const mod: any = await import(/* @vite-ignore */ spec).catch(() => null);
     return mod?.NativeBiometric ?? null;
   } catch {
     return null;
