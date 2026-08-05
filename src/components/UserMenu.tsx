@@ -9,15 +9,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { HelpCircle, LogOut, Maximize2, Minimize2, Settings, UserRound } from "lucide-react";
+import { Fingerprint, HelpCircle, LogOut, Maximize2, Minimize2, Settings, ShieldCheck, UserRound } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import HelpDialog from "@/components/HelpDialog";
+import { useBiometricLock } from "@/hooks/useBiometricLock";
+import { toast } from "sonner";
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { available: bioAvailable, enabled: bioEnabled, enable: bioEnable, disable: bioDisable, lock: bioLock } =
+    useBiometricLock();
+
+  const toggleBiometric = useCallback(async () => {
+    if (bioEnabled) {
+      bioDisable();
+      toast.success("Desbloqueio biométrico desativado.");
+      return;
+    }
+    try {
+      await bioEnable();
+      toast.success("Desbloqueio biométrico ativado neste aparelho.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível ativar a biometria.");
+    }
+  }, [bioEnabled, bioEnable, bioDisable]);
+
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
