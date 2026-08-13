@@ -233,6 +233,99 @@ export type Database = {
         }
         Relationships: []
       }
+      investments: {
+        Row: {
+          ativo: string
+          created_at: string
+          data_aplicacao: string
+          data_carencia: string | null
+          data_vencimento: string | null
+          explicacao: Json
+          file_name: string | null
+          id: string
+          indexador: string | null
+          instituicao: string
+          iof: number | null
+          ir: number | null
+          liquidez: string | null
+          observacoes: string | null
+          percentual_indexador: number | null
+          preco_unitario: number | null
+          quantidade: number | null
+          raw: Json
+          rendimento: number | null
+          rentabilidade_periodo: number | null
+          source: Database["public"]["Enums"]["investment_source"]
+          taxa_contratada: string | null
+          tipo_investimento: string
+          updated_at: string
+          user_id: string
+          valor_aplicado: number | null
+          valor_bruto: number | null
+          valor_liquido: number | null
+        }
+        Insert: {
+          ativo: string
+          created_at?: string
+          data_aplicacao: string
+          data_carencia?: string | null
+          data_vencimento?: string | null
+          explicacao?: Json
+          file_name?: string | null
+          id?: string
+          indexador?: string | null
+          instituicao?: string
+          iof?: number | null
+          ir?: number | null
+          liquidez?: string | null
+          observacoes?: string | null
+          percentual_indexador?: number | null
+          preco_unitario?: number | null
+          quantidade?: number | null
+          raw?: Json
+          rendimento?: number | null
+          rentabilidade_periodo?: number | null
+          source?: Database["public"]["Enums"]["investment_source"]
+          taxa_contratada?: string | null
+          tipo_investimento?: string
+          updated_at?: string
+          user_id: string
+          valor_aplicado?: number | null
+          valor_bruto?: number | null
+          valor_liquido?: number | null
+        }
+        Update: {
+          ativo?: string
+          created_at?: string
+          data_aplicacao?: string
+          data_carencia?: string | null
+          data_vencimento?: string | null
+          explicacao?: Json
+          file_name?: string | null
+          id?: string
+          indexador?: string | null
+          instituicao?: string
+          iof?: number | null
+          ir?: number | null
+          liquidez?: string | null
+          observacoes?: string | null
+          percentual_indexador?: number | null
+          preco_unitario?: number | null
+          quantidade?: number | null
+          raw?: Json
+          rendimento?: number | null
+          rentabilidade_periodo?: number | null
+          source?: Database["public"]["Enums"]["investment_source"]
+          taxa_contratada?: string | null
+          tipo_investimento?: string
+          updated_at?: string
+          user_id?: string
+          valor_aplicado?: number | null
+          valor_bruto?: number | null
+          valor_liquido?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -395,6 +488,7 @@ export type Database = {
         | "gas"
         | "telefone"
         | "outro"
+      investment_source: "upload" | "manual" | "drive"
       sms_review_status: "pending" | "approved" | "rejected"
       sms_txn_kind: "debit" | "credit" | "unknown"
     }
@@ -536,6 +630,7 @@ export const Constants = {
         "telefone",
         "outro",
       ],
+      investment_source: ["upload", "manual", "drive"],
       sms_review_status: ["pending", "approved", "rejected"],
       sms_txn_kind: ["debit", "credit", "unknown"],
     },
