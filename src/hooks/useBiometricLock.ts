@@ -9,6 +9,8 @@ import {
 } from "@/lib/biometrics";
 import {
   isPinEnabled,
+  rememberPinUser,
+  forgetPinUser,
   removePin as removePinStore,
   setPin as setPinStore,
   verifyPin as verifyPinStore,
@@ -124,6 +126,7 @@ export function useBiometricLock() {
     async (pin: string) => {
       if (!user) return;
       await setPinStore(user.id, pin);
+      rememberPinUser({ userId: user.id, email: user.email ?? "sua conta" });
       setPinEnabled(true);
       clearLockout(user.id);
       setLockoutSeconds(0);
@@ -141,6 +144,7 @@ export function useBiometricLock() {
         return false;
       }
       removePinStore(user.id);
+      forgetPinUser(user.id);
       setPinEnabled(false);
       clearLockout(user.id);
       setLockoutSeconds(0);
@@ -161,6 +165,7 @@ export function useBiometricLock() {
   const clearPin = useCallback(() => {
     if (!user) return;
     removePinStore(user.id);
+    forgetPinUser(user.id);
     setPinEnabled(false);
     if (!isBiometricEnabled(user.id)) setLocked(false);
   }, [user?.id]);

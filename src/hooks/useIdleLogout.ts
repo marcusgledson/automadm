@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { isPinEnabled } from "@/lib/pinLock";
+import { isBiometricEnabled } from "@/lib/biometrics";
 
 const EVENTS = ["mousemove", "mousedown", "keydown", "touchstart", "scroll", "visibilitychange"] as const;
 
@@ -20,9 +22,17 @@ export function useIdleLogout(timeoutMs = 15 * 60 * 1000) {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       if (warnRef.current) window.clearTimeout(warnRef.current);
       warnRef.current = window.setTimeout(() => {
+        if (isPinEnabled(user.id) || isBiometricEnabled(user.id)) return;
         toast.warning("Você será desconectado em 1 minuto por inatividade.");
       }, Math.max(0, timeoutMs - 60_000));
       timerRef.current = window.setTimeout(async () => {
+        // Com PIN/biometria ativos, mantemos a sessão do aparelho e apenas
+        // bloqueamos: a reentrada é feita pelo PIN, sem e-mail e senha.
+        if (isPinEnabled(user.id) || isBiometricEnabled(user.id)) {
+          toast.info("Aplicativo bloqueado por inatividade.");
+          window.dispatchEvent(new Event("biometric:lock"));
+          return;
+        }
         toast.info("Sessão encerrada por inatividade.");
         await signOut();
       }, timeoutMs);

@@ -50,3 +50,30 @@ export async function verifyPin(userId: string, pin: string) {
   if (!stored) return false;
   return (await hashPin(pin, stored.salt)) === stored.hash;
 }
+
+// --- Registro de contas com PIN neste aparelho -------------------------------
+// Permite entrar direto pelo PIN na tela inicial, sem digitar e-mail/senha.
+
+const PIN_USERS_KEY = "app_pin_users";
+
+export type PinUser = { userId: string; email: string };
+
+export function listPinUsers(): PinUser[] {
+  try {
+    const raw = localStorage.getItem(PIN_USERS_KEY);
+    const list = raw ? (JSON.parse(raw) as PinUser[]) : [];
+    return list.filter((u) => u?.userId && isPinEnabled(u.userId));
+  } catch {
+    return [];
+  }
+}
+
+export function rememberPinUser(user: PinUser) {
+  const list = listPinUsers().filter((u) => u.userId !== user.userId);
+  localStorage.setItem(PIN_USERS_KEY, JSON.stringify([user, ...list]));
+}
+
+export function forgetPinUser(userId: string) {
+  const list = listPinUsers().filter((u) => u.userId !== userId);
+  localStorage.setItem(PIN_USERS_KEY, JSON.stringify(list));
+}

@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { Loader2, Mail, Lock, User } from "lucide-react";
 import FinanceHero from "@/components/FinanceHero";
 import { lovable } from "@/integrations/lovable";
+import PinLogin from "@/components/PinLogin";
+import { listPinUsers, type PinUser } from "@/lib/pinLock";
+
 
 function GoogleButton() {
   const [busy, setBusy] = useState(false);
@@ -43,6 +46,7 @@ function GoogleButton() {
 export default function Auth() {
   const { user, loading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [pinUser, setPinUser] = useState<PinUser | null>(() => listPinUsers()[0] ?? null);
 
   if (loading) {
     return (
@@ -53,6 +57,7 @@ export default function Auth() {
   }
 
   if (user) return <Navigate to="/" replace />;
+
 
   return (
     <div className="flex min-h-screen items-center justify-center auth-gradient px-4 py-8">
@@ -67,34 +72,45 @@ export default function Auth() {
             className="text-3xl font-bold tracking-tight text-foreground"
             style={{ lineHeight: "1.1" }}
           >
-            {isSignUp ? "Criar conta" : "Bem-vindo de volta"}
+            {pinUser ? "Acesso rápido" : isSignUp ? "Criar conta" : "Bem-vindo de volta"}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            {isSignUp
-              ? "Cadastre-se para começar"
-              : "Entre na sua conta"}
+            {pinUser
+              ? "Use seu PIN para entrar neste aparelho"
+              : isSignUp
+                ? "Cadastre-se para começar"
+                : "Entre na sua conta"}
           </p>
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6 shadow-lg shadow-foreground/[0.03]">
-          <GoogleButton />
-          <div className="my-4 flex items-center gap-2">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">ou continue com e-mail</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          {isSignUp ? <SignUpForm /> : <SignInForm />}
+          {pinUser ? (
+            <PinLogin pinUser={pinUser} onUseEmail={() => setPinUser(null)} />
+          ) : (
+            <>
+              <GoogleButton />
+              <div className="my-4 flex items-center gap-2">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">ou continue com e-mail</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
+              {isSignUp ? <SignUpForm /> : <SignInForm />}
+            </>
+          )}
         </div>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
-          >
-            {isSignUp ? "Entrar" : "Cadastrar"}
-          </button>
-        </p>
+        {!pinUser && (
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
+            >
+              {isSignUp ? "Entrar" : "Cadastrar"}
+            </button>
+          </p>
+        )}
+
         </div>
       </div>
     </div>
