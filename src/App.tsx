@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Neoenergia from "./pages/Neoenergia";
 import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
 import ContasCentral from "./pages/ContasCentral";
+import Investimentos from "./pages/Investimentos";
 import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import SmsConfig from "./pages/SmsConfig";
