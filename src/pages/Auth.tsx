@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { Loader2, Mail, Lock, User } from "lucide-react";
 import FinanceHero from "@/components/FinanceHero";
 import { lovable } from "@/integrations/lovable";
+import PinLogin from "@/components/PinLogin";
+import { listPinUsers, type PinUser } from "@/lib/pinLock";
+
 
 function GoogleButton() {
   const [busy, setBusy] = useState(false);
