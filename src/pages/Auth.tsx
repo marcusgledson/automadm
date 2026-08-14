@@ -43,6 +43,7 @@ function GoogleButton() {
 export default function Auth() {
   const { user, loading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [pinUser, setPinUser] = useState<PinUser | null>(() => listPinUsers()[0] ?? null);
 
   if (loading) {
     return (
@@ -53,6 +54,7 @@ export default function Auth() {
   }
 
   if (user) return <Navigate to="/" replace />;
+
 
   return (
     <div className="flex min-h-screen items-center justify-center auth-gradient px-4 py-8">
