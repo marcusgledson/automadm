@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Zap, Receipt, Sparkles, HelpCircle } from "lucide-react";
+import { FileSpreadsheet, Zap, Receipt, TrendingUp, Sparkles, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
@@ -35,6 +35,14 @@ export default function Dashboard() {
       path: "/contas",
       gradient: "from-emerald-500/15 to-emerald-500/0",
       iconBg: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
+    },
+    {
+      title: "Meus Investimentos",
+      description: "Importe extratos de investimentos e entenda taxas, carência, resgate e rentabilidade em linguagem simples.",
+      icon: TrendingUp,
+      path: "/investimentos",
+      gradient: "from-amber-500/15 to-amber-500/0",
+      iconBg: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
     },
   ];
 
