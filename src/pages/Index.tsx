@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FolderOpen, ArrowLeft, Database, Loader2, Landmark, PencilLine } from "lucide-react";
+import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landmark, PencilLine } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
@@ -113,7 +113,7 @@ export default function Index() {
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4 select-none">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")} title="Voltar">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)} title="Voltar">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <FileSpreadsheet className="h-5 w-5 text-primary" />
@@ -126,6 +126,10 @@ export default function Index() {
               <FolderOpen className="h-4 w-4" /> Abrir OFX
             </Button>
           )}
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Tela inicial</span>
+          </Button>
           <UserMenu />
         </div>
       </header>

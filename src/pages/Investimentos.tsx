@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  ArrowLeft, TrendingUp, Upload, Loader2, FileText, Trash2, Info, BookOpen, CheckCircle2,
+  ArrowLeft, Home, TrendingUp, Upload, Loader2, FileText, Trash2, Info, BookOpen, CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,7 +109,7 @@ export default function Investimentos() {
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/dashboard")}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <TrendingUp className="h-4 w-4 text-primary" />
@@ -119,6 +119,10 @@ export default function Investimentos() {
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setGlossaryOpen(true)}>
             <BookOpen className="h-4 w-4" />
             <span className="hidden sm:inline">Entenda os termos</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Tela inicial</span>
           </Button>
           <UserMenu />
         </div>

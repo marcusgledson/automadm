@@ -10,7 +10,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
-import { Zap, ArrowLeft, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, ArchiveRestore, BarChart3 } from "lucide-react";
+import { Zap, ArrowLeft, Home, Minimize2, Maximize2, X, Upload, Loader2, FileText, Trash2, Eye, Archive, ArchiveRestore, BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -276,13 +276,19 @@ export default function Neoenergia() {
       {/* Title bar */}
       <header className="flex h-12 items-center justify-between border-b border-border bg-card px-4 select-none">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")} title="Voltar">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)} title="Voltar">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Zap className="h-5 w-5 text-accent" />
           <span className="text-sm font-semibold text-foreground">Faturas de Energia</span>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Tela inicial</span>
+          </Button>
+          <UserMenu />
+        </div>
       </header>
 
       {/* Content */}
