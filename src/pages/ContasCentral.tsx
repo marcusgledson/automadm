@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft, Minimize2, Maximize2, X, Filter, Trash2, BarChart3, Receipt, Search, FileUp, PencilLine, Zap,
+  ArrowLeft, Home, Minimize2, Maximize2, X, Filter, Trash2, BarChart3, Receipt, Search, FileUp, PencilLine, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import UniversalBillUpload from "@/components/UniversalBillUpload";
@@ -145,7 +145,7 @@ export default function ContasCentral() {
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4 select-none">
         <div className="flex items-center gap-2 min-w-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Receipt className="h-5 w-5 text-accent" />
@@ -160,6 +160,10 @@ export default function ContasCentral() {
           >
             <Zap className="h-4 w-4" />
             <span className="hidden sm:inline">Faturas de Energia</span>
+          </Button>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Tela inicial</span>
           </Button>
           <UserMenu />
         </div>
