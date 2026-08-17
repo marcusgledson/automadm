@@ -280,7 +280,7 @@ export default function Neoenergia() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <Zap className="h-5 w-5 text-accent" />
-          <span className="text-sm font-semibold text-foreground">Faturas Neoenergia</span>
+          <span className="text-sm font-semibold text-foreground">Faturas de Energia</span>
         </div>
         <UserMenu />
       </header>

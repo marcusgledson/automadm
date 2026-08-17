@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft, Minimize2, Maximize2, X, Filter, Trash2, BarChart3, Receipt, Search, FileUp, PencilLine,
+  ArrowLeft, Minimize2, Maximize2, X, Filter, Trash2, BarChart3, Receipt, Search, FileUp, PencilLine, Zap,
 } from "lucide-react";
 import { toast } from "sonner";
 import UniversalBillUpload from "@/components/UniversalBillUpload";
@@ -151,7 +151,18 @@ export default function ContasCentral() {
           <Receipt className="h-5 w-5 text-accent" />
           <span className="truncate text-sm font-semibold text-foreground">Central de Contas e Despesas</span>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate("/neoenergia")}
+            className="h-8 gap-1.5 border-accent/40 px-2 text-xs text-accent hover:bg-accent/10"
+          >
+            <Zap className="h-4 w-4" />
+            <span className="hidden sm:inline">Faturas de Energia</span>
+          </Button>
+          <UserMenu />
+        </div>
       </header>
 
       <main className="safe-bottom flex-1 overflow-auto p-3 sm:p-6">

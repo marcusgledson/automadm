@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Zap, Receipt, TrendingUp, Sparkles, HelpCircle } from "lucide-react";
+import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
@@ -13,7 +13,7 @@ export default function Dashboard() {
 
   const modules = [
     {
-      title: "Análise de Extrato",
+      title: "Análise de Extrato Bancário",
       description: "Importe OFX, analise transações e salve seu extrato bancário na base por agência e conta.",
       icon: FileSpreadsheet,
       path: "/extrato",
@@ -21,16 +21,8 @@ export default function Dashboard() {
       iconBg: "bg-primary/12 text-primary",
     },
     {
-      title: "Faturas Neoenergia",
-      description: "Importação especializada de faturas de energia (Drive ou upload). Tudo é consolidado na Central.",
-      icon: Zap,
-      path: "/neoenergia",
-      gradient: "from-accent/15 to-accent/0",
-      iconBg: "bg-accent/12 text-accent",
-    },
-    {
       title: "Central de Contas e Despesas",
-      description: "Energia, Internet, Água, IPTU, IPVA, Taxas, Boletos. Carregue arquivos ou lance manualmente.",
+      description: "Energia, Internet, Água, IPTU, IPVA, Taxas, Boletos. Carregue arquivos ou lance manualmente — inclui as Faturas de Energia.",
       icon: Receipt,
       path: "/contas",
       gradient: "from-emerald-500/15 to-emerald-500/0",
