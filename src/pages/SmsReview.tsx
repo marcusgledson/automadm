@@ -115,7 +115,11 @@ export default function SmsReview() {
               <p className="text-sm text-muted-foreground">Carregando...</p>
             ) : pending.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Nenhum SMS pendente. Vá em <Link to="/sms/config" className="underline">Configurações → SMS bancário</Link> para escanear.
+                Nenhum SMS pendente. Vá em{" "}
+                <Button variant="link" className="h-auto p-0 text-sm" onClick={() => navigate("/sms/config")}>
+                  Configurações → SMS bancário
+                </Button>{" "}
+                para escanear.
               </p>
             ) : (
               <div className="space-y-3">
