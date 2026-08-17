@@ -16,7 +16,7 @@ import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ComposedChart,
 } from "recharts";
-import { ArrowLeft, BarChart3, Minimize2, Maximize2, X, TrendingUp, Filter, Calculator, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Home, Minimize2, Maximize2, X, TrendingUp, Filter, Calculator, Loader2 } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
