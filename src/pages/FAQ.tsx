@@ -1,6 +1,6 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, HelpCircle } from "lucide-react";
+import { ArrowLeft, HelpCircle, Home } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import UserMenu from "@/components/UserMenu";
 
@@ -102,7 +102,7 @@ export default function FAQ() {
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
             <span className="text-xs">Voltar</span>
           </Button>
@@ -113,7 +113,13 @@ export default function FAQ() {
             <span className="text-sm font-semibold">Perguntas Frequentes</span>
           </div>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Tela inicial</span>
+          </Button>
+          <UserMenu />
+        </div>
       </header>
       <main className="safe-bottom mx-auto w-full max-w-3xl flex-1 p-4 sm:p-8">
         <div className="mb-6 space-y-1">

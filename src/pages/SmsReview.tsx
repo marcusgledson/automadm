@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowLeft, Check, X, Save } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Home, Check, X, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useSmsReviewQueue, type SmsReviewRow } from "@/hooks/useSmsReviewQueue"
 import { toast } from "@/hooks/use-toast";
 
 export default function SmsReview() {
+  const navigate = useNavigate();
   const { items, loading, approve, reject, update } = useSmsReviewQueue();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, Partial<SmsReviewRow>>>({});
@@ -76,12 +77,18 @@ export default function SmsReview() {
       <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="icon">
-              <Link to="/"><ArrowLeft className="h-5 w-5" /></Link>
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-lg font-semibold">Revisão de SMS bancário</h1>
           </div>
-          <UserMenu />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
+              <Home className="h-4 w-4" />
+              <span className="hidden sm:inline">Tela inicial</span>
+            </Button>
+            <UserMenu />
+          </div>
         </div>
       </header>
 
