@@ -120,6 +120,22 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute skipOnboarding>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/metas"
+              element={
+                <ProtectedRoute>
+                  <Metas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/"
               element={
                 <ProtectedRoute>
