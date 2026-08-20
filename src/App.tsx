@@ -35,7 +35,21 @@ import {
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+/** Redireciona para a apresentação inicial enquanto o modo de uso não for escolhido. */
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { settings, loading } = useAppSettings();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!settings?.onboarding_done) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNode; skipOnboarding?: boolean }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
   const { noticeOpen, dismissNotice } = useMobileFullscreen();
