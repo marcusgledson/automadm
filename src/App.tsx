@@ -15,10 +15,13 @@ import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import SmsConfig from "./pages/SmsConfig";
 import SmsReview from "./pages/SmsReview";
+import Onboarding from "./pages/Onboarding";
+import Metas from "./pages/Metas";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import {
   AlertDialog,
