@@ -1,18 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle } from "lucide-react";
+import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import FinanceHero from "@/components/FinanceHero";
 import HelpDialog from "@/components/HelpDialog";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);
+  const { isModuleEnabled } = useAppSettings();
 
   const modules = [
     {
+      id: "extrato",
       title: "Análise de Extrato Bancário",
       description: "Importe OFX, analise transações e salve seu extrato bancário na base por agência e conta.",
       icon: FileSpreadsheet,
@@ -21,6 +24,7 @@ export default function Dashboard() {
       iconBg: "bg-primary/12 text-primary",
     },
     {
+      id: "contas",
       title: "Central de Contas e Despesas",
       description: "Energia, Internet, Água, IPTU, IPVA, Taxas, Boletos. Carregue arquivos ou lance manualmente — inclui as Faturas de Energia.",
       icon: Receipt,
@@ -29,6 +33,7 @@ export default function Dashboard() {
       iconBg: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
     },
     {
+      id: "investimentos",
       title: "Meus Investimentos",
       description: "Importe extratos de investimentos e entenda taxas, carência, resgate e rentabilidade em linguagem simples.",
       icon: TrendingUp,
@@ -36,7 +41,16 @@ export default function Dashboard() {
       gradient: "from-amber-500/15 to-amber-500/0",
       iconBg: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
     },
-  ];
+    {
+      id: "metas",
+      title: "Metas e Orçamento",
+      description: "Defina objetivo de economia e prazo por modalidade de consumo e receba alerta quando o custo real ultrapassar o orçado.",
+      icon: Target,
+      path: "/metas",
+      gradient: "from-sky-500/15 to-sky-500/0",
+      iconBg: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
+    },
+  ].filter((m) => isModuleEnabled(m.id));
 
   return (
     <div className="flex min-h-screen flex-col app-surface">

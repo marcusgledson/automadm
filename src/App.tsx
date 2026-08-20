@@ -15,10 +15,13 @@ import NotFound from "./pages/NotFound";
 import FAQ from "./pages/FAQ";
 import SmsConfig from "./pages/SmsConfig";
 import SmsReview from "./pages/SmsReview";
+import Onboarding from "./pages/Onboarding";
+import Metas from "./pages/Metas";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import {
   AlertDialog,
@@ -32,7 +35,21 @@ import {
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
+/** Redireciona para a apresentação inicial enquanto o modo de uso não for escolhido. */
+function OnboardingGate({ children }: { children: React.ReactNode }) {
+  const { settings, loading } = useAppSettings();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!settings?.onboarding_done) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNode; skipOnboarding?: boolean }) {
   const { user, loading } = useAuth();
   useIdleLogout(15 * 60 * 1000);
   const { noticeOpen, dismissNotice } = useMobileFullscreen();
@@ -73,7 +90,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   return (
     <>
-      {children}
+      {skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}
       <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -102,6 +119,22 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/onboarding"
+              element={
+                <ProtectedRoute skipOnboarding>
+                  <Onboarding />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/metas"
+              element={
+                <ProtectedRoute>
+                  <Metas />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/"
               element={

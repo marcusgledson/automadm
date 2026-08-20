@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          created_at: string
+          enabled_modules: string[]
+          id: string
+          logo_url: string | null
+          onboarding_done: boolean
+          org_name: string | null
+          owner_id: string
+          palette: string
+          theme_style: string
+          updated_at: string
+          usage_mode: Database["public"]["Enums"]["app_usage_mode"]
+        }
+        Insert: {
+          created_at?: string
+          enabled_modules?: string[]
+          id?: string
+          logo_url?: string | null
+          onboarding_done?: boolean
+          org_name?: string | null
+          owner_id: string
+          palette?: string
+          theme_style?: string
+          updated_at?: string
+          usage_mode?: Database["public"]["Enums"]["app_usage_mode"]
+        }
+        Update: {
+          created_at?: string
+          enabled_modules?: string[]
+          id?: string
+          logo_url?: string | null
+          onboarding_done?: boolean
+          org_name?: string | null
+          owner_id?: string
+          palette?: string
+          theme_style?: string
+          updated_at?: string
+          usage_mode?: Database["public"]["Enums"]["app_usage_mode"]
+        }
+        Relationships: []
+      }
       bank_statements: {
         Row: {
           agencia: string
@@ -80,6 +122,57 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor?: number
+        }
+        Relationships: []
+      }
+      budget_goals: {
+        Row: {
+          alerta_percentual: number
+          created_at: string
+          escopo: string
+          id: string
+          meta_economia: number
+          notificar: boolean
+          observacoes: string | null
+          prazo: string | null
+          referencia: string | null
+          status: Database["public"]["Enums"]["goal_status"]
+          titulo: string
+          updated_at: string
+          user_id: string
+          valor_orcado: number
+        }
+        Insert: {
+          alerta_percentual?: number
+          created_at?: string
+          escopo?: string
+          id?: string
+          meta_economia?: number
+          notificar?: boolean
+          observacoes?: string | null
+          prazo?: string | null
+          referencia?: string | null
+          status?: Database["public"]["Enums"]["goal_status"]
+          titulo: string
+          updated_at?: string
+          user_id: string
+          valor_orcado?: number
+        }
+        Update: {
+          alerta_percentual?: number
+          created_at?: string
+          escopo?: string
+          id?: string
+          meta_economia?: number
+          notificar?: boolean
+          observacoes?: string | null
+          prazo?: string | null
+          referencia?: string | null
+          status?: Database["public"]["Enums"]["goal_status"]
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+          valor_orcado?: number
         }
         Relationships: []
       }
@@ -152,6 +245,60 @@ export type Database = {
           updated_at?: string
           user_id?: string
           valor_total?: number | null
+        }
+        Relationships: []
+      }
+      corporate_requests: {
+        Row: {
+          created_at: string
+          demanda: string
+          dev_notificado: boolean
+          email: string
+          empresa: string | null
+          id: string
+          modulos_desejados: string[]
+          nome_solicitante: string
+          phone_area_code: string | null
+          phone_country_code: string | null
+          phone_is_whatsapp: boolean
+          phone_number: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          demanda: string
+          dev_notificado?: boolean
+          email: string
+          empresa?: string | null
+          id?: string
+          modulos_desejados?: string[]
+          nome_solicitante: string
+          phone_area_code?: string | null
+          phone_country_code?: string | null
+          phone_is_whatsapp?: boolean
+          phone_number?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          demanda?: string
+          dev_notificado?: boolean
+          email?: string
+          empresa?: string | null
+          id?: string
+          modulos_desejados?: string[]
+          nome_solicitante?: string
+          phone_area_code?: string | null
+          phone_country_code?: string | null
+          phone_is_whatsapp?: boolean
+          phone_number?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -328,31 +475,100 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allowed_modules: string[]
           avatar_url: string | null
           created_at: string
           display_name: string | null
+          full_name: string | null
+          gender: Database["public"]["Enums"]["user_gender"] | null
           id: string
+          must_change_password: boolean
+          org_owner_id: string | null
+          phone_area_code: string | null
+          phone_country_code: string | null
+          phone_is_whatsapp: boolean
+          phone_number: string | null
           updated_at: string
           user_id: string
           username: string | null
         }
         Insert: {
+          allowed_modules?: string[]
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["user_gender"] | null
           id?: string
+          must_change_password?: boolean
+          org_owner_id?: string | null
+          phone_area_code?: string | null
+          phone_country_code?: string | null
+          phone_is_whatsapp?: boolean
+          phone_number?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
         }
         Update: {
+          allowed_modules?: string[]
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
+          full_name?: string | null
+          gender?: Database["public"]["Enums"]["user_gender"] | null
           id?: string
+          must_change_password?: boolean
+          org_owner_id?: string | null
+          phone_area_code?: string | null
+          phone_country_code?: string | null
+          phone_is_whatsapp?: boolean
+          phone_number?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      report_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          formato: string
+          id: string
+          justificativa: string | null
+          modulo: string
+          org_owner_id: string
+          requester_id: string
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          formato?: string
+          id?: string
+          justificativa?: string | null
+          modulo: string
+          org_owner_id: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          formato?: string
+          id?: string
+          justificativa?: string | null
+          modulo?: string
+          org_owner_id?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -469,14 +685,49 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          org_owner_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_owner_id: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_owner_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_app_owner: { Args: { _user_id: string }; Returns: boolean }
+      is_master: { Args: { _user_id: string }; Returns: boolean }
+      org_owner_of: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
+      app_role: "master" | "operador" | "colaborador" | "leitor"
+      app_usage_mode: "pessoal" | "coparticipativo" | "corporativo"
       bill_source: "drive" | "upload" | "manual"
       bill_type:
         | "energia"
@@ -488,9 +739,12 @@ export type Database = {
         | "gas"
         | "telefone"
         | "outro"
+      goal_status: "ativa" | "concluida" | "arquivada"
       investment_source: "upload" | "manual" | "drive"
+      request_status: "pendente" | "aprovada" | "recusada"
       sms_review_status: "pending" | "approved" | "rejected"
       sms_txn_kind: "debit" | "credit" | "unknown"
+      user_gender: "masculino" | "feminino" | "nao_informar"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -618,6 +872,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["master", "operador", "colaborador", "leitor"],
+      app_usage_mode: ["pessoal", "coparticipativo", "corporativo"],
       bill_source: ["drive", "upload", "manual"],
       bill_type: [
         "energia",
@@ -630,9 +886,12 @@ export const Constants = {
         "telefone",
         "outro",
       ],
+      goal_status: ["ativa", "concluida", "arquivada"],
       investment_source: ["upload", "manual", "drive"],
+      request_status: ["pendente", "aprovada", "recusada"],
       sms_review_status: ["pending", "approved", "rejected"],
       sms_txn_kind: ["debit", "credit", "unknown"],
+      user_gender: ["masculino", "feminino", "nao_informar"],
     },
   },
 } as const
