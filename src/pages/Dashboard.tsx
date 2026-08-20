@@ -6,6 +6,7 @@ import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import FinanceHero from "@/components/FinanceHero";
 import HelpDialog from "@/components/HelpDialog";
+import { useAppSettings } from "@/hooks/useAppSettings";
 
 export default function Dashboard() {
   const navigate = useNavigate();
