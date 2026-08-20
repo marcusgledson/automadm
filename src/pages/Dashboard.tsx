@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle } from "lucide-react";
+import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
