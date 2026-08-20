@@ -36,6 +36,14 @@ export default function Dashboard() {
       gradient: "from-amber-500/15 to-amber-500/0",
       iconBg: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
     },
+    {
+      title: "Metas e Orçamento",
+      description: "Defina objetivo de economia e prazo por modalidade de consumo e receba alerta quando o custo real ultrapassar o orçado.",
+      icon: Target,
+      path: "/metas",
+      gradient: "from-sky-500/15 to-sky-500/0",
+      iconBg: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
+    },
   ];
 
   return (
