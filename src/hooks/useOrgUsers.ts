@@ -88,7 +88,7 @@ export function useOrgUsers(enabled: boolean) {
     [refresh],
   );
 
-  /** Atualiza perfil e módulos via RLS (Máster já tem permissão nas tabelas). */
+  /** Atualiza perfil e módulos via RLS (Máster já tem permissão nas tabelas) e registra auditoria. */
   const updateUser = useCallback(
     async (user_id: string, patch: { role?: AppRole; allowed_modules?: string[]; full_name?: string | null }) => {
       if (patch.allowed_modules || patch.full_name !== undefined) {
@@ -100,10 +100,17 @@ export function useOrgUsers(enabled: boolean) {
           })
           .eq("user_id", user_id);
         if (error) return { ok: false, error: error.message };
+        await call({
+          action: "log",
+          user_id,
+          log_action: patch.allowed_modules ? "update_modules" : "update_profile",
+          details: patch.allowed_modules ? { allowed_modules: patch.allowed_modules } : { full_name: patch.full_name },
+        });
       }
       if (patch.role) {
         const { error } = await supabase.from("user_roles").update({ role: patch.role }).eq("user_id", user_id);
         if (error) return { ok: false, error: error.message };
+        await call({ action: "log", user_id, log_action: "update_role", details: { role: patch.role } });
       }
       await refresh();
       return { ok: true };
