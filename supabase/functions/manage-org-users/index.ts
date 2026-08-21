@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const DEFAULT_PASSWORD = "senha1010";
 const ROLES = ["master", "operador", "colaborador", "leitor"];
+const RANK: Record<string, number> = { master: 4, operador: 3, colaborador: 2, leitor: 1 };
+const LOGGABLE = ["update_role", "update_modules", "update_profile"];
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -33,6 +35,38 @@ serve(async (req) => {
     auth: { persistSession: false },
   });
 
+  const rankOf = async (userId: string) => {
+    const { data } = await admin.from("user_roles").select("role").eq("user_id", userId);
+    return (data ?? []).reduce((max, r) => Math.max(max, RANK[r.role as string] ?? 0), 0);
+  };
+
+  let body: Record<string, unknown> = {};
+  try {
+    body = await req.json();
+  } catch {
+    return json({ error: "Corpo inválido." }, 400);
+  }
+  const action = String(body.action || "");
+
+  // Ação disponível a qualquer usuário autenticado: registrar a própria troca de senha.
+  if (action === "self_password_changed") {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("org_owner_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    await admin.from("audit_logs").insert({
+      org_owner_id: prof?.org_owner_id ?? caller.id,
+      actor_id: caller.id,
+      actor_email: caller.email,
+      action: "change_password",
+      target_user_id: caller.id,
+      target_email: caller.email,
+      details: {},
+    });
+    return json({ ok: true });
+  }
+
   // Somente Máster pode gerenciar usuários da organização.
   const { data: masterRow } = await admin
     .from("user_roles")
@@ -42,11 +76,27 @@ serve(async (req) => {
     .maybeSingle();
   if (!masterRow) return json({ error: "Apenas o perfil Máster pode gerenciar usuários." }, 403);
   const orgOwnerId = masterRow.org_owner_id as string;
+  const isOrgOwner = orgOwnerId === caller.id;
+  const callerRank = await rankOf(caller.id);
+
+  const log = async (
+    logAction: string,
+    targetId: string | null,
+    targetEmail: string | null,
+    details: Record<string, unknown> = {},
+  ) => {
+    await admin.from("audit_logs").insert({
+      org_owner_id: orgOwnerId,
+      actor_id: caller.id,
+      actor_email: caller.email,
+      action: logAction,
+      target_user_id: targetId,
+      target_email: targetEmail,
+      details,
+    });
+  };
 
   try {
-    const body = await req.json();
-    const action = String(body.action || "");
-
     if (action === "list") {
       const { data: profs } = await admin
         .from("profiles")
@@ -58,12 +108,18 @@ serve(async (req) => {
         .eq("org_owner_id", orgOwnerId);
       const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
       const emails = new Map((authList?.users ?? []).map((x) => [x.id, x.email]));
-      const users = (profs ?? []).map((p) => ({
-        ...p,
-        email: emails.get(p.user_id) ?? null,
-        role: roles?.find((r) => r.user_id === p.user_id)?.role ?? "leitor",
-        is_self: p.user_id === caller.id,
-      }));
+      const users = (profs ?? [])
+        .map((p) => {
+          const role = roles?.find((r) => r.user_id === p.user_id)?.role ?? "leitor";
+          return {
+            ...p,
+            email: emails.get(p.user_id) ?? null,
+            role,
+            is_self: p.user_id === caller.id,
+          };
+        })
+        // Sigilo hierárquico: não expõe usuários de nível igual ou superior ao do solicitante.
+        .filter((p) => p.is_self || isOrgOwner || callerRank > (RANK[p.role as string] ?? 0));
       return json({ ok: true, users, org_owner_id: orgOwnerId });
     }
 
@@ -72,6 +128,9 @@ serve(async (req) => {
       const role = String(body.role || "leitor");
       if (!email) return json({ error: "E-mail obrigatório." }, 400);
       if (!ROLES.includes(role)) return json({ error: "Perfil inválido." }, 400);
+      if (!isOrgOwner && (RANK[role] ?? 0) >= callerRank) {
+        return json({ error: "Você não pode criar um usuário de nível igual ou superior ao seu." }, 403);
+      }
 
       const { data: created, error: ce } = await admin.auth.admin.createUser({
         email,
@@ -106,6 +165,7 @@ serve(async (req) => {
           { onConflict: "user_id,org_owner_id,role" },
         );
 
+      await log("create_user", newId, email, { role, allowed_modules: body.allowed_modules ?? [] });
       return json({ ok: true, user_id: newId, temp_password: DEFAULT_PASSWORD });
     }
 
@@ -123,16 +183,34 @@ serve(async (req) => {
       return json({ error: "Usuário não pertence à sua organização." }, 403);
     }
 
+    // Sigilo hierárquico: nunca agir sobre alguém de nível igual ou superior.
+    const targetRank = await rankOf(targetId);
+    if (!isOrgOwner && targetRank >= callerRank) {
+      return json({ error: "Você não pode acessar dados de um usuário de nível igual ou superior ao seu." }, 403);
+    }
+
+    const { data: targetAuth } = await admin.auth.admin.getUserById(targetId);
+    const targetEmail = targetAuth?.user?.email ?? null;
+
     if (action === "reset_password") {
       const { error } = await admin.auth.admin.updateUserById(targetId, { password: DEFAULT_PASSWORD });
       if (error) return json({ error: error.message }, 400);
       await admin.from("profiles").update({ must_change_password: true }).eq("user_id", targetId);
+      await log("reset_password", targetId, targetEmail, {});
       return json({ ok: true, temp_password: DEFAULT_PASSWORD });
     }
 
     if (action === "delete") {
       const { error } = await admin.auth.admin.deleteUser(targetId);
       if (error) return json({ error: error.message }, 400);
+      await log("delete_user", targetId, targetEmail, {});
+      return json({ ok: true });
+    }
+
+    if (action === "log") {
+      const kind = String(body.log_action || "");
+      if (!LOGGABLE.includes(kind)) return json({ error: "Ação de log inválida." }, 400);
+      await log(kind, targetId, targetEmail, (body.details as Record<string, unknown>) ?? {});
       return json({ ok: true });
     }
 
