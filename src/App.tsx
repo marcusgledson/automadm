@@ -23,7 +23,10 @@ import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useProfile } from "@/hooks/useProfile";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
+import ForcePasswordChange from "@/components/ForcePasswordChange";
+import ModuleGuard from "@/components/ModuleGuard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +50,20 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     );
   }
   if (!settings?.onboarding_done) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+/** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
+function PasswordGate({ children }: { children: React.ReactNode }) {
+  const { profile, loading, refresh } = useProfile();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (profile?.must_change_password) return <ForcePasswordChange onDone={() => void refresh()} />;
   return <>{children}</>;
 }
 
