@@ -11,6 +11,11 @@ const DEFAULT_PASSWORD = "senha1010";
 const ROLES = ["master", "operador", "colaborador", "leitor"];
 const RANK: Record<string, number> = { master: 4, operador: 3, colaborador: 2, leitor: 1 };
 const LOGGABLE = ["update_role", "update_modules", "update_profile"];
+/** Validade da senha padrão entregue no primeiro acesso (72 horas). */
+const TEMP_PASSWORD_TTL_MS = 72 * 60 * 60 * 1000;
+/** Espera mínima entre dois reenvios de e-mail de acesso. */
+const RESEND_COOLDOWN_MS = 60 * 1000;
+const expiryFromNow = () => new Date(Date.now() + TEMP_PASSWORD_TTL_MS).toISOString();
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
