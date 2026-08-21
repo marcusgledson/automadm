@@ -56,6 +56,42 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string
+          created_at: string
+          details: Json
+          id: string
+          org_owner_id: string
+          target_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          org_owner_id: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          org_owner_id?: string
+          target_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       bank_statements: {
         Row: {
           agencia: string
@@ -572,6 +608,33 @@ export type Database = {
         }
         Relationships: []
       }
+      role_modules: {
+        Row: {
+          allowed_modules: string[]
+          created_at: string
+          id: string
+          org_owner_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          allowed_modules?: string[]
+          created_at?: string
+          id?: string
+          org_owner_id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          allowed_modules?: string[]
+          created_at?: string
+          id?: string
+          org_owner_id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       sms_bank_configs: {
         Row: {
           agencia: string | null
@@ -714,6 +777,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_user: {
+        Args: { _actor: string; _target: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -724,6 +791,11 @@ export type Database = {
       is_app_owner: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       org_owner_of: { Args: { _user_id: string }; Returns: string }
+      role_rank: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
+      user_rank: { Args: { _user_id: string }; Returns: number }
     }
     Enums: {
       app_role: "master" | "operador" | "colaborador" | "leitor"
