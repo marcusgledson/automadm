@@ -69,6 +69,69 @@ serve(async (req) => {
       target_email: caller.email,
       details: {},
     });
+    await admin
+      .from("profiles")
+      .update({ temp_password_expires_at: null, password_email_sent_at: null })
+      .eq("user_id", caller.id);
+    return json({ ok: true });
+  }
+
+  /** Registra na auditoria um evento do próprio usuário (sem exigir perfil Máster). */
+  const selfLog = async (kind: string, details: Record<string, unknown> = {}) => {
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("org_owner_id")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    await admin.from("audit_logs").insert({
+      org_owner_id: prof?.org_owner_id ?? caller.id,
+      actor_id: caller.id,
+      actor_email: caller.email,
+      action: kind,
+      target_user_id: caller.id,
+      target_email: caller.email,
+      details,
+    });
+  };
+
+  // Reenvio do acesso por e-mail (sempre para o e-mail cadastrado na conta).
+  if (action === "resend_access_email") {
+    const email = caller.email;
+    if (!email) return json({ error: "Sua conta não possui e-mail cadastrado." }, 400);
+
+    const { data: prof } = await admin
+      .from("profiles")
+      .select("password_email_sent_at")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    const last = prof?.password_email_sent_at ? new Date(prof.password_email_sent_at).getTime() : 0;
+    const elapsed = Date.now() - last;
+    if (last && elapsed < RESEND_COOLDOWN_MS) {
+      return json(
+        {
+          error: `Aguarde ${Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000)} segundo(s) para reenviar.`,
+          retry_in: Math.ceil((RESEND_COOLDOWN_MS - elapsed) / 1000),
+        },
+        429,
+      );
+    }
+
+    const redirectTo = typeof body.redirect_to === "string" ? body.redirect_to : undefined;
+    const { error } = await anon.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+    if (error) return json({ error: error.message }, 400);
+
+    const expires = expiryFromNow();
+    await admin
+      .from("profiles")
+      .update({ password_email_sent_at: new Date().toISOString(), temp_password_expires_at: expires })
+      .eq("user_id", caller.id);
+    await selfLog("resend_access_email", { email });
+    return json({ ok: true, expires_at: expires, cooldown: RESEND_COOLDOWN_MS / 1000 });
+  }
+
+  // Registra que o prazo da senha padrão expirou (uma vez por sessão do front).
+  if (action === "access_link_expired") {
+    await selfLog("temp_password_expired", {});
     return json({ ok: true });
   }
 
