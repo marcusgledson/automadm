@@ -17,6 +17,7 @@ import SmsConfig from "./pages/SmsConfig";
 import SmsReview from "./pages/SmsReview";
 import Onboarding from "./pages/Onboarding";
 import Metas from "./pages/Metas";
+import Usuarios from "./pages/Usuarios";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
@@ -132,6 +133,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Metas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/usuarios"
+              element={
+                <ProtectedRoute>
+                  <Usuarios />
                 </ProtectedRoute>
               }
             />
