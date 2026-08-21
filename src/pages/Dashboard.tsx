@@ -6,12 +6,12 @@ import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
 import FinanceHero from "@/components/FinanceHero";
 import HelpDialog from "@/components/HelpDialog";
-import { useAppSettings } from "@/hooks/useAppSettings";
+import { useModuleAccess } from "@/hooks/useModuleAccess";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);
-  const { isModuleEnabled } = useAppSettings();
+  const { canAccess } = useModuleAccess();
 
   const modules = [
     {
@@ -50,7 +50,7 @@ export default function Dashboard() {
       gradient: "from-sky-500/15 to-sky-500/0",
       iconBg: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
     },
-  ].filter((m) => isModuleEnabled(m.id));
+  ].filter((m) => canAccess(m.id));
 
   return (
     <div className="flex min-h-screen flex-col app-surface">
