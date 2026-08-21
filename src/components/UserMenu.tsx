@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +28,7 @@ import {
   ShieldCheck,
   Timer,
   UserRound,
+  Users,
 } from "lucide-react";
 import AdminPanel from "@/components/AdminPanel";
 import HelpDialog from "@/components/HelpDialog";
@@ -37,6 +40,8 @@ import { toast } from "sonner";
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { isMaster } = useUserRole();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
