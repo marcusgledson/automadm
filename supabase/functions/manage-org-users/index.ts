@@ -47,6 +47,26 @@ serve(async (req) => {
     const body = await req.json();
     const action = String(body.action || "");
 
+    if (action === "list") {
+      const { data: profs } = await admin
+        .from("profiles")
+        .select("user_id, full_name, display_name, gender, phone_country_code, phone_area_code, phone_number, phone_is_whatsapp, must_change_password, allowed_modules, created_at")
+        .eq("org_owner_id", orgOwnerId);
+      const { data: roles } = await admin
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("org_owner_id", orgOwnerId);
+      const { data: authList } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const emails = new Map((authList?.users ?? []).map((x) => [x.id, x.email]));
+      const users = (profs ?? []).map((p) => ({
+        ...p,
+        email: emails.get(p.user_id) ?? null,
+        role: roles?.find((r) => r.user_id === p.user_id)?.role ?? "leitor",
+        is_self: p.user_id === caller.id,
+      }));
+      return json({ ok: true, users, org_owner_id: orgOwnerId });
+    }
+
     if (action === "create") {
       const email = String(body.email || "").trim().toLowerCase();
       const role = String(body.role || "leitor");
