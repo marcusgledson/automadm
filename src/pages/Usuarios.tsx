@@ -246,6 +246,8 @@ export default function Usuarios() {
                 ))}
               </div>
             )}
+
+            <AuditLogList />
           </>
         )}
       </main>
