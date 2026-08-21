@@ -47,3 +47,15 @@ Front:
 - `ModuleGuard.tsx` e `Dashboard.tsx`: chamar o log ao bloquear rota / clicar em card bloqueado.
 - `useAuditLogs.ts`: rótulos `access_denied`, `resend_access_email`, `temp_password_expired` e filtro por ação na lista.
 - Fase 4: `src/pages/Solicitacoes.tsx` + hook `useReportRequests.ts`, rota registrada em `App.tsx` e entrada no `UserMenu`.
+
+## 4. Aparência configurável no Painel Gerencial
+
+Nova aba **Aparência** no Menu Gerencial (disponível ao Máster para toda a organização; demais perfis apenas visualizam), permitindo trocar a qualquer momento o que hoje só é escolhido no onboarding:
+
+- **Paleta de cores**: opções pré-definidas (Verde Oliva como padrão atual, além de Azul, Grafite, Terracota, Roxo e Areia), com pré-visualização das amostras.
+- **Logo da tela inicial**: enviar/definir a imagem exibida no painel, com opção de voltar ao padrão.
+- **Tema/estilo de aparência**: Escritório, Construção, Arquitetura, Meio Ambiente, Carros, Aviação e Neutro. Cada tema ajusta imagem de fundo/ilustração, ícones de destaque e textura dos cards, sempre respeitando a paleta escolhida (o Neutro usa apenas a paleta, sem imagem temática).
+
+As mudanças valem imediatamente para toda a aplicação (painel, módulos e telas de acesso) e ficam salvas na organização, sem precisar refazer o onboarding.
+
+Detalhes técnicos: reaproveita as colunas já existentes `palette`, `theme_style` e `logo_url` em `app_settings`; novo componente `src/components/AppearancePanel.tsx` usado pelo `AdminPanel`, com as mesmas listas de paletas/temas hoje declaradas em `Onboarding.tsx` extraídas para `src/lib/appearance.ts`. As paletas gravam variáveis HSL em `index.css` (tokens `--primary`, `--accent`, etc.) aplicadas em runtime por um provider de tema; nenhuma cor fixa em componentes.
