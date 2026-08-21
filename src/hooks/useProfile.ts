@@ -2,13 +2,15 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+export type Gender = "masculino" | "feminino" | "nao_informar";
+
 export interface UserProfile {
   id: string;
   user_id: string;
   full_name: string | null;
   display_name: string | null;
   username: string | null;
-  gender: string | null;
+  gender: Gender | null;
   phone_country_code: string | null;
   phone_area_code: string | null;
   phone_number: string | null;
