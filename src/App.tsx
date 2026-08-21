@@ -149,7 +149,9 @@ const App = () => (
               path="/metas"
               element={
                 <ProtectedRoute>
-                  <Metas />
+                  <ModuleGuard module="metas">
+                    <Metas />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -173,7 +175,9 @@ const App = () => (
               path="/extrato"
               element={
                 <ProtectedRoute>
-                  <Index />
+                  <ModuleGuard module="extrato">
+                    <Index />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -181,7 +185,9 @@ const App = () => (
               path="/neoenergia"
               element={
                 <ProtectedRoute>
-                  <Neoenergia />
+                  <ModuleGuard module="energia">
+                    <Neoenergia />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -189,7 +195,9 @@ const App = () => (
               path="/neoenergia/analytics"
               element={
                 <ProtectedRoute>
-                  <NeoenergiaAnalytics />
+                  <ModuleGuard module="energia">
+                    <NeoenergiaAnalytics />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -197,7 +205,9 @@ const App = () => (
               path="/contas"
               element={
                 <ProtectedRoute>
-                  <ContasCentral />
+                  <ModuleGuard module="contas">
+                    <ContasCentral />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -205,7 +215,9 @@ const App = () => (
               path="/investimentos"
               element={
                 <ProtectedRoute>
-                  <Investimentos />
+                  <ModuleGuard module="investimentos">
+                    <Investimentos />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -221,7 +233,9 @@ const App = () => (
               path="/sms/config"
               element={
                 <ProtectedRoute>
-                  <SmsConfig />
+                  <ModuleGuard module="sms">
+                    <SmsConfig />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -229,7 +243,9 @@ const App = () => (
               path="/sms/revisao"
               element={
                 <ProtectedRoute>
-                  <SmsReview />
+                  <ModuleGuard module="sms">
+                    <SmsReview />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
