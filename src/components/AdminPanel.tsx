@@ -20,11 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings } from "lucide-react";
+import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, UserRoundCog, SlidersHorizontal } from "lucide-react";
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
 import DeleteImpactDialog from "@/components/DeleteImpactDialog";
+import ProfileUpdatePanel from "@/components/ProfileUpdatePanel";
+import ModulePermissionsPanel from "@/components/ModulePermissionsPanel";
 import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
@@ -406,6 +408,27 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
                   Limpar toda a base
                 </Button>
               </div>
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <UserRoundCog className="h-4 w-4 text-primary" /> Minhas informações
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Revise seus dados e use <strong>Atualiza Informações!</strong> — mostramos exatamente o que mudou
+                antes de gravar.
+              </p>
+              <ProfileUpdatePanel />
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <SlidersHorizontal className="h-4 w-4 text-primary" /> Permissões de módulos
+              </h4>
+              <p className="text-xs text-muted-foreground">
+                Habilite ou desabilite módulos por perfil de acesso ou individualmente por usuário.
+              </p>
+              <ModulePermissionsPanel />
             </section>
 
             <section className="space-y-2">

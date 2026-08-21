@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, KeyRound, Loader2, Trash2, UserPlus, Users } from "lucide-react";
+import { ArrowLeft, History, Home, KeyRound, Loader2, Trash2, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +31,7 @@ import PhoneField, { type PhoneValue } from "@/components/PhoneField";
 import { MODULES } from "@/hooks/useAppSettings";
 import { ROLE_DESCRIPTION, ROLE_LABEL, useUserRole, type AppRole } from "@/hooks/useUserRole";
 import { useOrgUsers, type OrgUser } from "@/hooks/useOrgUsers";
+import { AUDIT_ACTION_LABEL, useAuditLogs } from "@/hooks/useAuditLogs";
 
 const ROLES: AppRole[] = ["master", "operador", "colaborador", "leitor"];
 const EMPTY_PHONE: PhoneValue = { country: "+55", area: "", number: "", whatsapp: false };
@@ -246,6 +247,8 @@ export default function Usuarios() {
                 ))}
               </div>
             )}
+
+            <AuditLogList />
           </>
         )}
       </main>
@@ -343,5 +346,48 @@ export default function Usuarios() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/** Trilha de auditoria das ações do Máster. */
+function AuditLogList() {
+  const { logs, loading } = useAuditLogs(true);
+  return (
+    <Card className="card-elevated">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <History className="h-4 w-4 text-primary" /> Logs de auditoria
+        </CardTitle>
+        <CardDescription>
+          Registro das ações administrativas (criação, troca e redefinição de senha, exclusão e alterações de acesso).
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhuma ação registrada ainda.</p>
+        ) : (
+          <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+            {logs.map((l) => (
+              <div key={l.id} className="rounded-md border border-border/60 px-3 py-2 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium">{AUDIT_ACTION_LABEL[l.action] ?? l.action}</span>
+                  <span className="text-muted-foreground">
+                    {new Date(l.created_at).toLocaleString("pt-BR")}
+                  </span>
+                </div>
+                <p className="text-muted-foreground">
+                  Executor: {l.actor_email ?? l.actor_id}
+                  {l.target_email && l.target_user_id !== l.actor_id ? ` · Alvo: ${l.target_email}` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -23,7 +23,10 @@ import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import { useProfile } from "@/hooks/useProfile";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
+import ForcePasswordChange from "@/components/ForcePasswordChange";
+import ModuleGuard from "@/components/ModuleGuard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +50,20 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
     );
   }
   if (!settings?.onboarding_done) return <Navigate to="/onboarding" replace />;
+  return <>{children}</>;
+}
+
+/** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
+function PasswordGate({ children }: { children: React.ReactNode }) {
+  const { profile, loading, refresh } = useProfile();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (profile?.must_change_password) return <ForcePasswordChange onDone={() => void refresh()} />;
   return <>{children}</>;
 }
 
@@ -91,7 +108,7 @@ function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNod
     );
   return (
     <>
-      {skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}
+      <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
       <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -132,7 +149,9 @@ const App = () => (
               path="/metas"
               element={
                 <ProtectedRoute>
-                  <Metas />
+                  <ModuleGuard module="metas">
+                    <Metas />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -156,7 +175,9 @@ const App = () => (
               path="/extrato"
               element={
                 <ProtectedRoute>
-                  <Index />
+                  <ModuleGuard module="extrato">
+                    <Index />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -164,7 +185,9 @@ const App = () => (
               path="/neoenergia"
               element={
                 <ProtectedRoute>
-                  <Neoenergia />
+                  <ModuleGuard module="energia">
+                    <Neoenergia />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -172,7 +195,9 @@ const App = () => (
               path="/neoenergia/analytics"
               element={
                 <ProtectedRoute>
-                  <NeoenergiaAnalytics />
+                  <ModuleGuard module="energia">
+                    <NeoenergiaAnalytics />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -180,7 +205,9 @@ const App = () => (
               path="/contas"
               element={
                 <ProtectedRoute>
-                  <ContasCentral />
+                  <ModuleGuard module="contas">
+                    <ContasCentral />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -188,7 +215,9 @@ const App = () => (
               path="/investimentos"
               element={
                 <ProtectedRoute>
-                  <Investimentos />
+                  <ModuleGuard module="investimentos">
+                    <Investimentos />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -204,7 +233,9 @@ const App = () => (
               path="/sms/config"
               element={
                 <ProtectedRoute>
-                  <SmsConfig />
+                  <ModuleGuard module="sms">
+                    <SmsConfig />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
@@ -212,7 +243,9 @@ const App = () => (
               path="/sms/revisao"
               element={
                 <ProtectedRoute>
-                  <SmsReview />
+                  <ModuleGuard module="sms">
+                    <SmsReview />
+                  </ModuleGuard>
                 </ProtectedRoute>
               }
             />
