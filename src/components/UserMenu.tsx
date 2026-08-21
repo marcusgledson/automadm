@@ -140,6 +140,12 @@ export default function UserMenu() {
             <Settings className="mr-2 h-4 w-4" />
             Menu Gerencial
           </DropdownMenuItem>
+          {isMaster && (
+            <DropdownMenuItem onClick={() => navigate("/usuarios")}>
+              <Users className="mr-2 h-4 w-4" />
+              Perfis e Usuários
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={toggleBiometric} disabled={!bioAvailable}>
             <Fingerprint className="mr-2 h-4 w-4" />
