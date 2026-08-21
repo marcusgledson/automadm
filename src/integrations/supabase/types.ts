@@ -520,10 +520,12 @@ export type Database = {
           id: string
           must_change_password: boolean
           org_owner_id: string | null
+          password_email_sent_at: string | null
           phone_area_code: string | null
           phone_country_code: string | null
           phone_is_whatsapp: boolean
           phone_number: string | null
+          temp_password_expires_at: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -538,10 +540,12 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           org_owner_id?: string | null
+          password_email_sent_at?: string | null
           phone_area_code?: string | null
           phone_country_code?: string | null
           phone_is_whatsapp?: boolean
           phone_number?: string | null
+          temp_password_expires_at?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -556,10 +560,12 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           org_owner_id?: string | null
+          password_email_sent_at?: string | null
           phone_area_code?: string | null
           phone_country_code?: string | null
           phone_is_whatsapp?: boolean
           phone_number?: string | null
+          temp_password_expires_at?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
@@ -790,6 +796,10 @@ export type Database = {
       }
       is_app_owner: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
+      log_access_denied: {
+        Args: { _module: string; _reason: string; _surface: string }
+        Returns: undefined
+      }
       org_owner_of: { Args: { _user_id: string }; Returns: string }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
