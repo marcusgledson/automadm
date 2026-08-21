@@ -1,58 +1,49 @@
-# Plano de Evolução
+# Reenvio de senha, auditoria de acessos negados e Fase 4
 
-## 1. Visual moderno + PWA mobile
+## 1. Troca obrigatória de senha: expiração + reenvio
 
-- Refinar `index.css` / `tailwind.config.ts` com gradientes suaves, sombras elegantes, tipografia mais leve e espaçamento mais arejado.
-- Tornar **Dashboard**, **Central de Contas e Despesas**, **Neoenergia** e **Analytics** totalmente responsivos (cards empilháveis, header colapsando ações em menu, tabelas com scroll horizontal + cartões em mobile).
-- Adicionar suporte **PWA instalável** (manifest + ícones + meta tags). Sem service worker / cache (evita travar preview do Lovable). Aviso: instalação só funciona no app publicado.
+Hoje a tela de primeiro acesso apenas confere o e-mail cadastrado e grava a nova senha, sem qualquer prazo de validade nem forma de reenviar a credencial.
 
-## 2. Renomear & unificar
+O que muda:
+- A senha padrão passa a ter validade (72 horas a partir da criação/redefinição). A tela mostra o prazo restante.
+- Se o prazo expirou, o formulário é bloqueado e só aparece o botão **Reenviar acesso por e-mail**, que dispara um e-mail de redefinição para o e-mail cadastrado na conta (nunca para outro e-mail digitado).
+- O botão de reenvio também fica disponível antes de expirar, com espera de 60 segundos entre envios para evitar abuso.
+- Após o reenvio, um novo prazo de 72 horas é gravado.
+- Cada reenvio, expiração detectada e troca concluída entra na auditoria.
 
-- Renomear "Central de Contas" → **"Central de Contas e Despesas"** em rotas, dashboard e títulos.
-- Integrar Faturas Neoenergia ao mesmo cadastro: faturas Neoenergia já gravam em `consumption_bills` (tipo `energia`); manter o módulo Neoenergia como **importador especializado** e fazer a Central listar tudo unificadamente, incluindo um filtro "Origem" (Neoenergia / Upload / Manual / OFX).
+## 2. Auditoria de acessos negados
 
-## 3. Persistência do Extrato OFX
+Toda vez que um usuário tentar abrir um módulo sem permissão — pela rota (tela "Acesso não liberado") ou clicando em um card bloqueado do painel — o sistema registra na auditoria: quem tentou, qual módulo, por qual caminho (rota ou card) e o motivo da negação (bloqueado pela organização, pelo perfil ou pelo usuário).
 
-Nova tabela `bank_statements`:
+Para não poluir o histórico, a mesma tentativa (mesmo usuário + módulo + motivo) é registrada no máximo uma vez a cada 30 minutos.
 
-```text
-user_id, agencia, conta, data, lancamento, descricao,
-valor, tipo, tipo_lancamento, categoria, documento,
-codigo_operacao, fitid, raw jsonb, created_at, updated_at
-```
+A tela Perfis e Usuários passa a exibir esses registros com o rótulo "Acesso negado", e o Máster pode filtrar o histórico por tipo de ação.
 
-- Chave única: `(user_id, agencia, conta, fitid)` para evitar duplicidade real de transação (FITID é o ID único OFX).
-- Operação **UPSERT**: novas linhas inseridas; existentes recebem UPDATE dos campos atualizados.
-- Header do OFX (`<BANKACCTFROM>`) extraído para capturar **Agência (BRANCHID) + Conta (ACCTID)** e exibido no topo da tela de Extrato.
-- Tela `/extrato` ganha botão **"Salvar na Base"** + listagem dos extratos salvos com filtro por Agência/Conta.
+## 3. Próximas fases
 
-## 4. Gravar Despesas (Débitos) na Central
+**Fase 4 — Solicitações e relatórios**
+- Tela de solicitação de relatório para Colaborador/Leitor (módulo, formato, justificativa), gravando em `report_requests`.
+- Caixa de aprovação para o Máster (aprovar/recusar, com data e responsável), com auditoria de cada decisão.
+- Tela de demanda corporativa (`corporate_requests`) para pedidos de novos módulos, disponível conforme o modo de uso da organização.
 
-Nova tabela `expenses`:
+**Fase 5 — Relatórios e exportações por perfil**
+- Exportações do Menu Gerencial passam a respeitar o perfil: Leitor não exporta; Colaborador exporta apenas após aprovação registrada.
 
-```text
-user_id, tipo_lancamento, categoria, numero_documento,
-detalhes, valor, data_vencimento, data_pagamento, origem
-```
+Fase 4 é implementada nesta entrega; Fase 5 fica para a próxima, salvo pedido contrário.
 
-- Ao salvar o OFX, transações com `tipo = Débito` viram registros automáticos em `expenses` (origem `ofx`).
-- Na Central de Contas e Despesas, nova aba **"Despesas"** com:
-  - **Toggle**: "📎 Carregar arquivo" ou "✍️ Lançar manualmente".
-  - Modo arquivo → upload PDF/OFX (reaproveita `UniversalBillUpload` + parser OFX).
-  - Modo manual → formulário com os campos pedidos (Tipo, Categoria, Nº Documento, Detalhes, Valor, Vencimento, Pagamento).
-- Lista ordenada por vencimento crescente, filtros (tipo, categoria, período), edição/exclusão.
+## Detalhes técnicos
 
-## 5. Detalhes técnicos
+Banco:
+- `profiles`: colunas `temp_password_expires_at timestamptz` e `password_email_sent_at timestamptz`. Preenchidas na criação/redefinição de senha pela função `manage-org-users`.
+- Função `public.log_access_denied(_module text, _surface text, _reason text)` (SECURITY DEFINER) inserindo em `audit_logs` com `action = 'access_denied'`, resolvendo `org_owner_id` via `org_owner_of(auth.uid())` e aplicando a dedupe de 30 min; `GRANT EXECUTE` para `authenticated`.
+- Sem novas tabelas para a Fase 4 (as tabelas `report_requests` e `corporate_requests` já existem); apenas revisão das políticas de leitura/decisão.
 
-- 2 migrations: `bank_statements` e `expenses` com RLS por `auth.uid()` e GRANTs.
-- Novo hook `useBankStatements` (upsert por FITID) e `useExpenses` (CRUD).
-- Atualizar `fileParser.ts` para extrair `BRANCHID` e `ACCTID` do header OFX.
-- Reaproveitar mapeamento existente para classificar categoria automaticamente nas despesas vindas do OFX.
-- Manter Faturas Neoenergia funcionando exatamente como hoje, apenas refletindo na Central unificada.
+Edge Function `manage-org-users`:
+- Novas ações `resend_access_email` (auto-serviço do próprio usuário; usa `generateLink` do Admin API para o e-mail cadastrado, grava novo `temp_password_expires_at`, log `resend_access_email`) e gravação do prazo nas ações `create` e `reset_password`.
 
-## Arquivos principais
-- **Migrations:** `bank_statements`, `expenses`
-- **Criados:** `src/hooks/useBankStatements.ts`, `src/hooks/useExpenses.ts`, `src/components/ExpenseForm.tsx`, `src/pages/ContasDespesas.tsx` (substitui ContasCentral), `public/manifest.json`, `public/icon-*.png`
-- **Editados:** `src/lib/fileParser.ts`, `src/pages/Index.tsx` (Extrato), `src/pages/Dashboard.tsx`, `src/App.tsx`, `index.html`, `src/index.css`, `tailwind.config.ts`
-
-Confirma para eu seguir? Se quiser priorizar parte (ex: só visual+PWA primeiro, ou só persistência), me diga.
+Front:
+- `ForcePasswordChange.tsx`: contagem regressiva, estado expirado, botão de reenvio com cooldown.
+- `useModuleAccess.ts`: expor `denialReason(moduleId)` (`org` | `role` | `user`) e helper `logDenied`.
+- `ModuleGuard.tsx` e `Dashboard.tsx`: chamar o log ao bloquear rota / clicar em card bloqueado.
+- `useAuditLogs.ts`: rótulos `access_denied`, `resend_access_email`, `temp_password_expired` e filtro por ação na lista.
+- Fase 4: `src/pages/Solicitacoes.tsx` + hook `useReportRequests.ts`, rota registrada em `App.tsx` e entrada no `UserMenu`.
