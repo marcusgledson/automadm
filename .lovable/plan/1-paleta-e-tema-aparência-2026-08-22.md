@@ -1,4 +1,4 @@
-# Aparência, Configurações e Ajuda — evolução
+Aparência, Configurações e Ajuda — evolução
 
 ## 1. Paleta e Tema (aparência)
 
@@ -23,12 +23,13 @@
   - se PIN estiver configurado, exige também o PIN;
   - mostra o resumo do que será apagado e exige digitar `EXCLUIR` antes de confirmar;
   - apaga os dados do usuário e a conta de autenticação, limpa PIN/biometria locais e encerra a sessão.
+  - Envia todos os dados para a conta de e-mail cadastrada informando sua exclusão da base de dados à partir da data de solicitação em conformidade a LGPD.
 
 ## 3. Novo módulo "Minhas Informações"
 
 - Diálogo próprio com abas:
   - **Meus dados** — o painel de perfil atual (com "Atualiza Informações!" e comparação do que mudou).
-  - **Permissões de Módulos** — visível **apenas para o Máster**.
+  - **Permissões de Módulos** — visível **apenas para o Máster ou quem obtiver a permissão concedida pelo Master**.
 - Esses dois blocos saem de dentro de Configurações para não ficarem duplicados.
 
 ## 4. Menu suspenso do usuário
