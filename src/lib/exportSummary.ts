@@ -29,6 +29,10 @@ function buildSummaryData(records: FinancialRecord[]) {
   return { rows, totalCreditos, totalDebitos, saldo: totalCreditos + totalDebitos };
 }
 
+/** Escapa texto antes de inserir no HTML do canvas offscreen (evita XSS de dados importados). */
+const esc = (v: unknown) =>
+  String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export async function exportSummary({ records, filterTipo, filterCategoria, format }: SummaryOptions) {
@@ -72,7 +76,7 @@ export async function exportSummary({ records, filterTipo, filterCategoria, form
     const filters: string[] = [];
     if (filterTipo !== "todos") filters.push(`Tipo: ${filterTipo}`);
     if (filterCategoria !== "todos") filters.push(`Categoria: ${filterCategoria}`);
-    html += `<p style="margin:0 0 16px;font-size:12px;color:#666;">${filters.length > 0 ? `Filtros: ${filters.join(" | ")}` : "Sem filtros aplicados"}</p>`;
+    html += `<p style="margin:0 0 16px;font-size:12px;color:#666;">${filters.length > 0 ? `Filtros: ${esc(filters.join(" | "))}` : "Sem filtros aplicados"}</p>`;
 
     html += `<div style="display:flex;gap:16px;margin-bottom:20px;">
       <div style="flex:1;padding:12px;background:#f0fdf4;border-radius:8px;"><span style="font-size:11px;color:#666;">Créditos</span><br/><strong style="font-size:18px;color:#298069;">${fmt(totalCreditos)}</strong></div>
@@ -91,8 +95,8 @@ export async function exportSummary({ records, filterTipo, filterCategoria, form
     rows.forEach((r, i) => {
       const bg = i % 2 === 0 ? "#f9fafb" : "#fff";
       html += `<tr style="background:${bg};">
-        <td style="padding:6px 8px;">${r.categoria}</td>
-        <td style="padding:6px 8px;text-align:center;">${r.qtd}</td>
+        <td style="padding:6px 8px;">${esc(r.categoria)}</td>
+        <td style="padding:6px 8px;text-align:center;">${esc(r.qtd)}</td>
         <td style="padding:6px 8px;text-align:right;">${fmt(r.creditos)}</td>
         <td style="padding:6px 8px;text-align:right;">${fmt(r.debitos)}</td>
         <td style="padding:6px 8px;text-align:right;font-weight:600;">${fmt(r.total)}</td>
