@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { PALETTES as APPEARANCE_PALETTES, THEME_STYLES } from "@/lib/appearance";
+
 
 export type UsageMode = "pessoal" | "coparticipativo" | "corporativo";
 
@@ -25,22 +27,15 @@ export const MODULES = [
   { id: "sms", label: "Leitura de SMS bancário" },
 ] as const;
 
-export const PALETTES = [
-  { id: "oliva", label: "Verde Oliva", colors: ["#5c6b3c", "#8a9a5b", "#e8ecdd"] },
-  { id: "azul", label: "Azul Corporativo", colors: ["#1e3a5f", "#3b82a0", "#dfeaf2"] },
-  { id: "grafite", label: "Grafite", colors: ["#2b2d31", "#5c6169", "#e6e7e9"] },
-  { id: "terracota", label: "Terracota", colors: ["#8c4a2f", "#c97b58", "#f3e3da"] },
-];
+/** Paletas no formato usado pelas telas (cores apenas para pré-visualização). */
+export const PALETTES = APPEARANCE_PALETTES.map((p) => ({
+  id: p.id,
+  label: p.label,
+  colors: p.swatch,
+}));
 
-export const THEME_STYLES = [
-  { id: "neutro", label: "Neutro" },
-  { id: "escritorio", label: "Escritório" },
-  { id: "construcao", label: "Construção" },
-  { id: "arquitetura", label: "Arquitetura" },
-  { id: "meioambiente", label: "Meio Ambiente" },
-  { id: "carros", label: "Carros" },
-  { id: "aviacao", label: "Aviação" },
-];
+export { THEME_STYLES };
+
 
 export function useAppSettings() {
   const { user } = useAuth();
