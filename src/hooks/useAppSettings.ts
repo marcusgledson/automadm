@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { PALETTES as APPEARANCE_PALETTES, THEME_STYLES } from "@/lib/appearance";
+
 
 export type UsageMode = "pessoal" | "coparticipativo" | "corporativo";
 
