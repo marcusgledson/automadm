@@ -51,7 +51,7 @@ export async function exportSummary({ records, filterTipo, filterCategoria, form
     const filters: string[] = [];
     if (filterTipo !== "todos") filters.push(`Tipo: ${filterTipo}`);
     if (filterCategoria !== "todos") filters.push(`Categoria: ${filterCategoria}`);
-    doc.text(filters.length > 0 ? `Filtros: ${esc(filters.join(" | "))}` : "Sem filtros aplicados", 14, 28);
+    doc.text(filters.length > 0 ? `Filtros: ${filters.join(" | ")}` : "Sem filtros aplicados", 14, 28);
 
     doc.setFontSize(11);
     doc.text(`Créditos: ${fmt(totalCreditos)}`, 14, 38);
