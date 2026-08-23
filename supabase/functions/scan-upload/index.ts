@@ -52,8 +52,25 @@ serve(async (req) => {
       req,
     });
 
-    if (!result.ok) return json({ ok: false, error: result.reason, threats: result.scan?.threats ?? [] }, 422);
-    return json({ ok: true, engine: result.scan?.engine, size: bytes.byteLength });
+    if (!result.ok) {
+      return json(
+        {
+          ok: false,
+          error: result.reason,
+          threats: result.scan?.threats ?? [],
+          cached: !!result.cached,
+          sha256: result.sha256,
+        },
+        422,
+      );
+    }
+    return json({
+      ok: true,
+      engine: result.scan?.engine,
+      size: bytes.byteLength,
+      cached: !!result.cached,
+      sha256: result.sha256,
+    });
   } catch (error) {
     console.error("scan-upload error:", error);
     return json({ error: error instanceof Error ? error.message : "Erro interno" }, 500);
