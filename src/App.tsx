@@ -27,7 +27,7 @@ import { useProfile } from "@/hooks/useProfile";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
 import ModuleGuard from "@/components/ModuleGuard";
-import AppearanceProvider from "@/components/AppearanceProvider";
+import AppearanceProvider, { useAppearanceReady } from "@/components/AppearanceProvider";
 import {
   AlertDialog,
   AlertDialogAction,
