@@ -7,7 +7,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULT_PASSWORD = "senha1010";
+/** Gera uma senha temporária única e aleatória (nunca um valor fixo). */
+function generateTempPassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = crypto.getRandomValues(new Uint8Array(14));
+  let out = "";
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return `${out}#${crypto.getRandomValues(new Uint32Array(1))[0] % 90 + 10}`;
+}
 const ROLES = ["master", "operador", "colaborador", "leitor"];
 const RANK: Record<string, number> = { master: 4, operador: 3, colaborador: 2, leitor: 1 };
 const LOGGABLE = ["update_role", "update_modules", "update_profile"];
@@ -249,7 +256,33 @@ serve(async (req) => {
     });
   };
 
+  /**
+   * Invalida no servidor credenciais temporárias vencidas: se o prazo expirou sem a troca
+   * obrigatória, a senha é substituída por um valor aleatório desconhecido, exigindo reenvio.
+   */
+  const enforceTempPasswordExpiry = async () => {
+    const { data: expired } = await admin
+      .from("profiles")
+      .select("user_id")
+      .eq("org_owner_id", orgOwnerId)
+      .eq("must_change_password", true)
+      .not("temp_password_expires_at", "is", null)
+      .lt("temp_password_expires_at", new Date().toISOString());
+    for (const row of expired ?? []) {
+      const uid = row.user_id as string;
+      const { error } = await admin.auth.admin.updateUserById(uid, { password: generateTempPassword() });
+      if (error) continue;
+      await admin
+        .from("profiles")
+        .update({ temp_password_expires_at: null, password_email_sent_at: null })
+        .eq("user_id", uid);
+      await log("temp_password_expired", uid, null, { reason: "credencial temporária vencida" });
+    }
+  };
+
   try {
+    await enforceTempPasswordExpiry();
+
     if (action === "list") {
       const { data: profs } = await admin
         .from("profiles")
@@ -285,9 +318,10 @@ serve(async (req) => {
         return json({ error: "Você não pode criar um usuário de nível igual ou superior ao seu." }, 403);
       }
 
+      const tempPassword = generateTempPassword();
       const { data: created, error: ce } = await admin.auth.admin.createUser({
         email,
-        password: DEFAULT_PASSWORD,
+        password: tempPassword,
         email_confirm: true,
         user_metadata: { display_name: body.full_name || email },
       });
@@ -305,6 +339,7 @@ serve(async (req) => {
           phone_number: body.phone_number ?? null,
           phone_is_whatsapp: !!body.phone_is_whatsapp,
           must_change_password: true,
+          temp_password_expires_at: expiryFromNow(),
           org_owner_id: orgOwnerId,
           allowed_modules: Array.isArray(body.allowed_modules) ? body.allowed_modules : [],
         },
@@ -319,7 +354,7 @@ serve(async (req) => {
         );
 
       await log("create_user", newId, email, { role, allowed_modules: body.allowed_modules ?? [] });
-      return json({ ok: true, user_id: newId, temp_password: DEFAULT_PASSWORD });
+      return json({ ok: true, user_id: newId, temp_password: tempPassword, expires_at: expiryFromNow() });
     }
 
     const targetId = String(body.user_id || "");
@@ -346,11 +381,15 @@ serve(async (req) => {
     const targetEmail = targetAuth?.user?.email ?? null;
 
     if (action === "reset_password") {
-      const { error } = await admin.auth.admin.updateUserById(targetId, { password: DEFAULT_PASSWORD });
+      const tempPassword = generateTempPassword();
+      const { error } = await admin.auth.admin.updateUserById(targetId, { password: tempPassword });
       if (error) return json({ error: error.message }, 400);
-      await admin.from("profiles").update({ must_change_password: true }).eq("user_id", targetId);
+      await admin
+        .from("profiles")
+        .update({ must_change_password: true, temp_password_expires_at: expiryFromNow() })
+        .eq("user_id", targetId);
       await log("reset_password", targetId, targetEmail, {});
-      return json({ ok: true, temp_password: DEFAULT_PASSWORD });
+      return json({ ok: true, temp_password: tempPassword, expires_at: expiryFromNow() });
     }
 
     if (action === "delete") {

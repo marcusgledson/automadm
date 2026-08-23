@@ -8,8 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const DEFAULT_PASSWORD = "senha1010";
-
 interface Props {
   onDone: () => void;
 }
@@ -32,10 +30,6 @@ export default function ForcePasswordChange({ onDone }: Props) {
     }
     if (password.length < 8) {
       toast.error("A nova senha deve ter pelo menos 8 caracteres.");
-      return;
-    }
-    if (password === DEFAULT_PASSWORD) {
-      toast.error("Escolha uma senha diferente da senha padrão.");
       return;
     }
     if (password !== confirm) {
@@ -72,8 +66,8 @@ export default function ForcePasswordChange({ onDone }: Props) {
             <ShieldAlert className="h-5 w-5 text-primary" /> Troca de senha obrigatória
           </CardTitle>
           <CardDescription>
-            Seu acesso foi criado com a senha padrão <strong>{DEFAULT_PASSWORD}</strong>. Para continuar, confirme o
-            e-mail cadastrado e defina uma nova senha pessoal.
+            Seu acesso foi criado com uma senha temporária de uso único. Para continuar, confirme o e-mail
+            cadastrado e defina uma nova senha pessoal.
           </CardDescription>
         </CardHeader>
         <CardContent>
