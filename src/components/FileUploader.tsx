@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, FileSpreadsheet, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import {
   MAX_OFX_BYTES,
   MAX_PDF_BYTES,
@@ -30,6 +31,25 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
           toast.error(result.error ?? "Arquivo inválido.");
           return;
         }
+        // Validação/varredura no backend antes de processar o arquivo
+        const { data, error: fnError } = await supabase.functions.invoke("scan-upload", {
+          body: file,
+          headers: {
+            "Content-Type": result.kind === "pdf" ? "application/pdf" : "text/plain",
+            "x-file-kind": result.kind!,
+            "x-file-name": encodeURIComponent(file.name),
+          },
+        });
+
+        if (fnError || !data?.ok) {
+          const msg =
+            (data as { error?: string } | null)?.error ??
+            "Não foi possível validar o arquivo no servidor. Tente novamente.";
+          setError(msg);
+          toast.error(msg);
+          return;
+        }
+
         setError(null);
         onFileSelected(file);
       } finally {
