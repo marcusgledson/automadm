@@ -403,6 +403,6 @@ export async function renderHeaderImage(file: File, password?: string): Promise<
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.translate(0, -(viewport.height - cropHeight));
-  await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+  await page.render({ canvasContext: ctx, viewport }).promise;
   return canvas.toDataURL("image/png");
 }
