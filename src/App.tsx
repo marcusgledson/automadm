@@ -27,7 +27,7 @@ import { useProfile } from "@/hooks/useProfile";
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
 import ModuleGuard from "@/components/ModuleGuard";
-import AppearanceProvider from "@/components/AppearanceProvider";
+import AppearanceProvider, { useAppearanceReady } from "@/components/AppearanceProvider";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +39,17 @@ import {
 } from "@/components/ui/alert-dialog";
 
 const queryClient = new QueryClient();
+
+/** Falha cedo e com mensagem clara se o AppearanceProvider não estiver registrado. */
+function RequireAppearance({ children }: { children: React.ReactNode }) {
+  const ready = useAppearanceReady();
+  if (!ready) {
+    throw new Error(
+      "AppearanceProvider não está registrado acima das rotas protegidas. Recarregue a página.",
+    );
+  }
+  return <>{children}</>;
+}
 
 /** Redireciona para a apresentação inicial enquanto o modo de uso não for escolhido. */
 function OnboardingGate({ children }: { children: React.ReactNode }) {
@@ -109,7 +120,9 @@ function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNod
     );
   return (
     <>
-      <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+      <RequireAppearance>
+        <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+      </RequireAppearance>
       <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
         <AlertDialogContent>
           <AlertDialogHeader>
