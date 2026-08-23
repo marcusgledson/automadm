@@ -201,10 +201,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
     setPassword("");
   };
 
-  const copyPreview = async () => {
-    await navigator.clipboard.writeText(previewUrl);
-    toast.success("Link copiado. Compartilhe com sua equipe de testes.");
-  };
+
 
   // === Backup criptografado ===
   const openEncBackup = (dest: EncDest) => {
