@@ -79,7 +79,10 @@ export default function Usuarios() {
       toast.error(res.error ?? "Não foi possível criar o usuário.");
       return;
     }
-    toast.success("Usuário criado. Senha inicial: senha1010 (troca obrigatória no 1º acesso).");
+    toast.success(
+      `Usuário criado. Senha temporária: ${res.data?.temp_password ?? "(enviada ao usuário)"} — válida por 72h, com troca obrigatória no 1º acesso.`,
+      { duration: 15000 },
+    );
     setOpen(false);
     setEmail("");
     setFullName("");
@@ -205,7 +208,11 @@ export default function Usuarios() {
                           disabled={u.is_self}
                           onClick={async () => {
                             const res = await resetPassword(u.user_id);
-                            if (res.ok) toast.success("Senha redefinida para senha1010.");
+                            if (res.ok)
+                              toast.success(
+                                `Nova senha temporária: ${res.data?.temp_password ?? "(enviada ao usuário)"} — válida por 72h.`,
+                                { duration: 15000 },
+                              );
                             else toast.error(res.error ?? "Falha ao redefinir a senha.");
                           }}
                         >
@@ -258,7 +265,8 @@ export default function Usuarios() {
           <DialogHeader>
             <DialogTitle>Novo usuário</DialogTitle>
             <DialogDescription>
-              O acesso é criado com a senha padrão <strong>senha1010</strong> e troca obrigatória no primeiro acesso.
+              O acesso é criado com uma <strong>senha temporária única e aleatória</strong>, exibida apenas uma vez após a
+              criação, válida por 72 horas e com troca obrigatória no primeiro acesso.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">

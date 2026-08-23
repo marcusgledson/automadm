@@ -237,8 +237,8 @@ export default function Onboarding() {
                   </CardTitle>
                   <CardDescription>
                     O primeiro usuário detém todas as funções e é o único com acesso ao Painel de Perfis e
-                    Usuários. Os demais entram com a senha padrão <strong>senha1010</strong> e são obrigados a
-                    trocá-la no primeiro acesso.
+                    Usuários. Os demais recebem uma <strong>senha temporária única</strong>, válida por 72 horas, e são obrigados
+                    a trocá-la no primeiro acesso.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
