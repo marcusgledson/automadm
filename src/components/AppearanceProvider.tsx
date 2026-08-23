@@ -1,6 +1,13 @@
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { applyAppearance, cacheAppearance, readCachedAppearance } from "@/lib/appearance";
+
+const AppearanceContext = createContext<boolean | undefined>(undefined);
+
+/** Indica se o AppearanceProvider está registrado acima na árvore. */
+export function useAppearanceReady() {
+  return useContext(AppearanceContext) === true;
+}
 
 /**
  * Aplica a paleta e o tema salvos no banco assim que o app carrega.
@@ -20,5 +27,5 @@ export default function AppearanceProvider({ children }: { children: React.React
     cacheAppearance(settings.palette, settings.theme_style);
   }, [settings?.palette, settings?.theme_style]);
 
-  return <>{children}</>;
+  return <AppearanceContext.Provider value={true}>{children}</AppearanceContext.Provider>;
 }
