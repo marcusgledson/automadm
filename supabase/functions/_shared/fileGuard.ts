@@ -25,6 +25,88 @@ export interface GuardResult {
   ok: boolean;
   reason?: string;
   scan?: ScanResult;
+  /** true quando o veredito veio do cache por hash SHA-256 (sem reprocessar o arquivo). */
+  cached?: boolean;
+  sha256?: string;
+}
+
+/** TTL do cache de varredura, configurável via secret UPLOAD_SCAN_CACHE_TTL_HOURS (padrão 72h). */
+export function scanCacheTtlMs(): number {
+  const raw = Number(Deno.env.get("UPLOAD_SCAN_CACHE_TTL_HOURS") ?? "72");
+  const hours = Number.isFinite(raw) && raw > 0 ? Math.min(raw, 24 * 30) : 72;
+  return hours * 60 * 60 * 1000;
+}
+
+function adminClient() {
+  return createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
+    auth: { persistSession: false },
+  });
+}
+
+interface CachedVerdict {
+  verdict: "clean" | "threat";
+  reason: string | null;
+  engine: string | null;
+  threats: string[];
+}
+
+/** Consulta o cache de varredura por hash; ignora registros expirados. */
+export async function getCachedScan(sha256: string, kind: FileKind): Promise<CachedVerdict | null> {
+  try {
+    const admin = adminClient();
+    const { data } = await admin
+      .from("upload_scan_cache")
+      .select("verdict, reason, engine, threats, expires_at, hits")
+      .eq("sha256", sha256)
+      .eq("file_kind", kind)
+      .maybeSingle();
+    if (!data) return null;
+    if (new Date(data.expires_at as string).getTime() <= Date.now()) return null;
+    await admin
+      .from("upload_scan_cache")
+      .update({ hits: Number(data.hits ?? 0) + 1 })
+      .eq("sha256", sha256)
+      .eq("file_kind", kind);
+    return {
+      verdict: data.verdict as "clean" | "threat",
+      reason: (data.reason as string) ?? null,
+      engine: (data.engine as string) ?? null,
+      threats: (data.threats as string[]) ?? [],
+    };
+  } catch (e) {
+    console.error("scan cache read failed:", e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+/** Grava (ou renova) o veredito no cache por hash. */
+export async function putCachedScan(
+  sha256: string,
+  kind: FileKind,
+  size: number,
+  scan: ScanResult,
+  reason?: string,
+): Promise<void> {
+  try {
+    await adminClient()
+      .from("upload_scan_cache")
+      .upsert(
+        {
+          sha256,
+          file_kind: kind,
+          file_size: size,
+          verdict: scan.clean ? "clean" : "threat",
+          reason: reason ?? null,
+          engine: scan.engine,
+          threats: scan.threats,
+          expires_at: new Date(Date.now() + scanCacheTtlMs()).toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "sha256,file_kind" },
+      );
+  } catch (e) {
+    console.error("scan cache write failed:", e instanceof Error ? e.message : String(e));
+  }
 }
 
 const ALLOWED_MIME: Record<FileKind, string[]> = {
@@ -220,9 +302,27 @@ export async function guardAndAudit(
     return basic;
   }
 
-  const scan = await scanFile(bytes, opts.kind);
+  const hash = await sha256Hex(bytes);
+  const cached = await getCachedScan(hash, opts.kind);
+
+  let scan: ScanResult;
+  if (cached) {
+    scan = {
+      clean: cached.verdict === "clean",
+      engine: `${cached.engine ?? "heuristic"} (cache)`,
+      threats: cached.threats,
+      details: { sha256: hash, size: bytes.byteLength, cached: true },
+    };
+  } else {
+    scan = await scanFile(bytes, opts.kind);
+  }
+
   const status = scan.clean ? "accepted" : "rejected";
-  const reason = scan.clean ? undefined : `Conteúdo suspeito detectado: ${scan.threats.join(", ")}`;
+  const reason = scan.clean
+    ? undefined
+    : cached?.reason ?? `Conteúdo suspeito detectado: ${scan.threats.join(", ")}`;
+
+  if (!cached) await putCachedScan(hash, opts.kind, bytes.byteLength, scan, reason);
 
   await logUploadAudit({
     userId: opts.userId,
@@ -237,5 +337,7 @@ export async function guardAndAudit(
     req: opts.req,
   });
 
-  return scan.clean ? { ok: true, scan } : { ok: false, reason, scan };
+  return scan.clean
+    ? { ok: true, scan, cached: !!cached, sha256: hash }
+    : { ok: false, reason, scan, cached: !!cached, sha256: hash };
 }

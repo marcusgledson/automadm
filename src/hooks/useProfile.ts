@@ -16,6 +16,7 @@ export interface UserProfile {
   phone_number: string | null;
   phone_is_whatsapp: boolean;
   must_change_password: boolean;
+  temp_password_expires_at: string | null;
   allowed_modules: string[];
   org_owner_id: string | null;
 }

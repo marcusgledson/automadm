@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, Loader2, Mail, ShieldAlert } from "lucide-react";
+import { Clock, KeyRound, Loader2, Mail, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,20 +10,39 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 interface Props {
   onDone: () => void;
+  /** Prazo de validade da senha temporária entregue no primeiro acesso. */
+  expiresAt?: string | null;
 }
 
 /** Primeiro acesso: troca obrigatória da senha padrão com confirmação do e-mail cadastrado. */
-export default function ForcePasswordChange({ onDone }: Props) {
+export default function ForcePasswordChange({ onDone, expiresAt }: Props) {
   const { user, signOut } = useAuth();
+  const [resending, setResending] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
 
   const registered = (user?.email ?? "").toLowerCase();
+  const expired = !!expiresAt && new Date(expiresAt).getTime() <= Date.now();
+
+  const handleResend = async () => {
+    setResending(true);
+    const { data, error } = await supabase.functions.invoke("manage-org-users", {
+      body: { action: "resend_access_email", redirect_to: `${window.location.origin}/reset-password` },
+    });
+    setResending(false);
+    const msg = (data as { error?: string } | null)?.error;
+    if (error || msg) toast.error(msg ?? "Não foi possível reenviar o e-mail de acesso.");
+    else toast.success("Enviamos um link de redefinição para o seu e-mail cadastrado.");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (expired) {
+      toast.error("Sua senha temporária expirou. Solicite um novo link de acesso.");
+      return;
+    }
     if (email.trim().toLowerCase() !== registered) {
       toast.error("O e-mail informado não confere com o e-mail cadastrado.");
       return;
@@ -71,6 +90,24 @@ export default function ForcePasswordChange({ onDone }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {expired ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Sua senha temporária expirou em {new Date(expiresAt!).toLocaleString("pt-BR")} e não pode mais ser
+                  usada. Solicite um novo link de acesso para o e-mail cadastrado ({registered}).
+                </span>
+              </div>
+              <Button className="w-full" onClick={handleResend} disabled={resending}>
+                {resending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Reenviar link de acesso
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => signOut()} disabled={resending}>
+                Sair da conta
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fp-email">Confirme seu e-mail cadastrado</Label>
@@ -121,6 +158,7 @@ export default function ForcePasswordChange({ onDone }: Props) {
               Sair da conta
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>
