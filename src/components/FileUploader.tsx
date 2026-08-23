@@ -10,11 +10,14 @@ interface FileUploaderProps {
 export default function FileUploader({ onFileSelected, loading }: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const accepted = (name: string) =>
+    name.toLowerCase().endsWith(".ofx") || name.toLowerCase().endsWith(".pdf");
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       const file = e.dataTransfer.files[0];
-      if (file && file.name.toLowerCase().endsWith(".ofx")) {
+      if (file && accepted(file.name)) {
         onFileSelected(file);
       }
     },
@@ -40,10 +43,10 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
       </div>
       <div className="text-center">
         <p className="text-lg font-medium text-foreground">
-          Arraste seu arquivo OFX aqui
+          Arraste seu extrato (OFX ou PDF) aqui
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          Formato aceito: OFX (Open Financial Exchange)
+          Formatos aceitos: OFX (Open Financial Exchange) e PDF do extrato bancário
         </p>
       </div>
       <Button
@@ -53,15 +56,16 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
         className="gap-2"
       >
         <Upload className="h-4 w-4" />
-        {loading ? "Processando..." : "Selecionar Arquivo OFX"}
+        {loading ? "Processando..." : "Selecionar OFX ou PDF"}
       </Button>
       <input
         ref={inputRef}
         type="file"
-        accept=".ofx"
+        accept=".ofx,.pdf"
         onChange={handleChange}
         className="hidden"
       />
+
     </div>
   );
 }

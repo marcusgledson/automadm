@@ -5,6 +5,8 @@ import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landma
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
+import { parsePdfStatement, PdfPasswordRequiredError } from "@/lib/pdfStatementParser";
+
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
@@ -58,33 +60,73 @@ export default function Index() {
   }, [pendingPreview]);
 
 
+  const handlePdf = useCallback(async (file: File) => {
+    let password: string | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const parsed = await parsePdfStatement(file, password);
+        if (parsed.records.length === 0) {
+          toast.error("Nenhum lançamento reconhecido neste PDF.");
+          return;
+        }
+        setPendingPreview({
+          statements: [{ account: parsed.account, records: parsed.records }],
+          fileName: file.name,
+        });
+        return;
+      } catch (err) {
+        if (err instanceof PdfPasswordRequiredError) {
+          const input = window.prompt(
+            err.wrongPassword
+              ? "Senha incorreta. Informe a senha do PDF:"
+              : "Este PDF está protegido. Informe a senha:",
+          );
+          if (!input) { toast.error("Importação cancelada."); return; }
+          password = input;
+          continue;
+        }
+        console.error(err);
+        toast.error("Erro ao ler o PDF do extrato.");
+        return;
+      }
+    }
+    toast.error("Não foi possível abrir o PDF (senha inválida).");
+  }, []);
+
   const handleFile = useCallback(async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".ofx")) {
-      toast.error("Formato inválido. Apenas arquivos OFX são aceitos.");
+    const name = file.name.toLowerCase();
+    const isPdf = name.endsWith(".pdf") || file.type === "application/pdf";
+    if (!name.endsWith(".ofx") && !isPdf) {
+      toast.error("Formato inválido. Aceitos: OFX ou PDF.");
       return;
     }
     setLoading(true);
     try {
-      const text = await file.text();
-      processOFXText(text, file.name);
+      if (isPdf) {
+        await handlePdf(file);
+      } else {
+        const text = await file.text();
+        processOFXText(text, file.name);
+      }
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao processar o arquivo OFX.");
+      toast.error("Erro ao processar o arquivo.");
     } finally {
       setLoading(false);
     }
-  }, [processOFXText]);
+  }, [processOFXText, handlePdf]);
 
   const openFilePicker = () => {
     const input = document.createElement("input");
     input.type = "file";
-    input.accept = ".ofx";
+    input.accept = ".ofx,.pdf";
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) handleFile(file);
     };
     input.click();
   };
+
 
   const doPersist = useCallback(async () => {
     if (records.length === 0) return;
@@ -123,7 +165,7 @@ export default function Index() {
         <div className="flex items-center gap-1">
           {records.length > 0 && (
             <Button variant="ghost" size="sm" onClick={openFilePicker} className="mr-1 hidden gap-2 text-xs sm:flex">
-              <FolderOpen className="h-4 w-4" /> Abrir OFX
+              <FolderOpen className="h-4 w-4" /> Abrir OFX/PDF
             </Button>
           )}
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
