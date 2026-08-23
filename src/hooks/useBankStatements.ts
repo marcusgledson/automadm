@@ -39,6 +39,10 @@ export interface UpsertContext {
   conta: string;
   banco?: string;
   fileName?: string;
+  /** Conta cadastrada vinculada ao extrato. */
+  accountId?: string | null;
+  titular?: string | null;
+  documento?: string | null;
 }
 
 export function recordToRow(
