@@ -242,7 +242,44 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
           {/* Right pane */}
           <section className="flex-1 min-h-0 min-w-0 flex flex-col">
             {activeView === "guia" && (
-              <div className="flex flex-1 min-h-0 flex-col sm:flex-row">
+              <>
+                {/* Mobile: lista completa em acordeão, com rolagem */}
+                <ScrollArea className="flex-1 min-h-0 sm:hidden">
+                  <Accordion type="single" collapsible defaultValue={steps[0].id} className="p-3">
+                    {steps.map((s) => {
+                      const Icon = s.icon;
+                      return (
+                        <AccordionItem key={s.id} value={s.id}>
+                          <AccordionTrigger className="gap-2 py-3 text-left text-xs">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <Icon className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              <span className="truncate">{s.title}</span>
+                            </span>
+                          </AccordionTrigger>
+                          <AccordionContent>
+                            <div className="text-sm leading-relaxed text-muted-foreground">{s.body}</div>
+                            {s.tip && (
+                              <div className="mt-3 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs text-foreground/80">
+                                <strong className="text-accent">Dica: </strong>
+                                {s.tip}
+                              </div>
+                            )}
+                            {s.jumpTo && (
+                              <Button size="sm" className="mt-4 gap-1" onClick={() => jump(s.jumpTo!.path)}>
+                                {s.jumpTo.label}
+                                <ArrowRight className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </AccordionContent>
+                        </AccordionItem>
+                      );
+                    })}
+                  </Accordion>
+                </ScrollArea>
+
+                {/* Desktop: lista lateral + conteúdo */}
+                <div className="hidden flex-1 min-h-0 sm:flex sm:flex-row">
+
                 {/* Steps list */}
                 <div className="shrink-0 border-b border-border/60 sm:w-56 sm:border-b-0 sm:border-r">
                   <ScrollArea className="max-h-40 sm:max-h-none sm:h-full">
