@@ -49,4 +49,6 @@ Todo extrato traz o nome do cliente e/ou CPF/CNPJ. Esses dados passam a ser extr
 - `src/lib/pdfStatementParser.ts`: extrair itens com x/y, detecção de cabeçalho, mapeamento de colunas, agrupamento de linhas, fallback para o parser atual.
 - `src/components/AccountKeyDialog.tsx`: mostrar banco detectado com a origem (código, nome ou logo) e botão opcional "Identificar pela logo".
 - Detecção pela logo: nova Edge Function usando o modelo de visão do Lovable AI (sem chave extra), acionada só sob demanda.
-- Testes unitários em `src/lib/` cobrindo detecção de banco e mapeamento de colunas com amostras de layouts diferentes.
+- `src/lib/accountHolder.ts` (novo): extração de nome/CPF/CNPJ e comparação com contas já cadastradas.
+- Backend: nova tabela de contas (apelido, agência, conta, banco, titular, documento) com RLS por usuário e GRANTs; `bank_statements` ganha referência à conta.
+- Testes unitários em `src/lib/` cobrindo detecção de banco, titular/documento e mapeamento de colunas com amostras de layouts diferentes.
