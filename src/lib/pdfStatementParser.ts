@@ -2,7 +2,7 @@ import type { FinancialRecord } from "@/lib/fileParser";
 
 // pdf.js (build ESM) + worker via Vite
 import * as pdfjsLib from "pdfjs-dist";
-// @ts-expect-error - worker importado como URL pelo Vite
+// worker importado como URL pelo Vite
 import PdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker as string;
