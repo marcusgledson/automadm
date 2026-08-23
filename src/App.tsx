@@ -40,6 +40,17 @@ import {
 
 const queryClient = new QueryClient();
 
+/** Falha cedo e com mensagem clara se o AppearanceProvider não estiver registrado. */
+function RequireAppearance({ children }: { children: React.ReactNode }) {
+  const ready = useAppearanceReady();
+  if (!ready) {
+    throw new Error(
+      "AppearanceProvider não está registrado acima das rotas protegidas. Recarregue a página.",
+    );
+  }
+  return <>{children}</>;
+}
+
 /** Redireciona para a apresentação inicial enquanto o modo de uso não for escolhido. */
 function OnboardingGate({ children }: { children: React.ReactNode }) {
   const { settings, loading } = useAppSettings();
