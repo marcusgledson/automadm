@@ -330,16 +330,31 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" /> Menu Gerencial
+              <Settings className="h-5 w-5" /> Configurações
             </DialogTitle>
             <DialogDescription>
-              Decisões administrativas: exportação, limpeza por tipo e versão de testes.
+              Aparência, segurança do aparelho, backups e limpeza da base.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Palette className="h-4 w-4 text-primary" /> Aparência
+              </h4>
+              <AppearancePanel />
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Fingerprint className="h-4 w-4 text-primary" /> Segurança de acesso
+              </h4>
+              <SecuritySettingsPanel />
+            </section>
+
+            <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
+
               <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
