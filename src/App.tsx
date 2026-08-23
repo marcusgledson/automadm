@@ -120,7 +120,9 @@ function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNod
     );
   return (
     <>
-      <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+      <RequireAppearance>
+        <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+      </RequireAppearance>
       <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
         <AlertDialogContent>
           <AlertDialogHeader>
