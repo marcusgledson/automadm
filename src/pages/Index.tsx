@@ -165,7 +165,7 @@ export default function Index() {
         <div className="flex items-center gap-1">
           {records.length > 0 && (
             <Button variant="ghost" size="sm" onClick={openFilePicker} className="mr-1 hidden gap-2 text-xs sm:flex">
-              <FolderOpen className="h-4 w-4" /> Abrir OFX
+              <FolderOpen className="h-4 w-4" /> Abrir OFX/PDF
             </Button>
           )}
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
