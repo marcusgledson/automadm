@@ -41,6 +41,11 @@ serve(async (req) => {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    if (typeof pdfText !== "string" || pdfText.length > 400000) {
+      return new Response(JSON.stringify({ error: "Conteúdo excede o tamanho máximo permitido para análise." }), {
+        status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {

@@ -819,6 +819,60 @@ export type Database = {
           },
         ]
       }
+      upload_audit_logs: {
+        Row: {
+          client_ip: string | null
+          created_at: string
+          declared_mime: string | null
+          file_kind: string | null
+          file_name: string | null
+          file_size: number | null
+          id: string
+          org_owner_id: string | null
+          reject_reason: string | null
+          scan_details: Json
+          scan_result: string | null
+          source: string
+          status: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          client_ip?: string | null
+          created_at?: string
+          declared_mime?: string | null
+          file_kind?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          org_owner_id?: string | null
+          reject_reason?: string | null
+          scan_details?: Json
+          scan_result?: string | null
+          source?: string
+          status: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          client_ip?: string | null
+          created_at?: string
+          declared_mime?: string | null
+          file_kind?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          id?: string
+          org_owner_id?: string | null
+          reject_reason?: string | null
+          scan_details?: Json
+          scan_result?: string | null
+          source?: string
+          status?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 // @ts-ignore - pdfjs legacy build runs in Deno
 import * as pdfjsLib from "npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs";
+import { guardAndAudit, MAX_TEXT_CHARS } from "../_shared/fileGuard.ts";
+
 
 
 const corsHeaders = {
@@ -65,6 +67,19 @@ serve(async (req) => {
     }
 
     const bytes = new Uint8Array(await fileResponse.arrayBuffer());
+
+    const guard = await guardAndAudit(bytes, {
+      kind: "pdf",
+      declaredMime: fileResponse.headers.get("content-type"),
+      source: "google-drive",
+      userId: u.user.id,
+      req,
+    });
+    if (!guard.ok) {
+      return new Response(JSON.stringify({ success: false, error: guard.reason }), {
+        status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     try {
       const loadingTask = pdfjsLib.getDocument({
