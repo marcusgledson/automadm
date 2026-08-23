@@ -410,41 +410,19 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
               </div>
             </section>
 
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <UserRoundCog className="h-4 w-4 text-primary" /> Minhas informações
+            <section className="space-y-2 rounded-lg border border-destructive/40 p-3">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                <AlertTriangle className="h-4 w-4" /> Excluir minha conta
               </h4>
               <p className="text-xs text-muted-foreground">
-                Revise seus dados e use <strong>Atualiza Informações!</strong> — mostramos exatamente o que mudou
-                antes de gravar.
+                Remove definitivamente seu acesso e todos os seus dados. Exige senha e, se configurados,
+                também biometria e PIN.
               </p>
-              <ProfileUpdatePanel />
+              <Button variant="destructive" className="w-full" onClick={() => setDeleteAccountOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Excluir conta
+              </Button>
             </section>
 
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-primary" /> Permissões de módulos
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Habilite ou desabilite módulos por perfil de acesso ou individualmente por usuário.
-              </p>
-              <ModulePermissionsPanel />
-            </section>
-
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <FlaskConical className="h-4 w-4" /> Versão de testes
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Compartilhe este link com outros desenvolvedores para colaborarem em melhorias.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-md bg-muted px-2 py-1 text-xs">{previewUrl}</code>
-                <Button size="sm" variant="outline" onClick={copyPreview}>
-                  <Copy className="h-4 w-4" /> Copiar
-                </Button>
-              </div>
-            </section>
           </div>
         </DialogContent>
       </Dialog>
