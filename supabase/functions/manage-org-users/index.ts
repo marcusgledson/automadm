@@ -256,7 +256,33 @@ serve(async (req) => {
     });
   };
 
+  /**
+   * Invalida no servidor credenciais temporárias vencidas: se o prazo expirou sem a troca
+   * obrigatória, a senha é substituída por um valor aleatório desconhecido, exigindo reenvio.
+   */
+  const enforceTempPasswordExpiry = async () => {
+    const { data: expired } = await admin
+      .from("profiles")
+      .select("user_id")
+      .eq("org_owner_id", orgOwnerId)
+      .eq("must_change_password", true)
+      .not("temp_password_expires_at", "is", null)
+      .lt("temp_password_expires_at", new Date().toISOString());
+    for (const row of expired ?? []) {
+      const uid = row.user_id as string;
+      const { error } = await admin.auth.admin.updateUserById(uid, { password: generateTempPassword() });
+      if (error) continue;
+      await admin
+        .from("profiles")
+        .update({ temp_password_expires_at: null, password_email_sent_at: null })
+        .eq("user_id", uid);
+      await log("temp_password_expired", uid, null, { reason: "credencial temporária vencida" });
+    }
+  };
+
   try {
+    await enforceTempPasswordExpiry();
+
     if (action === "list") {
       const { data: profs } = await admin
         .from("profiles")
