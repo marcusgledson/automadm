@@ -55,7 +55,8 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
-  const [previewUrl] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [impactOpen, setImpactOpen] = useState(false);
