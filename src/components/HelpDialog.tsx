@@ -338,8 +338,10 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                     )}
                   </div>
                 </ScrollArea>
-              </div>
+                </div>
+              </>
             )}
+
 
             {activeView === "pdf" && (
               <div className="flex flex-1 min-h-0 flex-col">
