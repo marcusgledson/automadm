@@ -30,7 +30,12 @@ serve(async (req) => {
       return json({ ok: false, error: "Tipo de arquivo inválido (use pdf ou ofx)." }, 400);
     }
     const kind = kindHeader as FileKind;
-    const fileName = req.headers.get("x-file-name")?.slice(0, 300) || undefined;
+    let fileName: string | undefined;
+    const rawName = req.headers.get("x-file-name");
+    if (rawName) {
+      try { fileName = decodeURIComponent(rawName).slice(0, 300); }
+      catch { fileName = rawName.slice(0, 300); }
+    }
 
     const declaredLength = Number(req.headers.get("content-length") || "0");
     if (declaredLength > MAX_PDF_BYTES) {
