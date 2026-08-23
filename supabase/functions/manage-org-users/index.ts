@@ -182,6 +182,8 @@ serve(async (req) => {
       "drive_links",
       "sms_bank_configs",
       "sms_review_queue",
+      // Deve ficar por último: bank_statements referencia bank_accounts.
+      "bank_accounts",
     ];
 
     const exportData: Record<string, unknown> = {
