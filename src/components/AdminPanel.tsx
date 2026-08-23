@@ -20,13 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, UserRoundCog, SlidersHorizontal } from "lucide-react";
+import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint } from "lucide-react";
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
 import DeleteImpactDialog from "@/components/DeleteImpactDialog";
-import ProfileUpdatePanel from "@/components/ProfileUpdatePanel";
-import ModulePermissionsPanel from "@/components/ModulePermissionsPanel";
+import AppearancePanel from "@/components/AppearancePanel";
+import SecuritySettingsPanel from "@/components/SecuritySettingsPanel";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
