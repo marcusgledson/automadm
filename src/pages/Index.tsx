@@ -1,37 +1,57 @@
 import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landmark, PencilLine } from "lucide-react";
+import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landmark, PencilLine, UserRound } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError } from "@/lib/pdfStatementParser";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage } from "@/lib/pdfStatementParser";
+import { detectBankFromText, type BankDetection } from "@/lib/bankDetect";
+import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
+import { supabase } from "@/integrations/supabase/client";
 
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
-import AccountKeyDialog from "@/components/AccountKeyDialog";
+import AccountKeyDialog, { type AccountKeyResult } from "@/components/AccountKeyDialog";
 import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import EditableRecordsDialog from "@/components/EditableRecordsDialog";
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useBankStatements } from "@/hooks/useBankStatements";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { useExpenses } from "@/hooks/useExpenses";
+
+interface PendingParsed {
+  records: FinancialRecord[];
+  account: OFXAccountInfo;
+  fileName: string;
+  holder?: HolderInfo;
+  bank?: BankDetection;
+}
 
 export default function Index() {
   const { user: _user } = useAuth();
   const navigate = useNavigate();
   const [records, setRecords] = useState<FinancialRecord[]>([]);
   const [account, setAccount] = useState<OFXAccountInfo>({});
+  const [accountMeta, setAccountMeta] = useState<{ apelido?: string; titular?: string; documento?: string; accountId?: string }>({});
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [savingDB, setSavingDB] = useState(false);
-  const [pendingPreview, setPendingPreview] = useState<{ statements: ParsedOFXStatement[]; fileName: string } | null>(null);
-  const [pendingParsed, setPendingParsed] = useState<{ records: FinancialRecord[]; account: OFXAccountInfo; fileName: string } | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<{ statements: ParsedOFXStatement[]; fileName: string; holder?: HolderInfo; bank?: BankDetection } | null>(null);
+  const [pendingParsed, setPendingParsed] = useState<PendingParsed | null>(null);
+  const [pdfFile, setPdfFile] = useState<{ file: File; password?: string } | null>(null);
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState<{ mode: "pre" | "post"; saved?: number; expenses?: number } | null>(null);
+  const [duplicate, setDuplicate] = useState<{ existing: number; total: number } | null>(null);
 
-  const { upsertMany } = useBankStatements();
+  const { upsertMany, checkExisting } = useBankStatements();
+  const { accounts, saveAccount } = useBankAccounts();
   const { upsertManyFromOFX } = useExpenses();
 
   const processOFXText = useCallback((text: string, originFileName: string) => {
@@ -40,25 +60,23 @@ export default function Index() {
       toast.error("Nenhum registro encontrado no arquivo OFX");
       return;
     }
-    setPendingPreview({ statements: parsed.statements, fileName: originFileName });
+    setPdfFile(null);
+    setPendingPreview({
+      statements: parsed.statements,
+      fileName: originFileName,
+      holder: extractHolder(text.split(/\r?\n/)),
+      bank: detectBankFromText(text),
+    });
   }, []);
 
   const confirmPreview = useCallback((idx: number) => {
     if (!pendingPreview) return;
     const stmt = pendingPreview.statements[idx];
     const fn = pendingPreview.fileName;
+    const { holder, bank } = pendingPreview;
     setPendingPreview(null);
-    if (!stmt.account.agencia || !stmt.account.conta) {
-      setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn });
-      toast.info("Informe a agência e conta manualmente para continuar.");
-      return;
-    }
-    setRecords(stmt.records);
-    setAccount(stmt.account);
-    setFileName(fn);
-    toast.success(`${stmt.records.length} registros carregados de ${fn}`);
+    setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn, holder, bank });
   }, [pendingPreview]);
-
 
   const handlePdf = useCallback(async (file: File) => {
     let password: string | undefined;
@@ -69,10 +87,18 @@ export default function Index() {
           toast.error("Nenhum lançamento reconhecido neste PDF.");
           return;
         }
+        setPdfFile({ file, password });
         setPendingPreview({
           statements: [{ account: parsed.account, records: parsed.records }],
           fileName: file.name,
+          holder: parsed.holder,
+          bank: parsed.bank,
         });
+        if (parsed.strategy === "colunas" && parsed.columns) {
+          toast.success(
+            `Colunas reconhecidas: ${parsed.columns.map((c) => `${c.label} → ${c.field}`).join(", ")}`,
+          );
+        }
         return;
       } catch (err) {
         if (err instanceof PdfPasswordRequiredError) {
@@ -127,15 +153,70 @@ export default function Index() {
     input.click();
   };
 
+  /** Identificação do banco pela logo (IA), somente sob demanda. */
+  const identifyLogo = useCallback(async () => {
+    if (!pdfFile) {
+      toast.error("Identificação por logo disponível apenas para PDF.");
+      return null;
+    }
+    try {
+      const imageBase64 = await renderHeaderImage(pdfFile.file, pdfFile.password);
+      const { data, error } = await supabase.functions.invoke("identify-bank-logo", {
+        body: { imageBase64 },
+      });
+      if (error) throw error;
+      if (data?.error) { toast.error(data.error); return null; }
+      if (!data?.banco) { toast.info("Não foi possível identificar o banco pela logo."); return null; }
+      toast.success(`Banco identificado: ${data.banco}`);
+      return { name: data.banco as string, code: (data.codigo as string) || undefined };
+    } catch (e) {
+      console.error(e);
+      toast.error("Falha ao identificar o banco pela logo.");
+      return null;
+    }
+  }, [pdfFile]);
+
+  const applyAccountKey = useCallback(async (res: AccountKeyResult) => {
+    if (!pendingParsed) return;
+    let accountId = res.accountId;
+    if (res.salvarConta) {
+      const saved = await saveAccount({
+        apelido: res.apelido,
+        agencia: res.agencia,
+        conta: res.conta,
+        banco: res.banco ?? null,
+        bancoCodigo: res.bancoCodigo ?? null,
+        titular: res.titular ?? null,
+        documento: res.documento ?? null,
+        documentoTipo: res.documentoTipo ?? null,
+      });
+      if (saved.ok) accountId = saved.id ?? accountId;
+      else toast.error(`Não foi possível salvar a conta: ${saved.error}`);
+    }
+    setRecords(pendingParsed.records);
+    setAccount({ banco: res.banco, agencia: res.agencia, conta: res.conta });
+    setAccountMeta({ apelido: res.apelido, titular: res.titular, documento: res.documento, accountId });
+    setFileName(pendingParsed.fileName);
+    toast.success(`${pendingParsed.records.length} registros carregados de ${pendingParsed.fileName}`);
+    setPendingParsed(null);
+  }, [pendingParsed, saveAccount]);
 
   const doPersist = useCallback(async () => {
     if (records.length === 0) return;
     if (!account.agencia || !account.conta) {
-      toast.error("OFX sem Agência/Conta no cabeçalho. Não é possível gravar.");
+      toast.error("Extrato sem Agência/Conta. Não é possível gravar.");
       return;
     }
     setSavingDB(true);
-    const ctx = { agencia: account.agencia, conta: account.conta, banco: account.banco, fileName: fileName ?? undefined };
+    const ctx = {
+      agencia: account.agencia,
+      conta: account.conta,
+      banco: account.banco,
+      fileName: fileName ?? undefined,
+      accountId: accountMeta.accountId ?? null,
+      titular: accountMeta.titular ?? null,
+      documento: accountMeta.documento ?? null,
+    };
     const a = await upsertMany(records, ctx);
     const accountRef = `${account.agencia}/${account.conta}`;
     const b = await upsertManyFromOFX(records, accountRef);
@@ -144,7 +225,16 @@ export default function Index() {
     if (!b.ok) toast.error(`Despesas: ${b.error}`);
     setSummary({ mode: "post", saved: a.count, expenses: b.ok ? b.count : 0 });
     toast.success(`Extrato salvo (${a.count} linhas).`);
-  }, [records, account, fileName, upsertMany, upsertManyFromOFX]);
+  }, [records, account, accountMeta, fileName, upsertMany, upsertManyFromOFX]);
+
+  /** Verifica duplicidade antes de gravar. */
+  const confirmAndPersist = useCallback(async () => {
+    setSummary(null);
+    if (!account.agencia || !account.conta) { void doPersist(); return; }
+    const dup = await checkExisting(records, { agencia: account.agencia, conta: account.conta });
+    if (dup.existing > 0) { setDuplicate(dup); return; }
+    void doPersist();
+  }, [account, records, checkExisting, doPersist]);
 
   const saveToDatabase = () => {
     if (records.length === 0) return;
@@ -198,6 +288,13 @@ export default function Index() {
                       {account.banco ? `${account.banco} · ` : ""}
                       Ag {account.agencia || "—"} / Conta {account.conta || "—"}
                     </span>
+                    {(accountMeta.apelido || accountMeta.titular) && (
+                      <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-card/70 px-2 py-1">
+                        <UserRound className="h-3 w-3 text-primary" />
+                        {accountMeta.apelido || accountMeta.titular}
+                        {accountMeta.documento ? ` · ${maskDocument(accountMeta.documento)}` : ""}
+                      </span>
+                    )}
                     <span className="rounded-md border border-border/60 bg-card/70 px-2 py-1">
                       {records.length} lançamento{records.length === 1 ? "" : "s"}
                     </span>
@@ -212,7 +309,7 @@ export default function Index() {
                   {savingDB ? <Loader2 className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
                   Salvar na Base
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => { setRecords([]); setFileName(null); setAccount({}); }} className="gap-2">
+                <Button variant="outline" size="sm" onClick={() => { setRecords([]); setFileName(null); setAccount({}); setAccountMeta({}); }} className="gap-2">
                   <FileSpreadsheet className="h-4 w-4" /> Novo Arquivo
                 </Button>
               </div>
@@ -235,15 +332,14 @@ export default function Index() {
         defaultBanco={pendingParsed?.account.banco}
         defaultAgencia={pendingParsed?.account.agencia}
         defaultConta={pendingParsed?.account.conta}
+        defaultTitular={pendingParsed?.holder?.titular}
+        defaultDocumento={pendingParsed?.holder?.documento}
+        defaultDocumentoTipo={pendingParsed?.holder?.documentoTipo}
+        bankDetection={pendingParsed?.bank}
+        knownAccounts={accounts}
+        onIdentifyLogo={pdfFile ? identifyLogo : undefined}
         onCancel={() => setPendingParsed(null)}
-        onConfirm={({ banco, agencia, conta }) => {
-          if (!pendingParsed) return;
-          setRecords(pendingParsed.records);
-          setAccount({ banco, agencia, conta });
-          setFileName(pendingParsed.fileName);
-          toast.success(`${pendingParsed.records.length} registros carregados de ${pendingParsed.fileName}`);
-          setPendingParsed(null);
-        }}
+        onConfirm={(res) => { void applyAccountKey(res); }}
       />
 
       <EditableRecordsDialog
@@ -268,9 +364,28 @@ export default function Index() {
         savedCount={summary?.saved}
         expensesCount={summary?.expenses}
         onReview={() => { setSummary(null); setEditing(true); }}
-        onConfirm={() => { setSummary(null); void doPersist(); }}
+        onConfirm={() => { void confirmAndPersist(); }}
         onClose={() => setSummary(null)}
       />
+
+      <AlertDialog open={!!duplicate} onOpenChange={(o) => { if (!o) setDuplicate(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Extrato já importado</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicate?.existing === duplicate?.total
+                ? `Todos os ${duplicate?.total} lançamentos deste arquivo já constam na base para a conta Ag ${account.agencia} / ${account.conta}. Regravar apenas atualizará os dados existentes.`
+                : `${duplicate?.existing} de ${duplicate?.total} lançamentos deste arquivo já estão na base desta conta. Os repetidos serão atualizados e os novos incluídos, sem duplicar.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDuplicate(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setDuplicate(null); void doPersist(); }}>
+              Continuar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

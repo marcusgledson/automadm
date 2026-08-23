@@ -10,11 +10,13 @@ Estratégia em cascata, do mais barato para o mais caro — a leitura de imagem 
 
 ### Análise de custo (pedida antes de implementar)
 
-| Etapa | Custo | Impacto no desempenho |
-|---|---|---|
-| Código do banco | Regex sobre texto já extraído | Desprezível (<5 ms) |
-| Dicionário de nomes | Busca local em ~60 entradas | Desprezível |
-| Logo via IA | 1 chamada de IA + render de imagem | ~1–3 s e consumo de créditos por arquivo |
+
+| Etapa               | Custo                              | Impacto no desempenho                    |
+| ------------------- | ---------------------------------- | ---------------------------------------- |
+| Código do banco     | Regex sobre texto já extraído      | Desprezível (<5 ms)                      |
+| Dicionário de nomes | Busca local em ~60 entradas        | Desprezível                              |
+| Logo via IA         | 1 chamada de IA + render de imagem | ~1–3 s e consumo de créditos por arquivo |
+
 
 Conclusão: as etapas 1 e 2 resolvem a grande maioria dos extratos sem nenhum custo. A leitura da logo fica **desativada por padrão** e é acionada manualmente, evitando degradar a importação em lote (Google Drive) e o gasto de créditos.
 
@@ -39,10 +41,9 @@ Todo extrato traz o nome do cliente e/ou CPF/CNPJ. Esses dados passam a ser extr
 2. **Escolha do usuário** — no diálogo de confirmação de Agência/Conta, os dados detectados aparecem e o usuário decide o **apelido da conta** (ex.: nome do titular, CNPJ da empresa, ou um nome livre). Nada é gravado sem confirmação.
 3. **Gravação** — o apelido, o titular e o documento (CPF/CNPJ, guardado mascarado na exibição) ficam associados à chave Agência+Conta, para reuso.
 4. **Importações futuras** — ao abrir um novo arquivo, a detecção compara campo a campo (documento → agência/conta → nome) e já sugere a conta correspondente; se houver conflito (mesmo documento com agência/conta diferentes, ou mesma conta com outro titular) o usuário é avisado antes de gravar.
-5. **Antiduplicidade** — mantém-se a chave atual de lançamento (FITID / agência+conta+data+valor+descrição) e o vínculo à conta identificada, evitando reimportar o mesmo extrato em conta errada ou duplicada.
+5. **Antiduplicidade** — mantém-se a chave atual de lançamento (FITID / agência+conta+data+valor+descrição) e o vínculo à conta identificada, evitando reimportar o mesmo extrato em conta errada ou duplicada.  Informando em pop-up que o extrato já foi importado.
 
 ## Detalhes técnicos
-
 
 - `src/lib/bankRegistry.ts` (novo): tabela COMPE/ISPB → nome, apelidos e regex de detecção.
 - `src/lib/bankDetect.ts` (novo): cascata de detecção sobre texto do OFX/PDF.

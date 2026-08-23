@@ -39,6 +39,10 @@ export interface UpsertContext {
   conta: string;
   banco?: string;
   fileName?: string;
+  /** Conta cadastrada vinculada ao extrato. */
+  accountId?: string | null;
+  titular?: string | null;
+  documento?: string | null;
 }
 
 export function recordToRow(
@@ -91,7 +95,12 @@ export function useBankStatements() {
       if (!ctx.agencia || !ctx.conta) {
         return { ok: false, count: 0, error: "Agência/Conta não encontrados no OFX." };
       }
-      const payload = records.map((r) => recordToRow(r, ctx, user.id));
+      const payload = records.map((r) => ({
+        ...recordToRow(r, ctx, user.id),
+        account_id: ctx.accountId ?? null,
+        titular: ctx.titular ?? null,
+        documento_titular: ctx.documento ?? null,
+      }));
       const { error, count } = await supabase
         .from("bank_statements")
         .upsert(payload as never, {
@@ -105,5 +114,33 @@ export function useBankStatements() {
     [user, fetchAll],
   );
 
-  return { rows, loading, fetchAll, upsertMany };
+  /** Verifica quantos lançamentos do arquivo já existem na base (antiduplicidade). */
+  const checkExisting = useCallback(
+    async (
+      records: FinancialRecord[],
+      ctx: { agencia: string; conta: string },
+    ): Promise<{ existing: number; total: number }> => {
+      if (!user || records.length === 0) return { existing: 0, total: records.length };
+      const fitids = records.map(
+        (r) => r.fitid || r.documento || `${r.data}|${r.valor}|${r.descricao}`.slice(0, 80),
+      );
+      const unique = [...new Set(fitids)];
+      let existing = 0;
+      for (let i = 0; i < unique.length; i += 200) {
+        const chunk = unique.slice(i, i + 200);
+        const { count } = await supabase
+          .from("bank_statements")
+          .select("id", { count: "exact", head: true })
+          .eq("agencia", ctx.agencia)
+          .eq("conta", ctx.conta)
+          .in("fitid", chunk);
+        existing += count ?? 0;
+      }
+      return { existing, total: unique.length };
+    },
+    [user],
+  );
+
+  return { rows, loading, fetchAll, upsertMany, checkExisting };
 }
+

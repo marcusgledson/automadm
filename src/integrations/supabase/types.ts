@@ -92,8 +92,57 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          agencia: string
+          apelido: string
+          banco: string | null
+          banco_codigo: string | null
+          conta: string
+          created_at: string
+          documento: string | null
+          documento_tipo: string | null
+          id: string
+          observacoes: string | null
+          titular: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agencia: string
+          apelido: string
+          banco?: string | null
+          banco_codigo?: string | null
+          conta: string
+          created_at?: string
+          documento?: string | null
+          documento_tipo?: string | null
+          id?: string
+          observacoes?: string | null
+          titular?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agencia?: string
+          apelido?: string
+          banco?: string | null
+          banco_codigo?: string | null
+          conta?: string
+          created_at?: string
+          documento?: string | null
+          documento_tipo?: string | null
+          id?: string
+          observacoes?: string | null
+          titular?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bank_statements: {
         Row: {
+          account_id: string | null
           agencia: string
           banco: string | null
           categoria: string | null
@@ -104,6 +153,7 @@ export type Database = {
           data_raw: string | null
           descricao: string | null
           documento: string | null
+          documento_titular: string | null
           file_name: string | null
           fitid: string
           id: string
@@ -111,11 +161,13 @@ export type Database = {
           raw: Json
           tipo: string | null
           tipo_lancamento: string | null
+          titular: string | null
           updated_at: string
           user_id: string
           valor: number
         }
         Insert: {
+          account_id?: string | null
           agencia?: string
           banco?: string | null
           categoria?: string | null
@@ -126,6 +178,7 @@ export type Database = {
           data_raw?: string | null
           descricao?: string | null
           documento?: string | null
+          documento_titular?: string | null
           file_name?: string | null
           fitid: string
           id?: string
@@ -133,11 +186,13 @@ export type Database = {
           raw?: Json
           tipo?: string | null
           tipo_lancamento?: string | null
+          titular?: string | null
           updated_at?: string
           user_id: string
           valor?: number
         }
         Update: {
+          account_id?: string | null
           agencia?: string
           banco?: string | null
           categoria?: string | null
@@ -148,6 +203,7 @@ export type Database = {
           data_raw?: string | null
           descricao?: string | null
           documento?: string | null
+          documento_titular?: string | null
           file_name?: string | null
           fitid?: string
           id?: string
@@ -155,11 +211,20 @@ export type Database = {
           raw?: Json
           tipo?: string | null
           tipo_lancamento?: string | null
+          titular?: string | null
           updated_at?: string
           user_id?: string
           valor?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_statements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       budget_goals: {
         Row: {
