@@ -31,7 +31,18 @@ Hoje o parser de PDF lê linha a linha com regex de data + valor. Será substitu
 7. **Fallback** — se nenhum cabeçalho for reconhecido, usa o parser atual (linha a linha) para não regredir nos arquivos que já funcionam.
 8. **Confirmação visual** — a pré-visualização existente passa a mostrar o mapeamento detectado (ex.: "Coluna 3 → Descrição") e permite corrigir o campo de cada coluna antes de gravar.
 
+## 3. Titular da conta (Nome / CPF / CNPJ) como identidade da conta
+
+Todo extrato traz o nome do cliente e/ou CPF/CNPJ. Esses dados passam a ser extraídos e usados para nomear e reconhecer a conta.
+
+1. **Extração** — regex sobre o texto do PDF/OFX para CPF (`000.000.000-00`), CNPJ (`00.000.000/0000-00`) e nome do titular (linhas com "Cliente", "Titular", "Nome", ou a linha próxima ao documento). Custo zero, sem IA.
+2. **Escolha do usuário** — no diálogo de confirmação de Agência/Conta, os dados detectados aparecem e o usuário decide o **apelido da conta** (ex.: nome do titular, CNPJ da empresa, ou um nome livre). Nada é gravado sem confirmação.
+3. **Gravação** — o apelido, o titular e o documento (CPF/CNPJ, guardado mascarado na exibição) ficam associados à chave Agência+Conta, para reuso.
+4. **Importações futuras** — ao abrir um novo arquivo, a detecção compara campo a campo (documento → agência/conta → nome) e já sugere a conta correspondente; se houver conflito (mesmo documento com agência/conta diferentes, ou mesma conta com outro titular) o usuário é avisado antes de gravar.
+5. **Antiduplicidade** — mantém-se a chave atual de lançamento (FITID / agência+conta+data+valor+descrição) e o vínculo à conta identificada, evitando reimportar o mesmo extrato em conta errada ou duplicada.
+
 ## Detalhes técnicos
+
 
 - `src/lib/bankRegistry.ts` (novo): tabela COMPE/ISPB → nome, apelidos e regex de detecção.
 - `src/lib/bankDetect.ts` (novo): cascata de detecção sobre texto do OFX/PDF.
