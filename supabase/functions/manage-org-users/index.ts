@@ -135,6 +135,91 @@ serve(async (req) => {
     return json({ ok: true });
   }
 
+  // Exclusão definitiva da própria conta (LGPD): devolve a cópia dos dados e apaga tudo.
+  if (action === "delete_account") {
+    if (String(body.confirm || "") !== "EXCLUIR") {
+      return json({ error: "Confirmação inválida." }, 400);
+    }
+
+    const { data: ownProfile } = await admin
+      .from("profiles")
+      .select("*")
+      .eq("user_id", caller.id)
+      .maybeSingle();
+    const orgId = (ownProfile?.org_owner_id as string | null) ?? caller.id;
+
+    // O dono da organização não pode sair deixando outros usuários sem administração.
+    if (orgId === caller.id) {
+      const { count } = await admin
+        .from("profiles")
+        .select("user_id", { count: "exact", head: true })
+        .eq("org_owner_id", caller.id)
+        .neq("user_id", caller.id);
+      if ((count ?? 0) > 0) {
+        return json(
+          {
+            error:
+              "Existem usuários vinculados à sua organização. Exclua ou transfira esses usuários antes de encerrar sua conta.",
+          },
+          409,
+        );
+      }
+    }
+
+    const USER_TABLES = [
+      "bank_statements",
+      "consumption_bills",
+      "expenses",
+      "investments",
+      "budget_goals",
+      "drive_links",
+      "sms_bank_configs",
+      "sms_review_queue",
+    ];
+
+    const exportData: Record<string, unknown> = {
+      exported_at: new Date().toISOString(),
+      account: { user_id: caller.id, email: caller.email },
+      profile: ownProfile ?? null,
+    };
+
+    for (const t of USER_TABLES) {
+      const { data } = await admin.from(t).select("*").eq("user_id", caller.id);
+      exportData[t] = data ?? [];
+    }
+    const { data: settingsRow } = await admin
+      .from("app_settings")
+      .select("*")
+      .eq("owner_id", caller.id)
+      .maybeSingle();
+    exportData["app_settings"] = settingsRow ?? null;
+
+    await admin.from("audit_logs").insert({
+      org_owner_id: orgId,
+      actor_id: caller.id,
+      actor_email: caller.email,
+      action: "delete_account",
+      target_user_id: caller.id,
+      target_email: caller.email,
+      details: { requested_at: new Date().toISOString() },
+    });
+
+    for (const t of USER_TABLES) {
+      await admin.from(t).delete().eq("user_id", caller.id);
+    }
+    await admin.from("app_settings").delete().eq("owner_id", caller.id);
+    await admin.from("report_requests").delete().eq("requester_id", caller.id);
+    await admin.from("corporate_requests").delete().eq("user_id", caller.id);
+    await admin.from("user_roles").delete().eq("user_id", caller.id);
+    await admin.from("profiles").delete().eq("user_id", caller.id);
+
+    const { error: delErr } = await admin.auth.admin.deleteUser(caller.id);
+    if (delErr) return json({ error: delErr.message }, 400);
+
+    return json({ ok: true, email_sent: false, export: exportData });
+  }
+
+
   // Somente Máster pode gerenciar usuários da organização.
   const { data: masterRow } = await admin
     .from("user_roles")
