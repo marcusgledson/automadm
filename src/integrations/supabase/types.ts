@@ -873,6 +873,51 @@ export type Database = {
         }
         Relationships: []
       }
+      upload_scan_cache: {
+        Row: {
+          created_at: string
+          engine: string | null
+          expires_at: string
+          file_kind: string
+          file_size: number | null
+          hits: number
+          id: string
+          reason: string | null
+          sha256: string
+          threats: Json
+          updated_at: string
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          engine?: string | null
+          expires_at: string
+          file_kind: string
+          file_size?: number | null
+          hits?: number
+          id?: string
+          reason?: string | null
+          sha256: string
+          threats?: Json
+          updated_at?: string
+          verdict: string
+        }
+        Update: {
+          created_at?: string
+          engine?: string | null
+          expires_at?: string
+          file_kind?: string
+          file_size?: number | null
+          hits?: number
+          id?: string
+          reason?: string | null
+          sha256?: string
+          threats?: Json
+          updated_at?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
