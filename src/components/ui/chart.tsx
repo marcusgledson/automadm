@@ -194,7 +194,9 @@ const ChartTooltipContent = React.forwardRef<
                 )}
               >
                 {formatter && item?.value !== undefined && item.name ? (
-                  formatter(item.value, item.name, item, index, item.payload)
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (formatter as any)(item.value, item.name, item, index, item.payload)
+
                 ) : (
                   <>
                     {itemConfig?.icon ? (
