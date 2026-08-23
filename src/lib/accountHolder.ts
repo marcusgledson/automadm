@@ -33,6 +33,7 @@ export function normalizeDocument(doc?: string): string {
 
 function cleanName(raw: string): string {
   return raw
+    .replace(/\b(cpf|cnpj|documento|doc|ag[eê]ncia|conta)\b\.?\s*:?\s*/gi, " ")
     .replace(/\s+/g, " ")
     .replace(/[^A-Za-zÀ-ú'.&\s]/g, "")
     .trim()
