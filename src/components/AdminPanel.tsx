@@ -20,13 +20,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, FlaskConical, Copy, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, UserRoundCog, SlidersHorizontal } from "lucide-react";
+import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint } from "lucide-react";
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
 import DeleteImpactDialog from "@/components/DeleteImpactDialog";
-import ProfileUpdatePanel from "@/components/ProfileUpdatePanel";
-import ModulePermissionsPanel from "@/components/ModulePermissionsPanel";
+import AppearancePanel from "@/components/AppearancePanel";
+import SecuritySettingsPanel from "@/components/SecuritySettingsPanel";
+import DeleteAccountDialog from "@/components/DeleteAccountDialog";
 import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
@@ -54,7 +55,8 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [busy, setBusy] = useState<string | null>(null);
-  const [previewUrl] = useState(() => (typeof window !== "undefined" ? window.location.origin : ""));
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [impactOpen, setImpactOpen] = useState(false);
@@ -199,10 +201,7 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
     setPassword("");
   };
 
-  const copyPreview = async () => {
-    await navigator.clipboard.writeText(previewUrl);
-    toast.success("Link copiado. Compartilhe com sua equipe de testes.");
-  };
+
 
   // === Backup criptografado ===
   const openEncBackup = (dest: EncDest) => {
@@ -330,16 +329,31 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" /> Menu Gerencial
+              <Settings className="h-5 w-5" /> Configurações
             </DialogTitle>
             <DialogDescription>
-              Decisões administrativas: exportação, limpeza por tipo e versão de testes.
+              Aparência, segurança do aparelho, backups e limpeza da base.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Palette className="h-4 w-4 text-primary" /> Aparência
+              </h4>
+              <AppearancePanel />
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Fingerprint className="h-4 w-4 text-primary" /> Segurança de acesso
+              </h4>
+              <SecuritySettingsPanel />
+            </section>
+
+            <section className="space-y-2">
               <h4 className="text-sm font-semibold">Exportação</h4>
+
               <Button variant="outline" className="w-full justify-start" onClick={prepareExport} disabled={busy !== null}>
                 {busy === "export" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 Exportar backup completo (JSON)
@@ -410,44 +424,26 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
               </div>
             </section>
 
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <UserRoundCog className="h-4 w-4 text-primary" /> Minhas informações
+            <section className="space-y-2 rounded-lg border border-destructive/40 p-3">
+              <h4 className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                <AlertTriangle className="h-4 w-4" /> Excluir minha conta
               </h4>
               <p className="text-xs text-muted-foreground">
-                Revise seus dados e use <strong>Atualiza Informações!</strong> — mostramos exatamente o que mudou
-                antes de gravar.
+                Remove definitivamente seu acesso e todos os seus dados. Exige senha e, se configurados,
+                também biometria e PIN.
               </p>
-              <ProfileUpdatePanel />
+              <Button variant="destructive" className="w-full" onClick={() => setDeleteAccountOpen(true)}>
+                <Trash2 className="h-4 w-4" /> Excluir conta
+              </Button>
             </section>
 
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <SlidersHorizontal className="h-4 w-4 text-primary" /> Permissões de módulos
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Habilite ou desabilite módulos por perfil de acesso ou individualmente por usuário.
-              </p>
-              <ModulePermissionsPanel />
-            </section>
-
-            <section className="space-y-2">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <FlaskConical className="h-4 w-4" /> Versão de testes
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Compartilhe este link com outros desenvolvedores para colaborarem em melhorias.
-              </p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded-md bg-muted px-2 py-1 text-xs">{previewUrl}</code>
-                <Button size="sm" variant="outline" onClick={copyPreview}>
-                  <Copy className="h-4 w-4" /> Copiar
-                </Button>
-              </div>
-            </section>
           </div>
         </DialogContent>
       </Dialog>
+
+      <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />
+
+
 
       <DeleteImpactDialog
         open={impactOpen}
