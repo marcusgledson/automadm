@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { Upload, FileSpreadsheet, ShieldAlert } from "lucide-react";
+import { Upload, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,6 +9,8 @@ import {
   UploadRateLimiter,
   guardStatementUpload,
 } from "@/lib/uploadGuard";
+import { getCachedScan, setCachedScan, sha256Hex } from "@/lib/scanCache";
+import UploadStatusPanel, { type UploadStatusInfo } from "@/components/UploadStatusPanel";
 
 interface FileUploaderProps {
   onFileSelected: (file: File) => void;
@@ -18,19 +20,42 @@ interface FileUploaderProps {
 export default function FileUploader({ onFileSelected, loading }: FileUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const limiterRef = useRef(new UploadRateLimiter());
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<UploadStatusInfo>({ stage: "idle" });
   const [checking, setChecking] = useState(false);
 
   const handleFile = useCallback(
     async (file: File) => {
       setChecking(true);
+      const base = { fileName: file.name, fileSize: file.size };
+      setStatus({ stage: "validating", ...base });
+
+      const reject = (reason: string, extra: Partial<UploadStatusInfo> = {}) => {
+        setStatus({ stage: "rejected", ...base, reason, ...extra });
+        toast.error(reason);
+      };
+
       try {
         const result = await guardStatementUpload(file, limiterRef.current);
         if (!result.ok) {
-          setError(result.error ?? "Arquivo inválido.");
-          toast.error(result.error ?? "Arquivo inválido.");
+          reject(result.error ?? "Arquivo inválido.");
           return;
         }
+
+        setStatus({ stage: "scanning", ...base });
+
+        // Cache por hash SHA-256: evita reenviar e reprocessar arquivos repetidos.
+        const hash = await sha256Hex(file);
+        const cached = getCachedScan(hash);
+        if (cached) {
+          if (cached.verdict === "rejected") {
+            reject(cached.reason ?? "Arquivo rejeitado pela varredura de segurança.", { cached: true, hash });
+            return;
+          }
+          setStatus({ stage: "accepted", ...base, cached: true, hash, engine: cached.engine });
+          onFileSelected(file);
+          return;
+        }
+
         // Validação/varredura no backend antes de processar o arquivo
         const { data, error: fnError } = await supabase.functions.invoke("scan-upload", {
           body: file,
@@ -41,16 +66,20 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
           },
         });
 
-        if (fnError || !data?.ok) {
+        const payload = data as
+          | { ok?: boolean; error?: string; engine?: string; cached?: boolean }
+          | null;
+
+        if (fnError || !payload?.ok) {
           const msg =
-            (data as { error?: string } | null)?.error ??
-            "Não foi possível validar o arquivo no servidor. Tente novamente.";
-          setError(msg);
-          toast.error(msg);
+            payload?.error ?? "Não foi possível validar o arquivo no servidor. Tente novamente.";
+          if (payload?.error) setCachedScan(hash, { verdict: "rejected", reason: msg });
+          reject(msg, { hash, cached: payload?.cached });
           return;
         }
 
-        setError(null);
+        setCachedScan(hash, { verdict: "accepted", engine: payload.engine });
+        setStatus({ stage: "accepted", ...base, hash, engine: payload.engine, cached: payload.cached });
         onFileSelected(file);
       } finally {
         setChecking(false);
@@ -117,12 +146,9 @@ export default function FileUploader({ onFileSelected, loading }: FileUploaderPr
         className="hidden"
       />
 
-      {error && (
-        <p className="flex items-center gap-2 text-sm text-destructive" role="alert">
-          <ShieldAlert className="h-4 w-4" />
-          {error}
-        </p>
-      )}
+      <div className="w-full max-w-xl">
+        <UploadStatusPanel status={status} />
+      </div>
     </div>
   );
 }
