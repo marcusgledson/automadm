@@ -106,6 +106,8 @@ const ChartTooltipContent = React.forwardRef<
       active?: boolean;
       payload?: TooltipPayloadItem[];
       label?: unknown;
+      color?: string;
+
       hideLabel?: boolean;
       hideIndicator?: boolean;
       indicator?: "line" | "dot" | "dashed";
