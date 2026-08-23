@@ -90,6 +90,24 @@ export default function ForcePasswordChange({ onDone, expiresAt }: Props) {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {expired ? (
+            <div className="space-y-4">
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                <Clock className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Sua senha temporária expirou em {new Date(expiresAt!).toLocaleString("pt-BR")} e não pode mais ser
+                  usada. Solicite um novo link de acesso para o e-mail cadastrado ({registered}).
+                </span>
+              </div>
+              <Button className="w-full" onClick={handleResend} disabled={resending}>
+                {resending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Reenviar link de acesso
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => signOut()} disabled={resending}>
+                Sair da conta
+              </Button>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fp-email">Confirme seu e-mail cadastrado</Label>
@@ -140,6 +158,7 @@ export default function ForcePasswordChange({ onDone, expiresAt }: Props) {
               Sair da conta
             </Button>
           </form>
+          )}
         </CardContent>
       </Card>
     </div>

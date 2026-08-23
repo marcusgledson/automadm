@@ -75,7 +75,13 @@ function PasswordGate({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (profile?.must_change_password) return <ForcePasswordChange onDone={() => void refresh()} />;
+  if (profile?.must_change_password)
+    return (
+      <ForcePasswordChange
+        expiresAt={profile.temp_password_expires_at}
+        onDone={() => void refresh()}
+      />
+    );
   return <>{children}</>;
 }
 
