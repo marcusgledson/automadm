@@ -5,6 +5,8 @@ import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landma
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
+import { parsePdfStatement, PdfPasswordRequiredError } from "@/lib/pdfStatementParser";
+
 import FileUploader from "@/components/FileUploader";
 import DataTable from "@/components/DataTable";
 import AccountKeyDialog from "@/components/AccountKeyDialog";
