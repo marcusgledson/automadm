@@ -427,6 +427,10 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
         </DialogContent>
       </Dialog>
 
+      <DeleteAccountDialog open={deleteAccountOpen} onOpenChange={setDeleteAccountOpen} />
+
+
+
       <DeleteImpactDialog
         open={impactOpen}
         onOpenChange={setImpactOpen}
