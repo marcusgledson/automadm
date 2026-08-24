@@ -84,8 +84,10 @@ export async function extractPdfLines(file: File, password?: string): Promise<st
 }
 
 function toNumber(br: string): number {
-  const neg = /^\(.*\)$/.test(br.trim()) || br.trim().startsWith("-");
-  const n = parseFloat(br.replace(/[()\s]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+  const t = br.replace(/R\$/gi, "").trim();
+  const neg = /^\(.*\)$/.test(t) || t.startsWith("-") || /-\s*$/.test(t);
+  const n =
+    parseFloat(t.replace(/[()\s-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
   return neg ? -Math.abs(n) : n;
 }
 
@@ -131,6 +133,18 @@ export interface DetectedColumn {
   end: number;
 }
 
+/** Informações de diagnóstico para explicar leituras vazias. */
+export interface PdfDiagnostics {
+  pages: number;
+  linhas: number;
+  temTexto: boolean;
+  cabecalhoDetectado: boolean;
+  /** Motivo provável quando nenhum lançamento é reconhecido. */
+  motivo?: string;
+  /** Primeiras linhas extraídas, para inspeção do usuário. */
+  amostra: string[];
+}
+
 export interface ParsedPdfStatement {
   account: { banco?: string; agencia?: string; conta?: string };
   bank?: BankDetection;
@@ -142,12 +156,14 @@ export interface ParsedPdfStatement {
   strategy: "colunas" | "linhas";
   /** Texto completo (para detecções adicionais). */
   text: string;
+  diagnostics: PdfDiagnostics;
 }
 
-const VALUE_ANY = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?|-?\(?\d+,\d{2}\)?)/;
-const VALUE_END = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})\s*([CD])?\s*$/i;
-const DATE = /^(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/;
-const DATE_ANY = /\b(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/;
+const VALUE_ANY = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/;
+const VALUE_GLOBAL = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/g;
+const VALUE_END = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)\s*([CD])?\s*$/i;
+const DATE = /^(\d{2})[/.-](\d{2})(?:[/.-](\d{2,4}))?\b/;
+const DATE_ANY = /\b(\d{2})[/.-](\d{2})(?:[/.-](\d{2,4}))?\b/;
 
 const HEADER_MAP: { re: RegExp; field: ColumnField }[] = [
   { re: /^data(\s*(mov|movimenta[cç][aã]o|lan[cç]amento))?\.?$/i, field: "data" },
@@ -171,28 +187,74 @@ function labelToField(label: string): ColumnField | undefined {
 const SKIP_LINE =
   /(saldo\s+anterior|saldo\s+final|total\s+(geral|do|de)|p[aá]gina\s+\d|continua(ç|c)?[aã]o|extrato\s+de\s+conta)/i;
 
+/** Rótulos compostos usados na varredura dentro de uma célula única. */
+const INLINE_LABELS: { re: RegExp; field: ColumnField }[] = [
+  { re: /data\s*(?:mov\.?|movimenta[cç][aã]o|lan[cç]amento)?/gi, field: "data" },
+  { re: /hist[oó]rico|descri[cç][aã]o|lan[cç]amentos?|movimenta[cç][aã]o|detalhe/gi, field: "descricao" },
+  { re: /documento|n[º°o]?\.?\s*doc\.?|doc\.?/gi, field: "documento" },
+  { re: /d[eé]bito|sa[ií]da/gi, field: "debito" },
+  { re: /cr[eé]dito|entrada/gi, field: "credito" },
+  { re: /valor(?:\s*\(?r\$\)?)?|vlr\.?/gi, field: "valor" },
+  { re: /saldo(?:\s*\(?r\$\)?)?/gi, field: "saldo" },
+];
+
+/** Converte as células de uma linha em possíveis rótulos de coluna (com x estimado). */
+function headerCandidates(cells: PdfCell[]): { cell: PdfCell; field: ColumnField }[] {
+  const out: { cell: PdfCell; field: ColumnField }[] = [];
+  for (const cell of cells) {
+    const direct = labelToField(cell.text);
+    if (direct) {
+      out.push({ cell, field: direct });
+      continue;
+    }
+    // Célula única contendo vários rótulos ("Data Histórico Valor Saldo")
+    const len = Math.max(cell.text.length, 1);
+    const found: { cell: PdfCell; field: ColumnField }[] = [];
+    for (const { re, field } of INLINE_LABELS) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(cell.text)) !== null) {
+        const x = cell.x + (cell.width * m.index) / len;
+        const width = (cell.width * m[0].length) / len;
+        found.push({ cell: { x, width, text: m[0] }, field });
+      }
+    }
+    if (found.length >= 2) out.push(...found);
+  }
+  // Remove rótulos duplicados do mesmo campo mantendo o primeiro (menor x)
+  const seen = new Set<ColumnField>();
+  return out
+    .sort((a, b) => a.cell.x - b.cell.x)
+    .filter((m) => (seen.has(m.field) ? false : (seen.add(m.field), true)));
+}
+
 /** Detecta a linha de cabeçalho da tabela e monta as faixas de coluna. */
 export function detectColumns(lines: PdfLine[]): { columns: DetectedColumn[]; headerIndex: number } | undefined {
-  for (let i = 0; i < Math.min(lines.length, 120); i++) {
-    const line = lines[i];
-    const mapped = line.cells
-      .map((c) => ({ cell: c, field: labelToField(c.text) }))
-      .filter((m): m is { cell: PdfCell; field: ColumnField } => !!m.field);
+  const limit = Math.min(lines.length, 200);
+  for (let i = 0; i < limit; i++) {
+    // Considera a linha isolada e, em seguida, junto da seguinte (cabeçalho em 2 linhas)
+    const attempts: { cells: PdfCell[]; index: number }[] = [{ cells: lines[i].cells, index: i }];
+    if (i + 1 < limit) {
+      attempts.push({ cells: [...lines[i].cells, ...lines[i + 1].cells], index: i + 1 });
+    }
 
-    const fields = new Set(mapped.map((m) => m.field));
-    const hasValue = fields.has("valor") || fields.has("debito") || fields.has("credito");
-    if (!(fields.has("data") && hasValue && mapped.length >= 3)) continue;
+    for (const attempt of attempts) {
+      const mapped = headerCandidates(attempt.cells);
+      const fields = new Set(mapped.map((m) => m.field));
+      const hasValue = fields.has("valor") || fields.has("debito") || fields.has("credito");
+      if (!(fields.has("data") && hasValue && mapped.length >= 3)) continue;
 
-    const sorted = mapped.sort((a, b) => a.cell.x - b.cell.x);
-    const columns: DetectedColumn[] = sorted.map((m, idx) => {
-      const start = idx === 0 ? -Infinity : (sorted[idx - 1].cell.x + sorted[idx - 1].cell.width + m.cell.x) / 2;
-      const end =
-        idx === sorted.length - 1
-          ? Infinity
-          : (m.cell.x + m.cell.width + sorted[idx + 1].cell.x) / 2;
-      return { label: m.cell.text, field: m.field, start, end };
-    });
-    return { columns, headerIndex: i };
+      const sorted = mapped.sort((a, b) => a.cell.x - b.cell.x);
+      const columns: DetectedColumn[] = sorted.map((m, idx) => {
+        const start = idx === 0 ? -Infinity : (sorted[idx - 1].cell.x + sorted[idx - 1].cell.width + m.cell.x) / 2;
+        const end =
+          idx === sorted.length - 1
+            ? Infinity
+            : (m.cell.x + m.cell.width + sorted[idx + 1].cell.x) / 2;
+        return { label: m.cell.text, field: m.field, start, end };
+      });
+      return { columns, headerIndex: attempt.index };
+    }
   }
   return undefined;
 }
@@ -245,6 +307,7 @@ function normalizeDate(dm: RegExpMatchArray, yearHint: string) {
 /** Leitura com consciência de colunas (usa o cabeçalho detectado). */
 function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex: number, yearHint: string) {
   const records: FinancialRecord[] = [];
+  let lastDate: string | undefined;
   for (let i = headerIndex + 1; i < lines.length; i++) {
     const line = lines[i];
     if (SKIP_LINE.test(line.text)) continue;
@@ -258,13 +321,20 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
     };
 
     const dataRaw = get("data");
-    const dm = dataRaw.match(DATE) ?? dataRaw.match(DATE_ANY);
+    const dm = dataRaw.match(DATE) ?? dataRaw.match(DATE_ANY) ?? line.text.match(DATE);
     const descricao = [get("descricao")].filter(Boolean).join(" ").trim();
+    const hasValue = VALUE_ANY.test(line.text);
 
-    if (!dm) {
+    let data: string | undefined;
+    if (dm) {
+      data = normalizeDate(dm, yearHint);
+      lastDate = data;
+    } else if (hasValue && lastDate) {
+      // Extrato com data por bloco: herda a data do lançamento anterior
+      data = lastDate;
+    } else {
       // Continuação da descrição do lançamento anterior
-      const hasValue = VALUE_ANY.test(line.text);
-      if (!hasValue && descricao && records.length > 0) {
+      if (descricao && records.length > 0) {
         const prev = records[records.length - 1];
         prev.descricao = `${prev.descricao} ${descricao}`.replace(/\s+/g, " ").trim();
       }
@@ -285,7 +355,7 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
       const vm = valorCol.match(VALUE_END) ?? valorCol.match(VALUE_ANY);
       if (!vm) continue;
       valor = toNumber(vm[1]);
-      const flag = (valorCol.match(/([CD])\s*$/i)?.[1] ?? "").toUpperCase();
+      const flag = (valorCol.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
       if (flag === "D") valor = -Math.abs(valor);
       if (flag === "C") valor = Math.abs(valor);
     }
@@ -293,7 +363,7 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
 
     records.push(
       buildRecord(
-        normalizeDate(dm, yearHint),
+        data,
         descricao || "Lançamento",
         valor,
         get("documento") || undefined,
@@ -309,25 +379,44 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
 /** Leitura genérica linha a linha (fallback). */
 function parseByLines(lines: string[], yearHint: string) {
   const records: FinancialRecord[] = [];
-  for (const line of lines) {
-    const dm = line.match(DATE);
-    if (!dm) continue;
-    const vm = line.match(VALUE_END);
-    if (!vm) continue;
+  let lastDate: string | undefined;
 
-    let valor = toNumber(vm[1]);
-    const flag = vm[2]?.toUpperCase();
-    if (flag === "D" && valor > 0) valor = -valor;
-    if (flag === "C" && valor < 0) valor = Math.abs(valor);
+  for (const line of lines) {
+    if (SKIP_LINE.test(line)) continue;
+
+    const dm = line.match(DATE) ?? line.match(DATE_ANY);
+    const values = line.match(VALUE_GLOBAL) ?? [];
+    if (values.length === 0) continue;
+
+    let data: string | undefined;
+    if (dm) {
+      data = normalizeDate(dm, yearHint);
+      lastDate = data;
+    } else if (lastDate) {
+      data = lastDate; // extrato com data por bloco
+    } else {
+      continue;
+    }
+
+    // Quando há dois ou mais números, o último costuma ser o saldo acumulado.
+    const raw = values.length >= 2 ? values[values.length - 2] : values[values.length - 1];
+    let valor = toNumber(raw);
+
+    const flag = (line.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
+    if (flag === "D") valor = -Math.abs(valor);
+    if (flag === "C") valor = Math.abs(valor);
+    if (/\bd[eé]bito\b/i.test(line)) valor = -Math.abs(valor);
 
     const descricao = line
-      .slice(dm[0].length, line.length - vm[0].length)
-      .replace(/(-?\d{1,3}(?:\.\d{3})*,\d{2})/g, " ")
+      .replace(dm ? dm[0] : "", " ")
+      .replace(VALUE_GLOBAL, " ")
+      .replace(/\bR\$\b/gi, " ")
+      .replace(/\b[CD]\b\s*$/i, " ")
       .replace(/\s+/g, " ")
       .trim();
     if (!descricao) continue;
 
-    records.push(buildRecord(normalizeDate(dm, yearHint), descricao, valor, undefined, undefined, undefined, line));
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line));
   }
   return records;
 }
@@ -358,6 +447,25 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     strategy = "linhas";
   }
 
+  const pages = lines.length ? Math.max(...lines.map((l) => l.page)) : 0;
+  const diagnostics: PdfDiagnostics = {
+    pages,
+    linhas: lines.length,
+    temTexto: textLines.some((t) => t.trim().length > 0),
+    cabecalhoDetectado: !!detected,
+    amostra: textLines.slice(0, 30),
+    motivo:
+      records.length > 0
+        ? undefined
+        : !textLines.some((t) => t.trim().length > 0)
+          ? "O PDF não possui camada de texto (provavelmente digitalizado/imagem). É necessário um arquivo com texto selecionável."
+          : !detected
+            ? "Não foi possível reconhecer o cabeçalho da tabela nem lançamentos no formato data + valor."
+            : "O cabeçalho foi reconhecido, mas nenhuma linha de lançamento pôde ser interpretada.",
+  };
+
+
+
   return {
     account: {
       banco: bank?.name ?? text.match(/\b(banco[^\n,;]{2,30})/i)?.[1]?.trim() ?? undefined,
@@ -370,6 +478,7 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     columns: detected?.columns,
     strategy,
     text,
+    diagnostics,
   };
 }
 

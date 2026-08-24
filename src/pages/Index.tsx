@@ -5,7 +5,7 @@ import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landma
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage } from "@/lib/pdfStatementParser";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, type PdfDiagnostics } from "@/lib/pdfStatementParser";
 import { detectBankFromText, type BankDetection } from "@/lib/bankDetect";
 import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
 import { supabase } from "@/integrations/supabase/client";
@@ -49,6 +49,7 @@ export default function Index() {
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState<{ mode: "pre" | "post"; saved?: number; expenses?: number } | null>(null);
   const [duplicate, setDuplicate] = useState<{ existing: number; total: number } | null>(null);
+  const [pdfDiag, setPdfDiag] = useState<(PdfDiagnostics & { fileName: string }) | null>(null);
 
   const { upsertMany, checkExisting } = useBankStatements();
   const { accounts, saveAccount } = useBankAccounts();
@@ -84,7 +85,7 @@ export default function Index() {
       try {
         const parsed = await parsePdfStatement(file, password);
         if (parsed.records.length === 0) {
-          toast.error("Nenhum lançamento reconhecido neste PDF.");
+          setPdfDiag({ fileName: file.name, ...parsed.diagnostics });
           return;
         }
         setPdfFile({ file, password });
@@ -383,6 +384,38 @@ export default function Index() {
             <AlertDialogAction onClick={() => { setDuplicate(null); void doPersist(); }}>
               Continuar mesmo assim
             </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!pdfDiag} onOpenChange={(o) => { if (!o) setPdfDiag(null); }}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nenhum lançamento reconhecido no PDF</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>{pdfDiag?.motivo}</p>
+                <ul className="text-xs text-muted-foreground">
+                  <li>Arquivo: {pdfDiag?.fileName}</li>
+                  <li>Páginas: {pdfDiag?.pages} · Linhas extraídas: {pdfDiag?.linhas}</li>
+                  <li>Camada de texto: {pdfDiag?.temTexto ? "sim" : "não"}</li>
+                  <li>Cabeçalho da tabela: {pdfDiag?.cabecalhoDetectado ? "reconhecido" : "não reconhecido"}</li>
+                </ul>
+                {pdfDiag?.amostra?.length ? (
+                  <details className="rounded-md border border-border bg-muted/40 p-2">
+                    <summary className="cursor-pointer text-xs font-medium">
+                      Ver primeiras linhas extraídas
+                    </summary>
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[11px]">
+                      {pdfDiag.amostra.join("\n")}
+                    </pre>
+                  </details>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setPdfDiag(null)}>Entendi</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
