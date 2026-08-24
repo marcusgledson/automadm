@@ -528,7 +528,7 @@ export default function Index() {
         {records.length === 0 ? (
           <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-stretch justify-center gap-4 py-4">
             <div className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
-              <FileUploader onFileSelected={handleFile} loading={loading} />
+              <FileUploader onFilesSelected={(files) => { void handleFiles(files); }} loading={loading} />
             </div>
             <GoogleDriveOFXImport
               onOFXLoaded={({ text, fileName: fn }) => processOFXText(text, fn)}
