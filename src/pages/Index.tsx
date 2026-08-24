@@ -37,6 +37,19 @@ interface PendingParsed {
   bank?: BankDetection;
 }
 
+interface PdfPreviewState {
+  fileName: string;
+  account: OFXAccountInfo;
+  holder?: HolderInfo;
+  bank?: BankDetection;
+  strategy: "colunas" | "linhas" | "blocos";
+  columns?: DetectedColumn[];
+  headerIndex?: number;
+  lines: PdfLine[];
+  records: FinancialRecord[];
+}
+
+
 export default function Index() {
   const { user: _user } = useAuth();
   const navigate = useNavigate();
