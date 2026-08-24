@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectColumns, parsePdfStatementLayout, type PdfLine } from "@/lib/pdfStatementParser";
+import { detectColumns, parsePdfStatementLayout, parsePdfStatementLines, type PdfLine } from "@/lib/pdfStatementParser";
 
 function line(page: number, y: number, cells: [number, string][]): PdfLine {
   const mapped = cells.map(([x, text]) => ({ x, width: text.length * 5, text }));
