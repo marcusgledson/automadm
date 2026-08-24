@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landmark, PencilLine, UserRound } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, reparseWithColumns, type PdfDiagnostics, type DetectedColumn, type PdfLine } from "@/lib/pdfStatementParser";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, reparseWithColumns, headerSignature, type PdfDiagnostics, type DetectedColumn, type PdfLine, type ParsedPdfStatement } from "@/lib/pdfStatementParser";
 import { detectBankFromText, needsLogoFallback, type BankDetection } from "@/lib/bankDetect";
 
 import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
@@ -17,6 +17,9 @@ import AccountKeyDialog, { type AccountKeyResult } from "@/components/AccountKey
 import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import EditableRecordsDialog from "@/components/EditableRecordsDialog";
 import PdfPreviewDialog from "@/components/PdfPreviewDialog";
+import PdfBatchImportDialog, { type BatchItem } from "@/components/PdfBatchImportDialog";
+import { usePdfColumnProfiles } from "@/hooks/usePdfColumnProfiles";
+import { dedupeRecords } from "@/lib/dedupeRecords";
 
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
@@ -47,7 +50,12 @@ interface PdfPreviewState {
   headerIndex?: number;
   lines: PdfLine[];
   records: FinancialRecord[];
+  /** Assinatura do layout, para memorizar o mapeamento. */
+  signature: string;
+  /** Um mapeamento salvo foi aplicado automaticamente. */
+  profileApplied?: boolean;
 }
+
 
 
 export default function Index() {
