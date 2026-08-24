@@ -307,6 +307,7 @@ function normalizeDate(dm: RegExpMatchArray, yearHint: string) {
 /** Leitura com consciência de colunas (usa o cabeçalho detectado). */
 function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex: number, yearHint: string) {
   const records: FinancialRecord[] = [];
+  let lastDate: string | undefined;
   for (let i = headerIndex + 1; i < lines.length; i++) {
     const line = lines[i];
     if (SKIP_LINE.test(line.text)) continue;
@@ -320,13 +321,20 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
     };
 
     const dataRaw = get("data");
-    const dm = dataRaw.match(DATE) ?? dataRaw.match(DATE_ANY);
+    const dm = dataRaw.match(DATE) ?? dataRaw.match(DATE_ANY) ?? line.text.match(DATE);
     const descricao = [get("descricao")].filter(Boolean).join(" ").trim();
+    const hasValue = VALUE_ANY.test(line.text);
 
-    if (!dm) {
+    let data: string | undefined;
+    if (dm) {
+      data = normalizeDate(dm, yearHint);
+      lastDate = data;
+    } else if (hasValue && lastDate) {
+      // Extrato com data por bloco: herda a data do lançamento anterior
+      data = lastDate;
+    } else {
       // Continuação da descrição do lançamento anterior
-      const hasValue = VALUE_ANY.test(line.text);
-      if (!hasValue && descricao && records.length > 0) {
+      if (descricao && records.length > 0) {
         const prev = records[records.length - 1];
         prev.descricao = `${prev.descricao} ${descricao}`.replace(/\s+/g, " ").trim();
       }
@@ -347,7 +355,7 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
       const vm = valorCol.match(VALUE_END) ?? valorCol.match(VALUE_ANY);
       if (!vm) continue;
       valor = toNumber(vm[1]);
-      const flag = (valorCol.match(/([CD])\s*$/i)?.[1] ?? "").toUpperCase();
+      const flag = (valorCol.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
       if (flag === "D") valor = -Math.abs(valor);
       if (flag === "C") valor = Math.abs(valor);
     }
@@ -355,7 +363,7 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
 
     records.push(
       buildRecord(
-        normalizeDate(dm, yearHint),
+        data,
         descricao || "Lançamento",
         valor,
         get("documento") || undefined,
