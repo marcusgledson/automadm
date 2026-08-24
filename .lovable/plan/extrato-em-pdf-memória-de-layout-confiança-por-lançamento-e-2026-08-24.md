@@ -28,7 +28,7 @@ No preview:
 
 ## 3. Importação em lote de vários PDFs
 
-- O seletor de arquivos passa a aceitar múltiplos PDFs (arrastar vários também).
+- O seletor de arquivos passa a aceitar múltiplos PDFs (arrastar vários também) a cada 10 arquivos selecionados, perguntar se deseja adicionar mais, se Sim, liberar mais 10 arquivos, se Não, prosseguir a importação.
 - Fila de processamento sequencial com barra de progresso, nome do arquivo atual e opção de cancelar; senha é solicitada por arquivo protegido, e um arquivo que falha não interrompe os demais.
 - Um preview consolidado lista os arquivos com banco/conta/período/quantidade detectados; é possível desmarcar arquivos antes de confirmar.
 - Deduplicação em duas camadas:
