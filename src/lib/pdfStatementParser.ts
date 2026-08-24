@@ -275,6 +275,13 @@ function cellsToColumns(line: PdfLine, columns: DetectedColumn[]): string[] {
   return buckets.map((b) => b.join(" ").replace(/\s+/g, " ").trim());
 }
 
+/** Converte a lista de avisos em um nível de confiança. */
+export function confidenceFromFlags(avisos: string[]): "alta" | "media" | "baixa" {
+  if (avisos.length === 0) return "alta";
+  if (avisos.length === 1) return "media";
+  return "baixa";
+}
+
 function buildRecord(
   data: string,
   descricao: string,
@@ -283,8 +290,12 @@ function buildRecord(
   tipoLabel: string | undefined,
   categoria: string | undefined,
   rawLine: string,
+  avisos: string[] = [],
 ): FinancialRecord {
   const tipo = classifyType(valor);
+  const flags = [...avisos];
+  if (!descricao || descricao === "Lançamento") flags.push("Descrição não identificada");
+  if (!valor) flags.push("Valor zerado ou não reconhecido");
   return {
     data,
     lancamento: tipoLabel || tipo,
@@ -296,9 +307,12 @@ function buildRecord(
     documento: documento || undefined,
     codigoOperacao: undefined,
     fitid: `PDF|${data}|${valor}|${descricao}`.slice(0, 120),
+    confianca: confidenceFromFlags(flags),
+    avisos: flags.length ? flags : undefined,
     raw: { linha: rawLine, origem: "PDF" },
   };
 }
+
 
 function yearHintOf(text: string) {
   return text.match(/\b(20\d{2})\b/)?.[1] ?? String(new Date().getFullYear());
