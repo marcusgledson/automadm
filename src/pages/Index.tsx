@@ -56,6 +56,11 @@ interface PdfPreviewState {
   profileApplied?: boolean;
 }
 
+type ReadPdfResult =
+  | { ok: true; parsed: ParsedPdfStatement; bank?: BankDetection; account: OFXAccountInfo; password?: string; diagnostics?: undefined; error?: undefined }
+  | { ok: false; error: string; diagnostics?: PdfDiagnostics };
+
+
 
 
 export default function Index() {
