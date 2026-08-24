@@ -416,6 +416,23 @@ export default function Index() {
         onConfirm={confirmPreview}
       />
 
+      <PdfPreviewDialog
+        open={!!pdfPreview}
+        fileName={pdfPreview?.fileName}
+        bank={pdfPreview?.bank}
+        account={pdfPreview?.account ?? {}}
+        titular={pdfPreview?.holder?.titular}
+        strategy={pdfPreview?.strategy ?? "linhas"}
+        columns={pdfPreview?.columns}
+        records={pdfPreview?.records ?? []}
+        identifying={identifyingLogo}
+        onIdentifyLogo={pdfFile ? () => { void identifyLogoInPreview(); } : undefined}
+        onColumnsChange={applyColumnFix}
+        onCancel={() => setPdfPreview(null)}
+        onConfirm={confirmPdfPreview}
+      />
+
+
       <AccountKeyDialog
         open={!!pendingParsed}
         defaultBanco={pendingParsed?.account.banco}
