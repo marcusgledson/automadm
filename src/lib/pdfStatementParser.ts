@@ -478,6 +478,7 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     columns: detected?.columns,
     strategy,
     text,
+    diagnostics,
   };
 }
 
