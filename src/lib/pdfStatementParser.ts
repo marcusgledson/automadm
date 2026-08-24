@@ -447,6 +447,25 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     strategy = "linhas";
   }
 
+  const pages = lines.length ? Math.max(...lines.map((l) => l.page)) : 0;
+  const diagnostics: PdfDiagnostics = {
+    pages,
+    linhas: lines.length,
+    temTexto: textLines.some((t) => t.trim().length > 0),
+    cabecalhoDetectado: !!detected,
+    amostra: textLines.slice(0, 30),
+    motivo:
+      records.length > 0
+        ? undefined
+        : !textLines.some((t) => t.trim().length > 0)
+          ? "O PDF não possui camada de texto (provavelmente digitalizado/imagem). É necessário um arquivo com texto selecionável."
+          : !detected
+            ? "Não foi possível reconhecer o cabeçalho da tabela nem lançamentos no formato data + valor."
+            : "O cabeçalho foi reconhecido, mas nenhuma linha de lançamento pôde ser interpretada.",
+  };
+
+
+
   return {
     account: {
       banco: bank?.name ?? text.match(/\b(banco[^\n,;]{2,30})/i)?.[1]?.trim() ?? undefined,
