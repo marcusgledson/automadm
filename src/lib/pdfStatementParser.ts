@@ -589,6 +589,36 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
 }
 
 /**
+ * Assinatura estável de um layout de extrato: banco + estratégia + rótulos do
+ * cabeçalho. Usada para reaplicar automaticamente um mapeamento salvo.
+ */
+export function headerSignature(input: {
+  bankCode?: string;
+  bankName?: string;
+  strategy: "colunas" | "linhas" | "blocos";
+  columns?: { label: string }[];
+}): string {
+  const bank = (input.bankCode || input.bankName || "desconhecido")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+  const labels = (input.columns ?? [])
+    .map((c) =>
+      c.label
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, ""),
+    )
+    .filter(Boolean)
+    .join("|");
+  return `${bank}::${input.strategy}::${labels}`;
+}
+
+
+
+/**
  * Reprocessa os lançamentos usando um mapeamento de colunas corrigido pelo usuário.
  * Colunas marcadas como "ignorar" são descartadas.
  */
