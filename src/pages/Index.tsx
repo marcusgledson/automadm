@@ -406,10 +406,19 @@ export default function Index() {
     );
   }, [pdfFile, identifyLogo]);
 
-  /** Confirma o preview do PDF e segue para a chave da conta. */
+  /** Confirma o preview do PDF, memoriza o mapeamento e segue para a chave da conta. */
   const confirmPdfPreview = useCallback(() => {
     setPdfPreview((prev) => {
       if (prev) {
+        if (saveMapping && prev.columns?.length) {
+          void saveProfile({
+            signature: prev.signature,
+            bankCode: prev.bank?.code,
+            bankName: prev.bank?.name,
+            strategy: prev.strategy,
+            columns: prev.columns,
+          });
+        }
         setPendingParsed({
           records: prev.records,
           account: prev.account,
@@ -418,6 +427,7 @@ export default function Index() {
           bank: prev.bank,
         });
       }
+
       return null;
     });
   }, []);
