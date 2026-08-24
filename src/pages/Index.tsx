@@ -76,11 +76,20 @@ export default function Index() {
   const [pdfDiag, setPdfDiag] = useState<(PdfDiagnostics & { fileName: string }) | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
   const [identifyingLogo, setIdentifyingLogo] = useState(false);
+  const [saveMapping, setSaveMapping] = useState(true);
 
+  const [batch, setBatch] = useState<BatchItem[] | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const [batchFinished, setBatchFinished] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const cancelBatch = useRef(false);
 
   const { upsertMany, checkExisting } = useBankStatements();
   const { accounts, saveAccount } = useBankAccounts();
   const { upsertManyFromOFX } = useExpenses();
+  const { findBySignature, saveProfile, removeProfile } = usePdfColumnProfiles();
+
 
   const processOFXText = useCallback((text: string, originFileName: string) => {
     const parsed = parseOFXFull(text);
