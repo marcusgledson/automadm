@@ -352,8 +352,7 @@ function parseByBlocks(textLines: string[]): FinancialRecord[] {
     if (!descricao) continue;
 
     const abs = Math.abs(toNumber(vm[1]));
-    const explicit = /(^|\s)-\s*$/.test(line.slice(0, line.length - vm[0].length)) ? -1 : undefined;
-    const valor = (explicit ?? sign ?? 1) * abs;
+    const valor = (sign ?? 1) * abs;
     records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine));
   }
 
