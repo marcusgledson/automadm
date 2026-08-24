@@ -574,6 +574,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pdf_column_profiles: {
+        Row: {
+          bank_code: string | null
+          bank_name: string | null
+          columns: Json
+          created_at: string
+          header_signature: string
+          id: string
+          last_used_at: string
+          strategy: string
+          updated_at: string
+          user_id: string
+          uses: number
+        }
+        Insert: {
+          bank_code?: string | null
+          bank_name?: string | null
+          columns?: Json
+          created_at?: string
+          header_signature: string
+          id?: string
+          last_used_at?: string
+          strategy?: string
+          updated_at?: string
+          user_id: string
+          uses?: number
+        }
+        Update: {
+          bank_code?: string | null
+          bank_name?: string | null
+          columns?: Json
+          created_at?: string
+          header_signature?: string
+          id?: string
+          last_used_at?: string
+          strategy?: string
+          updated_at?: string
+          user_id?: string
+          uses?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           allowed_modules: string[]
