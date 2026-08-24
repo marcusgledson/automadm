@@ -124,66 +124,189 @@ export default function Index() {
     return { name: data.banco as string, code: (data.codigo as string) || undefined };
   }, []);
 
-  const handlePdf = useCallback(async (file: File) => {
-    let password: string | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const parsed = await parsePdfStatement(file, password);
-        if (parsed.records.length === 0) {
-          setPdfDiag({ fileName: file.name, ...parsed.diagnostics });
-          return;
+  /** Aplica automaticamente um mapeamento de colunas salvo para o mesmo layout. */
+  const applySavedProfile = useCallback(
+    (parsed: ParsedPdfStatement, bank?: BankDetection) => {
+      const signature = headerSignature({
+        bankCode: bank?.code,
+        bankName: bank?.name,
+        strategy: parsed.strategy,
+        columns: parsed.columns,
+      });
+      const prof = findBySignature(signature);
+      if (prof && parsed.columns?.length && prof.columns?.length === parsed.columns.length) {
+        const merged = parsed.columns.map((c, i) => ({ ...c, field: prof.columns[i].field }));
+        const re = reparseWithColumns(parsed.lines, merged, parsed.headerIndex ?? 0);
+        if (re.length > 0) {
+          return { signature, columns: merged, records: re, profileApplied: true };
         }
-        setPdfFile({ file, password });
-        let bank = parsed.bank;
-        const account = { ...parsed.account };
-
-        // Fallback automático: se o nome/código não deram confiança, tenta a logo (IA).
-        if (needsLogoFallback(bank)) {
-          try {
-            const byLogo = await identifyLogoFor(file, password);
-            if (byLogo) {
-              bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
-              account.banco = byLogo.name;
-            }
-          } catch (e) {
-            console.warn("Identificação por logo indisponível", e);
-          }
-        } else if (bank) {
-          account.banco = bank.name;
-        }
-
-        setPdfPreview({
-          fileName: file.name,
-          account,
-          holder: parsed.holder,
-          bank,
-          strategy: parsed.strategy,
-          columns: parsed.columns,
-          headerIndex: parsed.headerIndex,
-          lines: parsed.lines,
-          records: parsed.records,
-        });
-        return;
-
-      } catch (err) {
-        if (err instanceof PdfPasswordRequiredError) {
-          const input = window.prompt(
-            err.wrongPassword
-              ? "Senha incorreta. Informe a senha do PDF:"
-              : "Este PDF está protegido. Informe a senha:",
-          );
-          if (!input) { toast.error("Importação cancelada."); return; }
-          password = input;
-          continue;
-        }
-        console.error(err);
-        toast.error("Erro ao ler o PDF do extrato.");
-        return;
       }
-    }
-    toast.error("Não foi possível abrir o PDF (senha inválida).");
-  }, [identifyLogoFor]);
+      return { signature, columns: parsed.columns, records: parsed.records, profileApplied: false };
+    },
+    [findBySignature],
+  );
 
+  /**
+   * Lê um PDF (pedindo senha quando necessário) e resolve o banco,
+   * acionando a identificação por logo quando a confiança é baixa.
+   */
+  const readPdf = useCallback(
+    async (
+      file: File,
+      opts: { askPassword?: boolean; logoFallback?: boolean } = {},
+    ): Promise<
+      | { ok: true; parsed: ParsedPdfStatement; bank?: BankDetection; account: OFXAccountInfo; password?: string }
+      | { ok: false; error: string; diagnostics?: PdfDiagnostics }
+    > => {
+      const { askPassword = true, logoFallback = true } = opts;
+      let password: string | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const parsed = await parsePdfStatement(file, password);
+          if (parsed.records.length === 0) {
+            return { ok: false, error: parsed.diagnostics.motivo ?? "Nenhum lançamento reconhecido.", diagnostics: parsed.diagnostics };
+          }
+          let bank = parsed.bank;
+          const account: OFXAccountInfo = { ...parsed.account };
+          if (logoFallback && needsLogoFallback(bank)) {
+            try {
+              const byLogo = await identifyLogoFor(file, password);
+              if (byLogo) {
+                bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
+                account.banco = byLogo.name;
+              }
+            } catch (e) {
+              console.warn("Identificação por logo indisponível", e);
+            }
+          } else if (bank) {
+            account.banco = bank.name;
+          }
+          return { ok: true, parsed, bank, account, password };
+        } catch (err) {
+          if (err instanceof PdfPasswordRequiredError) {
+            if (!askPassword) return { ok: false, error: "PDF protegido por senha — importe este arquivo individualmente." };
+            const input = window.prompt(
+              err.wrongPassword
+                ? `Senha incorreta. Informe a senha do PDF (${file.name}):`
+                : `Este PDF está protegido. Informe a senha (${file.name}):`,
+            );
+            if (!input) return { ok: false, error: "Importação cancelada (senha não informada)." };
+            password = input;
+            continue;
+          }
+          console.error(err);
+          return { ok: false, error: "Erro ao ler o PDF do extrato." };
+        }
+      }
+      return { ok: false, error: "Não foi possível abrir o PDF (senha inválida)." };
+    },
+    [identifyLogoFor],
+  );
+
+  const handlePdf = useCallback(async (file: File) => {
+    const res = await readPdf(file);
+    if (!res.ok) {
+      if (res.diagnostics) setPdfDiag({ fileName: file.name, ...res.diagnostics });
+      else toast.error(res.error);
+      return;
+    }
+    setPdfFile({ file, password: res.password });
+    const applied = applySavedProfile(res.parsed, res.bank);
+    setSaveMapping(true);
+    setPdfPreview({
+      fileName: file.name,
+      account: res.account,
+      holder: res.parsed.holder,
+      bank: res.bank,
+      strategy: res.parsed.strategy,
+      columns: applied.columns,
+      headerIndex: res.parsed.headerIndex,
+      lines: res.parsed.lines,
+      records: applied.records,
+      signature: applied.signature,
+      profileApplied: applied.profileApplied,
+    });
+  }, [readPdf, applySavedProfile]);
+
+  /** Lê uma fila de PDFs em sequência, deduplicando lançamentos entre arquivos. */
+  const runBatch = useCallback(async (files: File[]) => {
+    cancelBatch.current = false;
+    setBatchFinished(false);
+    setBatchSaving(false);
+    setBatchProgress({ current: 0, total: files.length });
+    setBatch(files.map((f) => ({ fileName: f.name, status: "pendente", selected: true, records: [], account: {} })));
+    setBatchRunning(true);
+
+    const seen = new Set<string>();
+    for (let i = 0; i < files.length; i++) {
+      if (cancelBatch.current) break;
+      setBatchProgress({ current: i + 1, total: files.length });
+      setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, status: "lendo" } : it)) ?? prev);
+      // eslint-disable-next-line no-await-in-loop
+      const res = await readPdf(files[i], { askPassword: false });
+      if (!res.ok) {
+        setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, status: "erro", selected: false, error: res.error } : it)) ?? prev);
+        continue;
+      }
+      const applied = applySavedProfile(res.parsed, res.bank);
+      const { records: unique, removed } = dedupeRecords(applied.records, seen);
+      setBatch((prev) =>
+        prev?.map((it, k) =>
+          k === i
+            ? {
+                ...it,
+                status: "pronto",
+                selected: unique.length > 0 && !!res.account.agencia && !!res.account.conta,
+                records: unique,
+                account: res.account,
+                titular: res.parsed.holder?.titular,
+                documento: res.parsed.holder?.documento,
+                bank: res.bank,
+                duplicadosLote: removed,
+              }
+            : it,
+        ) ?? prev,
+      );
+    }
+    setBatchRunning(false);
+  }, [readPdf, applySavedProfile]);
+
+  /** Grava em lote os arquivos selecionados, sem duplicar lançamentos. */
+  const confirmBatch = useCallback(async () => {
+    if (!batch) return;
+    setBatchSaving(true);
+    for (let i = 0; i < batch.length; i++) {
+      const item = batch[i];
+      if (!item.selected || item.status !== "pronto") continue;
+      const { agencia, conta, banco } = item.account;
+      if (!agencia || !conta) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const dup = await checkExisting(item.records, { agencia, conta });
+      const ctx = {
+        agencia, conta, banco,
+        fileName: item.fileName,
+        accountId: null,
+        titular: item.titular ?? null,
+        documento: item.documento ?? null,
+      };
+      // eslint-disable-next-line no-await-in-loop
+      const a = await upsertMany(item.records, ctx);
+      // eslint-disable-next-line no-await-in-loop
+      await upsertManyFromOFX(item.records, `${agencia}/${conta}`);
+      setBatch((prev) =>
+        prev?.map((it, k) =>
+          k === i
+            ? a.ok
+              ? { ...it, status: "importado" as const, importados: a.count, duplicadosBase: dup.existing }
+              : { ...it, status: "erro" as const, error: a.error }
+            : it,
+        ) ?? prev,
+      );
+    }
+    setBatchSaving(false);
+    setBatchFinished(true);
+    toast.success("Importação em lote concluída.");
+  }, [batch, checkExisting, upsertMany, upsertManyFromOFX]);
 
   const handleFile = useCallback(async (file: File) => {
     const name = file.name.toLowerCase();
@@ -207,6 +330,24 @@ export default function Index() {
       setLoading(false);
     }
   }, [processOFXText, handlePdf]);
+
+  /** Entrada do uploader: 1 arquivo segue o fluxo normal, vários vão para o lote. */
+  const handleFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length === 1) { await handleFile(files[0]); return; }
+    const pdfs = files.filter((f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf");
+    const ofx = files.filter((f) => !pdfs.includes(f));
+    if (ofx.length) toast.warning("Importação em lote disponível apenas para PDFs. Envie os OFX individualmente.");
+    if (pdfs.length === 0) return;
+    if (pdfs.length === 1) { await handleFile(pdfs[0]); return; }
+    setLoading(true);
+    try {
+      await runBatch(pdfs);
+    } finally {
+      setLoading(false);
+    }
+  }, [handleFile, runBatch]);
+
 
   const openFilePicker = () => {
     const input = document.createElement("input");
