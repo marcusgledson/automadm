@@ -9,8 +9,13 @@ export interface FinancialRecord {
   documento?: string;
   codigoOperacao?: string;
   fitid?: string;
+  /** Confiança da leitura automática deste lançamento (PDF). */
+  confianca?: "alta" | "media" | "baixa";
+  /** Motivos que tornam o lançamento ambíguo. */
+  avisos?: string[];
   raw: Record<string, unknown>;
 }
+
 
 export interface OFXAccountInfo {
   banco?: string;
