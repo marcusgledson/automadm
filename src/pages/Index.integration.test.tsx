@@ -14,7 +14,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 vi.mock("@/hooks/useBankStatements", () => ({
-  useBankStatements: () => ({ upsertMany }),
+  useBankStatements: () => ({ upsertMany, checkExisting: vi.fn(async () => ({ existing: 0, total: 1 })) }),
 }));
 
 vi.mock("@/hooks/useExpenses", () => ({
@@ -31,6 +31,16 @@ vi.mock("@/components/DataTable", () => ({
   default: ({ records }: { records: unknown[] }) => (
     <div data-testid="data-table">rows:{records.length}</div>
   ),
+}));
+
+vi.mock("@/hooks/useBankAccounts", () => ({
+  useBankAccounts: () => ({
+    accounts: [],
+    loading: false,
+    saveAccount: vi.fn(async () => ({ ok: true, id: "acc1" })),
+    removeAccount: vi.fn(),
+    fetchAll: vi.fn(),
+  }),
 }));
 
 vi.mock("@/hooks/usePdfColumnProfiles", () => ({
