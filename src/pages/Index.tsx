@@ -597,9 +597,38 @@ export default function Index() {
         identifying={identifyingLogo}
         onIdentifyLogo={pdfFile ? () => { void identifyLogoInPreview(); } : undefined}
         onColumnsChange={applyColumnFix}
+        onRecordsChange={(recs) => setPdfPreview((prev) => (prev ? { ...prev, records: recs } : prev))}
+        profileApplied={pdfPreview?.profileApplied}
+        saveMapping={saveMapping}
+        onSaveMappingChange={setSaveMapping}
+        onForgetProfile={
+          pdfPreview?.profileApplied
+            ? () => {
+                const sig = pdfPreview.signature;
+                void removeProfile(sig);
+                setPdfPreview((prev) => (prev ? { ...prev, profileApplied: false } : prev));
+                toast.success("Mapeamento salvo removido.");
+              }
+            : undefined
+        }
         onCancel={() => setPdfPreview(null)}
         onConfirm={confirmPdfPreview}
       />
+
+      <PdfBatchImportDialog
+        open={!!batch}
+        items={batch ?? []}
+        running={batchRunning}
+        saving={batchSaving}
+        finished={batchFinished}
+        progress={batchProgress}
+        onToggle={(i) => setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, selected: !it.selected } : it)) ?? prev)}
+        onCancelRun={() => { cancelBatch.current = true; }}
+        onClose={() => { cancelBatch.current = true; setBatch(null); setBatchFinished(false); }}
+        onConfirm={() => { void confirmBatch(); }}
+      />
+
+
 
 
       <AccountKeyDialog
