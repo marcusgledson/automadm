@@ -568,7 +568,9 @@ export function reparseWithColumns(
   const usable = columns.filter((c) => c.field !== "ignorar");
   if (usable.length === 0) return [];
   const yearHint = yearHintOf(lines.map((l) => l.text).join("\n"));
-  return parseByColumns(lines, usable, headerIndex, yearHint);
+  // Mantém todas as faixas para o agrupamento por x; "ignorar" apenas não é lido.
+  return parseByColumns(lines, columns, headerIndex, yearHint);
+
 }
 
 
