@@ -478,12 +478,14 @@ function parseByLines(lines: string[], yearHint: string) {
     const values = line.match(VALUE_GLOBAL) ?? [];
     if (values.length === 0) continue;
 
+    const avisos: string[] = ["Leitura genérica, sem cabeçalho de colunas"];
     let data: string | undefined;
     if (dm) {
       data = normalizeDate(dm, yearHint);
       lastDate = data;
     } else if (lastDate) {
       data = lastDate; // extrato com data por bloco
+      avisos.push("Data herdada do lançamento anterior");
     } else {
       continue;
     }
@@ -491,11 +493,15 @@ function parseByLines(lines: string[], yearHint: string) {
     // Quando há dois ou mais números, o último costuma ser o saldo acumulado.
     const raw = values.length >= 2 ? values[values.length - 2] : values[values.length - 1];
     let valor = toNumber(raw);
+    if (values.length >= 3) avisos.push("Vários valores na linha; coluna do valor incerta");
 
     const flag = (line.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
     if (flag === "D") valor = -Math.abs(valor);
     if (flag === "C") valor = Math.abs(valor);
     if (/\bd[eé]bito\b/i.test(line)) valor = -Math.abs(valor);
+    if (!flag && valor > 0 && !/\bd[eé]bito\b/i.test(line)) {
+      avisos.push("Sinal (débito/crédito) não explícito na linha");
+    }
 
     const descricao = line
       .replace(dm ? dm[0] : "", " ")
@@ -506,7 +512,8 @@ function parseByLines(lines: string[], yearHint: string) {
       .trim();
     if (!descricao) continue;
 
-    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line));
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line, avisos));
+
   }
   return records;
 }
