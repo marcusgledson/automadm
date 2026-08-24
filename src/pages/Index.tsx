@@ -387,6 +387,38 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={!!pdfDiag} onOpenChange={(o) => { if (!o) setPdfDiag(null); }}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Nenhum lançamento reconhecido no PDF</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-left">
+                <p>{pdfDiag?.motivo}</p>
+                <ul className="text-xs text-muted-foreground">
+                  <li>Arquivo: {pdfDiag?.fileName}</li>
+                  <li>Páginas: {pdfDiag?.pages} · Linhas extraídas: {pdfDiag?.linhas}</li>
+                  <li>Camada de texto: {pdfDiag?.temTexto ? "sim" : "não"}</li>
+                  <li>Cabeçalho da tabela: {pdfDiag?.cabecalhoDetectado ? "reconhecido" : "não reconhecido"}</li>
+                </ul>
+                {pdfDiag?.amostra?.length ? (
+                  <details className="rounded-md border border-border bg-muted/40 p-2">
+                    <summary className="cursor-pointer text-xs font-medium">
+                      Ver primeiras linhas extraídas
+                    </summary>
+                    <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words text-[11px]">
+                      {pdfDiag.amostra.join("\n")}
+                    </pre>
+                  </details>
+                ) : null}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setPdfDiag(null)}>Entendi</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
