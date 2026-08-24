@@ -187,28 +187,74 @@ function labelToField(label: string): ColumnField | undefined {
 const SKIP_LINE =
   /(saldo\s+anterior|saldo\s+final|total\s+(geral|do|de)|p[aá]gina\s+\d|continua(ç|c)?[aã]o|extrato\s+de\s+conta)/i;
 
+/** Rótulos compostos usados na varredura dentro de uma célula única. */
+const INLINE_LABELS: { re: RegExp; field: ColumnField }[] = [
+  { re: /data\s*(?:mov\.?|movimenta[cç][aã]o|lan[cç]amento)?/gi, field: "data" },
+  { re: /hist[oó]rico|descri[cç][aã]o|lan[cç]amentos?|movimenta[cç][aã]o|detalhe/gi, field: "descricao" },
+  { re: /documento|n[º°o]?\.?\s*doc\.?|doc\.?/gi, field: "documento" },
+  { re: /d[eé]bito|sa[ií]da/gi, field: "debito" },
+  { re: /cr[eé]dito|entrada/gi, field: "credito" },
+  { re: /valor(?:\s*\(?r\$\)?)?|vlr\.?/gi, field: "valor" },
+  { re: /saldo(?:\s*\(?r\$\)?)?/gi, field: "saldo" },
+];
+
+/** Converte as células de uma linha em possíveis rótulos de coluna (com x estimado). */
+function headerCandidates(cells: PdfCell[]): { cell: PdfCell; field: ColumnField }[] {
+  const out: { cell: PdfCell; field: ColumnField }[] = [];
+  for (const cell of cells) {
+    const direct = labelToField(cell.text);
+    if (direct) {
+      out.push({ cell, field: direct });
+      continue;
+    }
+    // Célula única contendo vários rótulos ("Data Histórico Valor Saldo")
+    const len = Math.max(cell.text.length, 1);
+    const found: { cell: PdfCell; field: ColumnField }[] = [];
+    for (const { re, field } of INLINE_LABELS) {
+      re.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(cell.text)) !== null) {
+        const x = cell.x + (cell.width * m.index) / len;
+        const width = (cell.width * m[0].length) / len;
+        found.push({ cell: { x, width, text: m[0] }, field });
+      }
+    }
+    if (found.length >= 2) out.push(...found);
+  }
+  // Remove rótulos duplicados do mesmo campo mantendo o primeiro (menor x)
+  const seen = new Set<ColumnField>();
+  return out
+    .sort((a, b) => a.cell.x - b.cell.x)
+    .filter((m) => (seen.has(m.field) ? false : (seen.add(m.field), true)));
+}
+
 /** Detecta a linha de cabeçalho da tabela e monta as faixas de coluna. */
 export function detectColumns(lines: PdfLine[]): { columns: DetectedColumn[]; headerIndex: number } | undefined {
-  for (let i = 0; i < Math.min(lines.length, 120); i++) {
-    const line = lines[i];
-    const mapped = line.cells
-      .map((c) => ({ cell: c, field: labelToField(c.text) }))
-      .filter((m): m is { cell: PdfCell; field: ColumnField } => !!m.field);
+  const limit = Math.min(lines.length, 200);
+  for (let i = 0; i < limit; i++) {
+    // Considera a linha isolada e, em seguida, junto da seguinte (cabeçalho em 2 linhas)
+    const attempts: { cells: PdfCell[]; index: number }[] = [{ cells: lines[i].cells, index: i }];
+    if (i + 1 < limit) {
+      attempts.push({ cells: [...lines[i].cells, ...lines[i + 1].cells], index: i + 1 });
+    }
 
-    const fields = new Set(mapped.map((m) => m.field));
-    const hasValue = fields.has("valor") || fields.has("debito") || fields.has("credito");
-    if (!(fields.has("data") && hasValue && mapped.length >= 3)) continue;
+    for (const attempt of attempts) {
+      const mapped = headerCandidates(attempt.cells);
+      const fields = new Set(mapped.map((m) => m.field));
+      const hasValue = fields.has("valor") || fields.has("debito") || fields.has("credito");
+      if (!(fields.has("data") && hasValue && mapped.length >= 3)) continue;
 
-    const sorted = mapped.sort((a, b) => a.cell.x - b.cell.x);
-    const columns: DetectedColumn[] = sorted.map((m, idx) => {
-      const start = idx === 0 ? -Infinity : (sorted[idx - 1].cell.x + sorted[idx - 1].cell.width + m.cell.x) / 2;
-      const end =
-        idx === sorted.length - 1
-          ? Infinity
-          : (m.cell.x + m.cell.width + sorted[idx + 1].cell.x) / 2;
-      return { label: m.cell.text, field: m.field, start, end };
-    });
-    return { columns, headerIndex: i };
+      const sorted = mapped.sort((a, b) => a.cell.x - b.cell.x);
+      const columns: DetectedColumn[] = sorted.map((m, idx) => {
+        const start = idx === 0 ? -Infinity : (sorted[idx - 1].cell.x + sorted[idx - 1].cell.width + m.cell.x) / 2;
+        const end =
+          idx === sorted.length - 1
+            ? Infinity
+            : (m.cell.x + m.cell.width + sorted[idx + 1].cell.x) / 2;
+        return { label: m.cell.text, field: m.field, start, end };
+      });
+      return { columns, headerIndex: attempt.index };
+    }
   }
   return undefined;
 }
