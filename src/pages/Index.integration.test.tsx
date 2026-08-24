@@ -14,7 +14,7 @@ vi.mock("react-router-dom", () => ({
 }));
 
 vi.mock("@/hooks/useBankStatements", () => ({
-  useBankStatements: () => ({ upsertMany }),
+  useBankStatements: () => ({ upsertMany, checkExisting: vi.fn(async () => ({ existing: 0, total: 1 })) }),
 }));
 
 vi.mock("@/hooks/useExpenses", () => ({
@@ -33,7 +33,28 @@ vi.mock("@/components/DataTable", () => ({
   ),
 }));
 
+vi.mock("@/hooks/useBankAccounts", () => ({
+  useBankAccounts: () => ({
+    accounts: [],
+    loading: false,
+    saveAccount: vi.fn(async () => ({ ok: true, id: "acc1" })),
+    removeAccount: vi.fn(),
+    fetchAll: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/usePdfColumnProfiles", () => ({
+  usePdfColumnProfiles: () => ({
+    profiles: [],
+    fetchAll: vi.fn(),
+    findBySignature: () => undefined,
+    saveProfile: vi.fn(async () => ({ ok: true })),
+    removeProfile: vi.fn(),
+  }),
+}));
+
 vi.mock("@/integrations/supabase/client", () => ({
+
   supabase: {
     functions: {
       invoke: vi.fn(async (name: string) => {
@@ -106,6 +127,10 @@ describe("Index — fluxo completo Drive → preview → editar → confirmar", 
     expect(radios).toHaveLength(2);
     fireEvent.click(radios[1]);
     fireEvent.click(within(dialog).getByRole("button", { name: /importar conta selecionada/i }));
+
+    // 3b) Confirma a chave da conta (agência/conta) extraída do arquivo
+    const keyDialog = await screen.findByRole("dialog");
+    fireEvent.click(within(keyDialog).getByRole("button", { name: /confirmar e carregar/i }));
 
     // 4) Tela principal com a conta selecionada (5678 / 22222-2, 2 lançamentos)
     await waitFor(() =>

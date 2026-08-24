@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landmark, PencilLine, UserRound } from "lucide-react";
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, reparseWithColumns, type PdfDiagnostics, type DetectedColumn, type PdfLine } from "@/lib/pdfStatementParser";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, reparseWithColumns, headerSignature, type PdfDiagnostics, type DetectedColumn, type PdfLine, type ParsedPdfStatement } from "@/lib/pdfStatementParser";
 import { detectBankFromText, needsLogoFallback, type BankDetection } from "@/lib/bankDetect";
 
 import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
@@ -17,6 +17,9 @@ import AccountKeyDialog, { type AccountKeyResult } from "@/components/AccountKey
 import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import EditableRecordsDialog from "@/components/EditableRecordsDialog";
 import PdfPreviewDialog from "@/components/PdfPreviewDialog";
+import PdfBatchImportDialog, { type BatchItem } from "@/components/PdfBatchImportDialog";
+import { usePdfColumnProfiles } from "@/hooks/usePdfColumnProfiles";
+import { dedupeRecords } from "@/lib/dedupeRecords";
 
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
@@ -47,7 +50,17 @@ interface PdfPreviewState {
   headerIndex?: number;
   lines: PdfLine[];
   records: FinancialRecord[];
+  /** Assinatura do layout, para memorizar o mapeamento. */
+  signature: string;
+  /** Um mapeamento salvo foi aplicado automaticamente. */
+  profileApplied?: boolean;
 }
+
+type ReadPdfResult =
+  | { ok: true; parsed: ParsedPdfStatement; bank?: BankDetection; account: OFXAccountInfo; password?: string; diagnostics?: undefined; error?: undefined }
+  | { ok: false; error: string; diagnostics?: PdfDiagnostics };
+
+
 
 
 export default function Index() {
@@ -68,11 +81,20 @@ export default function Index() {
   const [pdfDiag, setPdfDiag] = useState<(PdfDiagnostics & { fileName: string }) | null>(null);
   const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
   const [identifyingLogo, setIdentifyingLogo] = useState(false);
+  const [saveMapping, setSaveMapping] = useState(true);
 
+  const [batch, setBatch] = useState<BatchItem[] | null>(null);
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchSaving, setBatchSaving] = useState(false);
+  const [batchFinished, setBatchFinished] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
+  const cancelBatch = useRef(false);
 
   const { upsertMany, checkExisting } = useBankStatements();
   const { accounts, saveAccount } = useBankAccounts();
   const { upsertManyFromOFX } = useExpenses();
+  const { findBySignature, saveProfile, removeProfile } = usePdfColumnProfiles();
+
 
   const processOFXText = useCallback((text: string, originFileName: string) => {
     const parsed = parseOFXFull(text);
@@ -107,66 +129,187 @@ export default function Index() {
     return { name: data.banco as string, code: (data.codigo as string) || undefined };
   }, []);
 
-  const handlePdf = useCallback(async (file: File) => {
-    let password: string | undefined;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const parsed = await parsePdfStatement(file, password);
-        if (parsed.records.length === 0) {
-          setPdfDiag({ fileName: file.name, ...parsed.diagnostics });
-          return;
+  /** Aplica automaticamente um mapeamento de colunas salvo para o mesmo layout. */
+  const applySavedProfile = useCallback(
+    (parsed: ParsedPdfStatement, bank?: BankDetection) => {
+      const signature = headerSignature({
+        bankCode: bank?.code,
+        bankName: bank?.name,
+        strategy: parsed.strategy,
+        columns: parsed.columns,
+      });
+      const prof = findBySignature(signature);
+      if (prof && parsed.columns?.length && prof.columns?.length === parsed.columns.length) {
+        const merged = parsed.columns.map((c, i) => ({ ...c, field: prof.columns[i].field }));
+        const re = reparseWithColumns(parsed.lines, merged, parsed.headerIndex ?? 0);
+        if (re.length > 0) {
+          return { signature, columns: merged, records: re, profileApplied: true };
         }
-        setPdfFile({ file, password });
-        let bank = parsed.bank;
-        const account = { ...parsed.account };
-
-        // Fallback automático: se o nome/código não deram confiança, tenta a logo (IA).
-        if (needsLogoFallback(bank)) {
-          try {
-            const byLogo = await identifyLogoFor(file, password);
-            if (byLogo) {
-              bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
-              account.banco = byLogo.name;
-            }
-          } catch (e) {
-            console.warn("Identificação por logo indisponível", e);
-          }
-        } else if (bank) {
-          account.banco = bank.name;
-        }
-
-        setPdfPreview({
-          fileName: file.name,
-          account,
-          holder: parsed.holder,
-          bank,
-          strategy: parsed.strategy,
-          columns: parsed.columns,
-          headerIndex: parsed.headerIndex,
-          lines: parsed.lines,
-          records: parsed.records,
-        });
-        return;
-
-      } catch (err) {
-        if (err instanceof PdfPasswordRequiredError) {
-          const input = window.prompt(
-            err.wrongPassword
-              ? "Senha incorreta. Informe a senha do PDF:"
-              : "Este PDF está protegido. Informe a senha:",
-          );
-          if (!input) { toast.error("Importação cancelada."); return; }
-          password = input;
-          continue;
-        }
-        console.error(err);
-        toast.error("Erro ao ler o PDF do extrato.");
-        return;
       }
-    }
-    toast.error("Não foi possível abrir o PDF (senha inválida).");
-  }, [identifyLogoFor]);
+      return { signature, columns: parsed.columns, records: parsed.records, profileApplied: false };
+    },
+    [findBySignature],
+  );
 
+  /**
+   * Lê um PDF (pedindo senha quando necessário) e resolve o banco,
+   * acionando a identificação por logo quando a confiança é baixa.
+   */
+  const readPdf = useCallback(
+    async (
+      file: File,
+      opts: { askPassword?: boolean; logoFallback?: boolean } = {},
+    ): Promise<ReadPdfResult> => {
+
+      const { askPassword = true, logoFallback = true } = opts;
+      let password: string | undefined;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const parsed = await parsePdfStatement(file, password);
+          if (parsed.records.length === 0) {
+            return { ok: false, error: parsed.diagnostics.motivo ?? "Nenhum lançamento reconhecido.", diagnostics: parsed.diagnostics };
+          }
+          let bank = parsed.bank;
+          const account: OFXAccountInfo = { ...parsed.account };
+          if (logoFallback && needsLogoFallback(bank)) {
+            try {
+              const byLogo = await identifyLogoFor(file, password);
+              if (byLogo) {
+                bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
+                account.banco = byLogo.name;
+              }
+            } catch (e) {
+              console.warn("Identificação por logo indisponível", e);
+            }
+          } else if (bank) {
+            account.banco = bank.name;
+          }
+          return { ok: true, parsed, bank, account, password };
+        } catch (err) {
+          if (err instanceof PdfPasswordRequiredError) {
+            if (!askPassword) return { ok: false, error: "PDF protegido por senha — importe este arquivo individualmente." };
+            const input = window.prompt(
+              err.wrongPassword
+                ? `Senha incorreta. Informe a senha do PDF (${file.name}):`
+                : `Este PDF está protegido. Informe a senha (${file.name}):`,
+            );
+            if (!input) return { ok: false, error: "Importação cancelada (senha não informada)." };
+            password = input;
+            continue;
+          }
+          console.error(err);
+          return { ok: false, error: "Erro ao ler o PDF do extrato." };
+        }
+      }
+      return { ok: false, error: "Não foi possível abrir o PDF (senha inválida)." };
+    },
+    [identifyLogoFor],
+  );
+
+  const handlePdf = useCallback(async (file: File) => {
+    const res = await readPdf(file);
+    if (!res.ok) {
+      if (res.diagnostics) setPdfDiag({ fileName: file.name, ...res.diagnostics });
+      else toast.error(res.error);
+      return;
+    }
+    setPdfFile({ file, password: res.password });
+    const applied = applySavedProfile(res.parsed, res.bank);
+    setSaveMapping(true);
+    setPdfPreview({
+      fileName: file.name,
+      account: res.account,
+      holder: res.parsed.holder,
+      bank: res.bank,
+      strategy: res.parsed.strategy,
+      columns: applied.columns,
+      headerIndex: res.parsed.headerIndex,
+      lines: res.parsed.lines,
+      records: applied.records,
+      signature: applied.signature,
+      profileApplied: applied.profileApplied,
+    });
+  }, [readPdf, applySavedProfile]);
+
+  /** Lê uma fila de PDFs em sequência, deduplicando lançamentos entre arquivos. */
+  const runBatch = useCallback(async (files: File[]) => {
+    cancelBatch.current = false;
+    setBatchFinished(false);
+    setBatchSaving(false);
+    setBatchProgress({ current: 0, total: files.length });
+    setBatch(files.map((f) => ({ fileName: f.name, status: "pendente", selected: true, records: [], account: {} })));
+    setBatchRunning(true);
+
+    const seen = new Set<string>();
+    for (let i = 0; i < files.length; i++) {
+      if (cancelBatch.current) break;
+      setBatchProgress({ current: i + 1, total: files.length });
+      setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, status: "lendo" } : it)) ?? prev);
+      // eslint-disable-next-line no-await-in-loop
+      const res = await readPdf(files[i], { askPassword: false });
+      if (!res.ok) {
+        setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, status: "erro", selected: false, error: res.error } : it)) ?? prev);
+        continue;
+      }
+      const applied = applySavedProfile(res.parsed, res.bank);
+      const { records: unique, removed } = dedupeRecords(applied.records, seen);
+      setBatch((prev) =>
+        prev?.map((it, k) =>
+          k === i
+            ? {
+                ...it,
+                status: "pronto",
+                selected: unique.length > 0 && !!res.account.agencia && !!res.account.conta,
+                records: unique,
+                account: res.account,
+                titular: res.parsed.holder?.titular,
+                documento: res.parsed.holder?.documento,
+                bank: res.bank,
+                duplicadosLote: removed,
+              }
+            : it,
+        ) ?? prev,
+      );
+    }
+    setBatchRunning(false);
+  }, [readPdf, applySavedProfile]);
+
+  /** Grava em lote os arquivos selecionados, sem duplicar lançamentos. */
+  const confirmBatch = useCallback(async () => {
+    if (!batch) return;
+    setBatchSaving(true);
+    for (let i = 0; i < batch.length; i++) {
+      const item = batch[i];
+      if (!item.selected || item.status !== "pronto") continue;
+      const { agencia, conta, banco } = item.account;
+      if (!agencia || !conta) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const dup = await checkExisting(item.records, { agencia, conta });
+      const ctx = {
+        agencia, conta, banco,
+        fileName: item.fileName,
+        accountId: null,
+        titular: item.titular ?? null,
+        documento: item.documento ?? null,
+      };
+      // eslint-disable-next-line no-await-in-loop
+      const a = await upsertMany(item.records, ctx);
+      // eslint-disable-next-line no-await-in-loop
+      await upsertManyFromOFX(item.records, `${agencia}/${conta}`);
+      setBatch((prev) =>
+        prev?.map((it, k) =>
+          k === i
+            ? a.ok
+              ? { ...it, status: "importado" as const, importados: a.count, duplicadosBase: dup.existing }
+              : { ...it, status: "erro" as const, error: a.error }
+            : it,
+        ) ?? prev,
+      );
+    }
+    setBatchSaving(false);
+    setBatchFinished(true);
+    toast.success("Importação em lote concluída.");
+  }, [batch, checkExisting, upsertMany, upsertManyFromOFX]);
 
   const handleFile = useCallback(async (file: File) => {
     const name = file.name.toLowerCase();
@@ -190,6 +333,24 @@ export default function Index() {
       setLoading(false);
     }
   }, [processOFXText, handlePdf]);
+
+  /** Entrada do uploader: 1 arquivo segue o fluxo normal, vários vão para o lote. */
+  const handleFiles = useCallback(async (files: File[]) => {
+    if (files.length === 0) return;
+    if (files.length === 1) { await handleFile(files[0]); return; }
+    const pdfs = files.filter((f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf");
+    const ofx = files.filter((f) => !pdfs.includes(f));
+    if (ofx.length) toast.warning("Importação em lote disponível apenas para PDFs. Envie os OFX individualmente.");
+    if (pdfs.length === 0) return;
+    if (pdfs.length === 1) { await handleFile(pdfs[0]); return; }
+    setLoading(true);
+    try {
+      await runBatch(pdfs);
+    } finally {
+      setLoading(false);
+    }
+  }, [handleFile, runBatch]);
+
 
   const openFilePicker = () => {
     const input = document.createElement("input");
@@ -248,10 +409,19 @@ export default function Index() {
     );
   }, [pdfFile, identifyLogo]);
 
-  /** Confirma o preview do PDF e segue para a chave da conta. */
+  /** Confirma o preview do PDF, memoriza o mapeamento e segue para a chave da conta. */
   const confirmPdfPreview = useCallback(() => {
     setPdfPreview((prev) => {
       if (prev) {
+        if (saveMapping && prev.columns?.length) {
+          void saveProfile({
+            signature: prev.signature,
+            bankCode: prev.bank?.code,
+            bankName: prev.bank?.name,
+            strategy: prev.strategy,
+            columns: prev.columns,
+          });
+        }
         setPendingParsed({
           records: prev.records,
           account: prev.account,
@@ -260,9 +430,11 @@ export default function Index() {
           bank: prev.bank,
         });
       }
+
       return null;
     });
-  }, []);
+  }, [saveMapping, saveProfile]);
+
 
 
   const applyAccountKey = useCallback(async (res: AccountKeyResult) => {
@@ -359,7 +531,7 @@ export default function Index() {
         {records.length === 0 ? (
           <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-stretch justify-center gap-4 py-4">
             <div className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
-              <FileUploader onFileSelected={handleFile} loading={loading} />
+              <FileUploader onFilesSelected={(files) => { void handleFiles(files); }} loading={loading} />
             </div>
             <GoogleDriveOFXImport
               onOFXLoaded={({ text, fileName: fn }) => processOFXText(text, fn)}
@@ -428,9 +600,38 @@ export default function Index() {
         identifying={identifyingLogo}
         onIdentifyLogo={pdfFile ? () => { void identifyLogoInPreview(); } : undefined}
         onColumnsChange={applyColumnFix}
+        onRecordsChange={(recs) => setPdfPreview((prev) => (prev ? { ...prev, records: recs } : prev))}
+        profileApplied={pdfPreview?.profileApplied}
+        saveMapping={saveMapping}
+        onSaveMappingChange={setSaveMapping}
+        onForgetProfile={
+          pdfPreview?.profileApplied
+            ? () => {
+                const sig = pdfPreview.signature;
+                void removeProfile(sig);
+                setPdfPreview((prev) => (prev ? { ...prev, profileApplied: false } : prev));
+                toast.success("Mapeamento salvo removido.");
+              }
+            : undefined
+        }
         onCancel={() => setPdfPreview(null)}
         onConfirm={confirmPdfPreview}
       />
+
+      <PdfBatchImportDialog
+        open={!!batch}
+        items={batch ?? []}
+        running={batchRunning}
+        saving={batchSaving}
+        finished={batchFinished}
+        progress={batchProgress}
+        onToggle={(i) => setBatch((prev) => prev?.map((it, k) => (k === i ? { ...it, selected: !it.selected } : it)) ?? prev)}
+        onCancelRun={() => { cancelBatch.current = true; }}
+        onClose={() => { cancelBatch.current = true; setBatch(null); setBatchFinished(false); }}
+        onConfirm={() => { void confirmBatch(); }}
+      />
+
+
 
 
       <AccountKeyDialog

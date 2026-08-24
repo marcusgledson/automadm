@@ -275,6 +275,13 @@ function cellsToColumns(line: PdfLine, columns: DetectedColumn[]): string[] {
   return buckets.map((b) => b.join(" ").replace(/\s+/g, " ").trim());
 }
 
+/** Converte a lista de avisos em um nível de confiança. */
+export function confidenceFromFlags(avisos: string[]): "alta" | "media" | "baixa" {
+  if (avisos.length === 0) return "alta";
+  if (avisos.length === 1) return "media";
+  return "baixa";
+}
+
 function buildRecord(
   data: string,
   descricao: string,
@@ -283,8 +290,12 @@ function buildRecord(
   tipoLabel: string | undefined,
   categoria: string | undefined,
   rawLine: string,
+  avisos: string[] = [],
 ): FinancialRecord {
   const tipo = classifyType(valor);
+  const flags = [...avisos];
+  if (!descricao || descricao === "Lançamento") flags.push("Descrição não identificada");
+  if (!valor) flags.push("Valor zerado ou não reconhecido");
   return {
     data,
     lancamento: tipoLabel || tipo,
@@ -296,9 +307,12 @@ function buildRecord(
     documento: documento || undefined,
     codigoOperacao: undefined,
     fitid: `PDF|${data}|${valor}|${descricao}`.slice(0, 120),
+    confianca: confidenceFromFlags(flags),
+    avisos: flags.length ? flags : undefined,
     raw: { linha: rawLine, origem: "PDF" },
   };
 }
+
 
 function yearHintOf(text: string) {
   return text.match(/\b(20\d{2})\b/)?.[1] ?? String(new Date().getFullYear());
@@ -358,7 +372,10 @@ function parseByBlocks(textLines: string[]): FinancialRecord[] {
 
     const abs = Math.abs(toNumber(vm[1]));
     const valor = (sign ?? 1) * abs;
-    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine));
+    const avisos: string[] = [];
+    if (sign === undefined) avisos.push("Sinal presumido como entrada (seção de entradas/saídas não identificada)");
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine, avisos));
+
   }
 
   return records;
@@ -390,13 +407,16 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
     const descricao = [get("descricao")].filter(Boolean).join(" ").trim();
     const hasValue = VALUE_ANY.test(line.text);
 
+    const avisos: string[] = [];
     let data: string | undefined;
     if (dm) {
       data = normalizeDate(dm, yearHint);
       lastDate = data;
+      if (!dm[3]) avisos.push("Ano não informado na linha; assumido " + yearHint);
     } else if (hasValue && lastDate) {
       // Extrato com data por bloco: herda a data do lançamento anterior
       data = lastDate;
+      avisos.push("Data herdada do lançamento anterior");
     } else {
       // Continuação da descrição do lançamento anterior
       if (descricao && records.length > 0) {
@@ -422,7 +442,10 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
       valor = toNumber(vm[1]);
       const flag = (valorCol.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
       if (flag === "D") valor = -Math.abs(valor);
-      if (flag === "C") valor = Math.abs(valor);
+      else if (flag === "C") valor = Math.abs(valor);
+      else if (valor > 0 && !/[-()]/.test(valorCol)) {
+        avisos.push("Sinal (débito/crédito) não explícito na linha");
+      }
     }
     if (!valor && !descricao) continue;
 
@@ -435,8 +458,10 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
         get("tipo") || undefined,
         get("categoria") || undefined,
         line.text,
+        avisos,
       ),
     );
+
   }
   return records;
 }
@@ -453,12 +478,14 @@ function parseByLines(lines: string[], yearHint: string) {
     const values = line.match(VALUE_GLOBAL) ?? [];
     if (values.length === 0) continue;
 
+    const avisos: string[] = ["Leitura genérica, sem cabeçalho de colunas"];
     let data: string | undefined;
     if (dm) {
       data = normalizeDate(dm, yearHint);
       lastDate = data;
     } else if (lastDate) {
       data = lastDate; // extrato com data por bloco
+      avisos.push("Data herdada do lançamento anterior");
     } else {
       continue;
     }
@@ -466,11 +493,15 @@ function parseByLines(lines: string[], yearHint: string) {
     // Quando há dois ou mais números, o último costuma ser o saldo acumulado.
     const raw = values.length >= 2 ? values[values.length - 2] : values[values.length - 1];
     let valor = toNumber(raw);
+    if (values.length >= 3) avisos.push("Vários valores na linha; coluna do valor incerta");
 
     const flag = (line.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
     if (flag === "D") valor = -Math.abs(valor);
     if (flag === "C") valor = Math.abs(valor);
     if (/\bd[eé]bito\b/i.test(line)) valor = -Math.abs(valor);
+    if (!flag && valor > 0 && !/\bd[eé]bito\b/i.test(line)) {
+      avisos.push("Sinal (débito/crédito) não explícito na linha");
+    }
 
     const descricao = line
       .replace(dm ? dm[0] : "", " ")
@@ -481,7 +512,8 @@ function parseByLines(lines: string[], yearHint: string) {
       .trim();
     if (!descricao) continue;
 
-    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line));
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line, avisos));
+
   }
   return records;
 }
@@ -555,6 +587,36 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     diagnostics,
   };
 }
+
+/**
+ * Assinatura estável de um layout de extrato: banco + estratégia + rótulos do
+ * cabeçalho. Usada para reaplicar automaticamente um mapeamento salvo.
+ */
+export function headerSignature(input: {
+  bankCode?: string;
+  bankName?: string;
+  strategy: "colunas" | "linhas" | "blocos";
+  columns?: { label: string }[];
+}): string {
+  const bank = (input.bankCode || input.bankName || "desconhecido")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "");
+  const labels = (input.columns ?? [])
+    .map((c) =>
+      c.label
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, ""),
+    )
+    .filter(Boolean)
+    .join("|");
+  return `${bank}::${input.strategy}::${labels}`;
+}
+
+
 
 /**
  * Reprocessa os lançamentos usando um mapeamento de colunas corrigido pelo usuário.
