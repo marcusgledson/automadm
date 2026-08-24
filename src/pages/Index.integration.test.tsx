@@ -33,7 +33,18 @@ vi.mock("@/components/DataTable", () => ({
   ),
 }));
 
+vi.mock("@/hooks/usePdfColumnProfiles", () => ({
+  usePdfColumnProfiles: () => ({
+    profiles: [],
+    fetchAll: vi.fn(),
+    findBySignature: () => undefined,
+    saveProfile: vi.fn(async () => ({ ok: true })),
+    removeProfile: vi.fn(),
+  }),
+}));
+
 vi.mock("@/integrations/supabase/client", () => ({
+
   supabase: {
     functions: {
       invoke: vi.fn(async (name: string) => {
