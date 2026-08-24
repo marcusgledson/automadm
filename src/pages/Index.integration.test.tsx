@@ -118,6 +118,10 @@ describe("Index — fluxo completo Drive → preview → editar → confirmar", 
     fireEvent.click(radios[1]);
     fireEvent.click(within(dialog).getByRole("button", { name: /importar conta selecionada/i }));
 
+    // 3b) Confirma a chave da conta (agência/conta) extraída do arquivo
+    const keyDialog = await screen.findByRole("dialog");
+    fireEvent.click(within(keyDialog).getByRole("button", { name: /confirmar e carregar/i }));
+
     // 4) Tela principal com a conta selecionada (5678 / 22222-2, 2 lançamentos)
     await waitFor(() =>
       expect(screen.getByText(/Análise do Extrato/i)).toBeInTheDocument(),
