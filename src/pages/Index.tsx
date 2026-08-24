@@ -154,10 +154,8 @@ export default function Index() {
     async (
       file: File,
       opts: { askPassword?: boolean; logoFallback?: boolean } = {},
-    ): Promise<
-      | { ok: true; parsed: ParsedPdfStatement; bank?: BankDetection; account: OFXAccountInfo; password?: string }
-      | { ok: false; error: string; diagnostics?: PdfDiagnostics }
-    > => {
+    ): Promise<ReadPdfResult> => {
+
       const { askPassword = true, logoFallback = true } = opts;
       let password: string | undefined;
       for (let attempt = 0; attempt < 3; attempt++) {
