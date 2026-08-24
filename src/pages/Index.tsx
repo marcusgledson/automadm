@@ -165,7 +165,8 @@ export default function Index() {
       }
     }
     toast.error("Não foi possível abrir o PDF (senha inválida).");
-  }, []);
+  }, [identifyLogoFor]);
+
 
   const handleFile = useCallback(async (file: File) => {
     const name = file.name.toLowerCase();
