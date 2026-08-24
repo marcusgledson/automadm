@@ -84,8 +84,10 @@ export async function extractPdfLines(file: File, password?: string): Promise<st
 }
 
 function toNumber(br: string): number {
-  const neg = /^\(.*\)$/.test(br.trim()) || br.trim().startsWith("-");
-  const n = parseFloat(br.replace(/[()\s]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
+  const t = br.replace(/R\$/gi, "").trim();
+  const neg = /^\(.*\)$/.test(t) || t.startsWith("-") || /-\s*$/.test(t);
+  const n =
+    parseFloat(t.replace(/[()\s-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
   return neg ? -Math.abs(n) : n;
 }
 
