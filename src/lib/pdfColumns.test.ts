@@ -55,3 +55,36 @@ describe("parsePdfStatementLayout", () => {
     expect(parsed.records.map((r) => r.valor)).toEqual([-250, 3000]);
   });
 });
+
+describe("layouts adicionais", () => {
+  it("reconhece cabeçalho em célula única (Data Histórico Valor Saldo)", () => {
+    const lines = [
+      line(1, 700, [[40, "Data Histórico Valor Saldo"]]),
+      line(1, 680, [[40, "01/05/2026"], [120, "PIX ENVIADO"], [330, "100,00-"], [430, "900,00"]]),
+    ];
+    const res = detectColumns(lines);
+    expect(res?.columns.map((c) => c.field)).toEqual(["data", "descricao", "valor", "saldo"]);
+    const parsed = parsePdfStatementLayout(lines);
+    expect(parsed.records).toHaveLength(1);
+    expect(parsed.records[0].valor).toBe(-100);
+  });
+
+  it("herda a data do bloco anterior e ignora o saldo no fallback", () => {
+    const lines = [
+      line(1, 700, [[40, "02/06/2026 COMPRA MERCADO R$ 80,00 1.000,00"]]),
+      line(1, 690, [[40, "PAGAMENTO BOLETO 120,00 880,00"]]),
+    ];
+    const parsed = parsePdfStatementLayout(lines);
+    expect(parsed.strategy).toBe("linhas");
+    expect(parsed.records).toHaveLength(2);
+    expect(parsed.records.map((r) => r.data)).toEqual(["02/06/2026", "02/06/2026"]);
+    expect(parsed.records.map((r) => r.valor)).toEqual([80, 120]);
+  });
+
+  it("informa diagnóstico quando não há camada de texto", () => {
+    const parsed = parsePdfStatementLayout([]);
+    expect(parsed.records).toHaveLength(0);
+    expect(parsed.diagnostics.temTexto).toBe(false);
+    expect(parsed.diagnostics.motivo).toContain("camada de texto");
+  });
+});
