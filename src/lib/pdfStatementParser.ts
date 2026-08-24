@@ -488,7 +488,10 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
 
   const agencia = text.match(/ag[êe]ncia[:\s]*([\d]{3,6})/i)?.[1]
     ?? text.match(/\bAg\.?[:\s]*([\d]{3,6})/i)?.[1];
-  const conta = text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1]
+  const conta = text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-[\dxX])/i)?.[1]
+    ?? text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1]
+    // Nubank e similares quebram a linha entre o rótulo "Conta" e o número.
+    ?? text.match(/conta(?:\s*corrente)?\s*[:\s]*\n\s*([\d]{5,12}-[\dxX])/i)?.[1]
     ?? text.match(/\bC\/?C[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1];
 
   const bank = detectBankFromText(text);
@@ -497,10 +500,14 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
 
   const detected = detectColumns(lines);
   let records: FinancialRecord[] = [];
-  let strategy: "colunas" | "linhas" = "linhas";
+  let strategy: "colunas" | "linhas" | "blocos" = "linhas";
   if (detected) {
     records = parseByColumns(lines, detected.columns, detected.headerIndex, yearHint);
     strategy = "colunas";
+  }
+  if (records.length === 0) {
+    records = parseByBlocks(textLines);
+    strategy = "blocos";
   }
   if (records.length === 0) {
     records = parseByLines(textLines, yearHint);
