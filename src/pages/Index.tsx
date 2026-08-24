@@ -430,7 +430,8 @@ export default function Index() {
 
       return null;
     });
-  }, []);
+  }, [saveMapping, saveProfile]);
+
 
 
   const applyAccountKey = useCallback(async (res: AccountKeyResult) => {
