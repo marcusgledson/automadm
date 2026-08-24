@@ -407,13 +407,16 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
     const descricao = [get("descricao")].filter(Boolean).join(" ").trim();
     const hasValue = VALUE_ANY.test(line.text);
 
+    const avisos: string[] = [];
     let data: string | undefined;
     if (dm) {
       data = normalizeDate(dm, yearHint);
       lastDate = data;
+      if (!dm[3]) avisos.push("Ano não informado na linha; assumido " + yearHint);
     } else if (hasValue && lastDate) {
       // Extrato com data por bloco: herda a data do lançamento anterior
       data = lastDate;
+      avisos.push("Data herdada do lançamento anterior");
     } else {
       // Continuação da descrição do lançamento anterior
       if (descricao && records.length > 0) {
@@ -439,7 +442,10 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
       valor = toNumber(vm[1]);
       const flag = (valorCol.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
       if (flag === "D") valor = -Math.abs(valor);
-      if (flag === "C") valor = Math.abs(valor);
+      else if (flag === "C") valor = Math.abs(valor);
+      else if (valor > 0 && !/[-()]/.test(valorCol)) {
+        avisos.push("Sinal (débito/crédito) não explícito na linha");
+      }
     }
     if (!valor && !descricao) continue;
 
@@ -452,8 +458,10 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
         get("tipo") || undefined,
         get("categoria") || undefined,
         line.text,
+        avisos,
       ),
     );
+
   }
   return records;
 }
