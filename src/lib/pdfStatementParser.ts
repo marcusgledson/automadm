@@ -152,12 +152,17 @@ export interface ParsedPdfStatement {
   records: FinancialRecord[];
   /** Colunas reconhecidas quando o extrato tem cabeçalho tabular. */
   columns?: DetectedColumn[];
+  /** Índice da linha de cabeçalho (para reprocessar com colunas corrigidas). */
+  headerIndex?: number;
+  /** Layout bruto do PDF, permitindo reprocessamento sem reabrir o arquivo. */
+  lines: PdfLine[];
   /** Estratégia utilizada na leitura. */
   strategy: "colunas" | "linhas" | "blocos";
   /** Texto completo (para detecções adicionais). */
   text: string;
   diagnostics: PdfDiagnostics;
 }
+
 
 const VALUE_ANY = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/;
 const VALUE_GLOBAL = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/g;
