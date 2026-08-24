@@ -342,7 +342,7 @@ function parseByBlocks(textLines: string[]): FinancialRecord[] {
     if (!vm) {
       // Linha de continuação: complementa a descrição do último lançamento.
       const last = records[records.length - 1];
-      if (last && !/^\d/.test(line) && last.descricao.length < 240) {
+      if (last && line.length <= 120 && last.descricao.length < 240) {
         last.descricao = `${last.descricao} ${line}`.replace(/\s+/g, " ").trim();
       }
       continue;
