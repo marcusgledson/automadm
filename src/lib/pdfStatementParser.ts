@@ -153,7 +153,7 @@ export interface ParsedPdfStatement {
   /** Colunas reconhecidas quando o extrato tem cabeçalho tabular. */
   columns?: DetectedColumn[];
   /** Estratégia utilizada na leitura. */
-  strategy: "colunas" | "linhas";
+  strategy: "colunas" | "linhas" | "blocos";
   /** Texto completo (para detecções adicionais). */
   text: string;
   diagnostics: PdfDiagnostics;
@@ -299,6 +299,66 @@ function yearHintOf(text: string) {
   return text.match(/\b(20\d{2})\b/)?.[1] ?? String(new Date().getFullYear());
 }
 
+/** Meses abreviados usados em extratos com data por bloco (ex.: Nubank "04 JAN 2022"). */
+const MONTHS: Record<string, string> = {
+  jan: "01", fev: "02", mar: "03", abr: "04", mai: "05", jun: "06",
+  jul: "07", ago: "08", set: "09", out: "10", nov: "11", dez: "12",
+};
+
+const BLOCK_DATE = /^(\d{1,2})\s+([A-Za-zçÇ]{3})[A-Za-zçÇ.]*\s+(\d{4})\b/;
+const BLOCK_SKIP =
+  /^(saldo\s+(do\s+dia|inicial|final)|rendimento|total\s+de\s+(entradas|sa[ií]das)|movimenta[cç][õo]es|valores\s+em|tem\s+alguma\s+d[úu]vida|atendimento|cnpj|cpf\b)/i;
+
+/**
+ * Extratos sem cabeçalho tabular, com a data no início de cada bloco e as
+ * seções "Total de entradas" / "Total de saídas" definindo o sinal (padrão Nubank).
+ */
+function parseByBlocks(textLines: string[]): FinancialRecord[] {
+  const records: FinancialRecord[] = [];
+  let data: string | undefined;
+  let sign: 1 | -1 | undefined;
+
+  for (const rawLine of textLines) {
+    let line = rawLine.replace(/\s+/g, " ").trim();
+    if (!line) continue;
+
+    const bd = line.match(BLOCK_DATE);
+    if (bd) {
+      const mm = MONTHS[bd[2].toLowerCase()];
+      if (mm) {
+        data = `${bd[1].padStart(2, "0")}/${mm}/${bd[3]}`;
+        sign = undefined;
+        line = line.slice(bd[0].length).trim();
+        if (!line) continue;
+      }
+    }
+
+    if (/^total\s+de\s+entradas/i.test(line)) { sign = 1; continue; }
+    if (/^total\s+de\s+sa[ií]das/i.test(line)) { sign = -1; continue; }
+    if (BLOCK_SKIP.test(line)) continue;
+    if (!data) continue;
+
+    const vm = line.match(VALUE_END);
+    if (!vm) {
+      // Linha de continuação: complementa a descrição do último lançamento.
+      const last = records[records.length - 1];
+      if (last && line.length <= 120 && last.descricao.length < 240) {
+        last.descricao = `${last.descricao} ${line}`.replace(/\s+/g, " ").trim();
+      }
+      continue;
+    }
+
+    const descricao = line.slice(0, line.length - vm[0].length).replace(/[+-]\s*$/, "").trim();
+    if (!descricao) continue;
+
+    const abs = Math.abs(toNumber(vm[1]));
+    const valor = (sign ?? 1) * abs;
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine));
+  }
+
+  return records;
+}
+
 function normalizeDate(dm: RegExpMatchArray, yearHint: string) {
   const yy = dm[3] ? (dm[3].length === 2 ? `20${dm[3]}` : dm[3]) : yearHint;
   return `${dm[1]}/${dm[2]}/${yy}`;
@@ -428,7 +488,10 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
 
   const agencia = text.match(/ag[êe]ncia[:\s]*([\d]{3,6})/i)?.[1]
     ?? text.match(/\bAg\.?[:\s]*([\d]{3,6})/i)?.[1];
-  const conta = text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1]
+  const conta = text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-[\dxX])/i)?.[1]
+    ?? text.match(/conta(?:\s*corrente)?[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1]
+    // Nubank e similares quebram a linha entre o rótulo "Conta" e o número.
+    ?? text.match(/conta(?:\s*corrente)?\s*[:\s]*\n\s*([\d]{5,12}-[\dxX])/i)?.[1]
     ?? text.match(/\bC\/?C[:\s]*([\d]{3,12}-?[\dxX]?)/i)?.[1];
 
   const bank = detectBankFromText(text);
@@ -437,10 +500,14 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
 
   const detected = detectColumns(lines);
   let records: FinancialRecord[] = [];
-  let strategy: "colunas" | "linhas" = "linhas";
+  let strategy: "colunas" | "linhas" | "blocos" = "linhas";
   if (detected) {
     records = parseByColumns(lines, detected.columns, detected.headerIndex, yearHint);
     strategy = "colunas";
+  }
+  if (records.length === 0) {
+    records = parseByBlocks(textLines);
+    strategy = "blocos";
   }
   if (records.length === 0) {
     records = parseByLines(textLines, yearHint);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { detectColumns, parsePdfStatementLayout, type PdfLine } from "@/lib/pdfStatementParser";
+import { detectColumns, parsePdfStatementLayout, parsePdfStatementLines, type PdfLine } from "@/lib/pdfStatementParser";
 
 function line(page: number, y: number, cells: [number, string][]): PdfLine {
   const mapped = cells.map(([x, text]) => ({ x, width: text.length * 5, text }));
@@ -86,5 +86,37 @@ describe("layouts adicionais", () => {
     expect(parsed.records).toHaveLength(0);
     expect(parsed.diagnostics.temTexto).toBe(false);
     expect(parsed.diagnostics.motivo).toContain("camada de texto");
+  });
+});
+
+describe("layout por blocos (Nubank)", () => {
+  const blocos = [
+    "BACCAN SOCIEDADE INDIVIDUAL DE ADVOCACIA",
+    "CNPJ 28.031.398/0001-42 Agência 0001 Conta",
+    "48639989-1",
+    "Movimentações",
+    "04 JAN 2022       Total de entradas                          + 156,75",
+    "Transferência recebida pelo Pix  LENITA HELENA LEITE - BCO DO      156,75",
+    "BRASIL S.A. (0001) Agência: 6834 Conta: 450471-2",
+    "Total de saídas                                            - 1.830,28",
+    "Pagamento de boleto efetuado  ASSOCIACAO DOS ADVOGADOS            862,90",
+    "Saldo do dia                                                    3.928,83",
+  ];
+
+  it("usa data do bloco e o sinal da seção entradas/saídas", () => {
+    const p = parsePdfStatementLines(blocos);
+    expect(p.strategy).toBe("blocos");
+    expect(p.records).toHaveLength(2);
+    expect(p.records[0].valor).toBe(156.75);
+    expect(p.records[0].data).toBe("04/01/2022");
+    expect(p.records[0].descricao).toContain("Agência: 6834");
+    expect(p.records[1].valor).toBe(-862.9);
+  });
+
+  it("identifica conta em linha separada e ignora bancos de contrapartida", () => {
+    const p = parsePdfStatementLines(blocos);
+    expect(p.account.conta).toBe("48639989-1");
+    expect(p.account.agencia).toBe("0001");
+    expect(p.holder.documento).toBe("28.031.398/0001-42");
   });
 });
