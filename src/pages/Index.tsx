@@ -98,6 +98,15 @@ export default function Index() {
     setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn, holder, bank });
   }, [pendingPreview]);
 
+  /** Identificação do banco pela logo (IA) a partir de um arquivo PDF. */
+  const identifyLogoFor = useCallback(async (file: File, password?: string) => {
+    const imageBase64 = await renderHeaderImage(file, password);
+    const { data, error } = await supabase.functions.invoke("identify-bank-logo", { body: { imageBase64 } });
+    if (error) throw error;
+    if (data?.error || !data?.banco) return null;
+    return { name: data.banco as string, code: (data.codigo as string) || undefined };
+  }, []);
+
   const handlePdf = useCallback(async (file: File) => {
     let password: string | undefined;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -108,18 +117,37 @@ export default function Index() {
           return;
         }
         setPdfFile({ file, password });
-        setPendingPreview({
-          statements: [{ account: parsed.account, records: parsed.records }],
-          fileName: file.name,
-          holder: parsed.holder,
-          bank: parsed.bank,
-        });
-        if (parsed.strategy === "colunas" && parsed.columns) {
-          toast.success(
-            `Colunas reconhecidas: ${parsed.columns.map((c) => `${c.label} → ${c.field}`).join(", ")}`,
-          );
+        let bank = parsed.bank;
+        const account = { ...parsed.account };
+
+        // Fallback automático: se o nome/código não deram confiança, tenta a logo (IA).
+        if (needsLogoFallback(bank)) {
+          try {
+            const byLogo = await identifyLogoFor(file, password);
+            if (byLogo) {
+              bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
+              account.banco = byLogo.name;
+            }
+          } catch (e) {
+            console.warn("Identificação por logo indisponível", e);
+          }
+        } else if (bank) {
+          account.banco = bank.name;
         }
+
+        setPdfPreview({
+          fileName: file.name,
+          account,
+          holder: parsed.holder,
+          bank,
+          strategy: parsed.strategy,
+          columns: parsed.columns,
+          headerIndex: parsed.headerIndex,
+          lines: parsed.lines,
+          records: parsed.records,
+        });
         return;
+
       } catch (err) {
         if (err instanceof PdfPasswordRequiredError) {
           const input = window.prompt(
