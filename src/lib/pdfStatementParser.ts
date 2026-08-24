@@ -379,25 +379,44 @@ function parseByColumns(lines: PdfLine[], columns: DetectedColumn[], headerIndex
 /** Leitura genérica linha a linha (fallback). */
 function parseByLines(lines: string[], yearHint: string) {
   const records: FinancialRecord[] = [];
-  for (const line of lines) {
-    const dm = line.match(DATE);
-    if (!dm) continue;
-    const vm = line.match(VALUE_END);
-    if (!vm) continue;
+  let lastDate: string | undefined;
 
-    let valor = toNumber(vm[1]);
-    const flag = vm[2]?.toUpperCase();
-    if (flag === "D" && valor > 0) valor = -valor;
-    if (flag === "C" && valor < 0) valor = Math.abs(valor);
+  for (const line of lines) {
+    if (SKIP_LINE.test(line)) continue;
+
+    const dm = line.match(DATE) ?? line.match(DATE_ANY);
+    const values = line.match(VALUE_GLOBAL) ?? [];
+    if (values.length === 0) continue;
+
+    let data: string | undefined;
+    if (dm) {
+      data = normalizeDate(dm, yearHint);
+      lastDate = data;
+    } else if (lastDate) {
+      data = lastDate; // extrato com data por bloco
+    } else {
+      continue;
+    }
+
+    // Quando há dois ou mais números, o último costuma ser o saldo acumulado.
+    const raw = values.length >= 2 ? values[values.length - 2] : values[values.length - 1];
+    let valor = toNumber(raw);
+
+    const flag = (line.match(/\b([CD])\b\s*$/i)?.[1] ?? "").toUpperCase();
+    if (flag === "D") valor = -Math.abs(valor);
+    if (flag === "C") valor = Math.abs(valor);
+    if (/\bd[eé]bito\b/i.test(line)) valor = -Math.abs(valor);
 
     const descricao = line
-      .slice(dm[0].length, line.length - vm[0].length)
-      .replace(/(-?\d{1,3}(?:\.\d{3})*,\d{2})/g, " ")
+      .replace(dm ? dm[0] : "", " ")
+      .replace(VALUE_GLOBAL, " ")
+      .replace(/\bR\$\b/gi, " ")
+      .replace(/\b[CD]\b\s*$/i, " ")
       .replace(/\s+/g, " ")
       .trim();
     if (!descricao) continue;
 
-    records.push(buildRecord(normalizeDate(dm, yearHint), descricao, valor, undefined, undefined, undefined, line));
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, line));
   }
   return records;
 }
