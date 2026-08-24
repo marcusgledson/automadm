@@ -372,7 +372,10 @@ function parseByBlocks(textLines: string[]): FinancialRecord[] {
 
     const abs = Math.abs(toNumber(vm[1]));
     const valor = (sign ?? 1) * abs;
-    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine));
+    const avisos: string[] = [];
+    if (sign === undefined) avisos.push("Sinal presumido como entrada (seção de entradas/saídas não identificada)");
+    records.push(buildRecord(data, descricao, valor, undefined, undefined, undefined, rawLine, avisos));
+
   }
 
   return records;
