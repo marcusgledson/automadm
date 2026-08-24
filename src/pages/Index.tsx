@@ -49,6 +49,7 @@ export default function Index() {
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState<{ mode: "pre" | "post"; saved?: number; expenses?: number } | null>(null);
   const [duplicate, setDuplicate] = useState<{ existing: number; total: number } | null>(null);
+  const [pdfDiag, setPdfDiag] = useState<(PdfDiagnostics & { fileName: string }) | null>(null);
 
   const { upsertMany, checkExisting } = useBankStatements();
   const { accounts, saveAccount } = useBankAccounts();
