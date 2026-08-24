@@ -41,9 +41,15 @@ export function detectBankFromText(text: string): BankDetection | undefined {
   }
 
   // --- Etapa 2: dicionário de nomes ---
-  const alias: BankEntry | undefined = bankByAlias(text);
+  // Ignora linhas de lançamento (contêm valor ou dados de contrapartida), pois
+  // nelas aparecem bancos de terceiros que não são o emissor do extrato.
+  const infoText = text
+    .split(/\r?\n/)
+    .filter((l) => !/\d,\d{2}/.test(l) && !/(ag[êe]ncia|conta)\s*:\s*\d/i.test(l))
+    .join("\n");
+  const alias: BankEntry | undefined = bankByAlias(infoText) ?? bankByAlias(text);
   if (alias) {
-    const t = normalizeText(text);
+    const t = normalizeText(infoText.includes(alias.aliases[0]) ? infoText : text);
     const idx = t.indexOf(alias.aliases.find((a) => t.includes(a)) ?? "");
     const evidence = idx >= 0 ? t.slice(Math.max(0, idx - 12), idx + 40).trim() : undefined;
     return { code: alias.code, name: alias.name, source: "nome", evidence };
