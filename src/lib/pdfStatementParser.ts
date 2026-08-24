@@ -133,6 +133,18 @@ export interface DetectedColumn {
   end: number;
 }
 
+/** Informações de diagnóstico para explicar leituras vazias. */
+export interface PdfDiagnostics {
+  pages: number;
+  linhas: number;
+  temTexto: boolean;
+  cabecalhoDetectado: boolean;
+  /** Motivo provável quando nenhum lançamento é reconhecido. */
+  motivo?: string;
+  /** Primeiras linhas extraídas, para inspeção do usuário. */
+  amostra: string[];
+}
+
 export interface ParsedPdfStatement {
   account: { banco?: string; agencia?: string; conta?: string };
   bank?: BankDetection;
@@ -144,12 +156,14 @@ export interface ParsedPdfStatement {
   strategy: "colunas" | "linhas";
   /** Texto completo (para detecções adicionais). */
   text: string;
+  diagnostics: PdfDiagnostics;
 }
 
-const VALUE_ANY = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?|-?\(?\d+,\d{2}\)?)/;
-const VALUE_END = /(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+,\d{2})\s*([CD])?\s*$/i;
-const DATE = /^(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/;
-const DATE_ANY = /\b(\d{2})\/(\d{2})(?:\/(\d{2,4}))?\b/;
+const VALUE_ANY = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/;
+const VALUE_GLOBAL = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)/g;
+const VALUE_END = /(-?\(?\d{1,3}(?:\.\d{3})*,\d{2}\)?-?|-?\(?\d+,\d{2}\)?-?)\s*([CD])?\s*$/i;
+const DATE = /^(\d{2})[/.-](\d{2})(?:[/.-](\d{2,4}))?\b/;
+const DATE_ANY = /\b(\d{2})[/.-](\d{2})(?:[/.-](\d{2,4}))?\b/;
 
 const HEADER_MAP: { re: RegExp; field: ColumnField }[] = [
   { re: /^data(\s*(mov|movimenta[cç][aã]o|lan[cç]amento))?\.?$/i, field: "data" },
