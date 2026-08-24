@@ -5,8 +5,9 @@ import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landma
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, type PdfDiagnostics } from "@/lib/pdfStatementParser";
-import { detectBankFromText, type BankDetection } from "@/lib/bankDetect";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, reparseWithColumns, type PdfDiagnostics, type DetectedColumn, type PdfLine } from "@/lib/pdfStatementParser";
+import { detectBankFromText, needsLogoFallback, type BankDetection } from "@/lib/bankDetect";
+
 import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,6 +16,8 @@ import DataTable from "@/components/DataTable";
 import AccountKeyDialog, { type AccountKeyResult } from "@/components/AccountKeyDialog";
 import OFXPreviewDialog from "@/components/OFXPreviewDialog";
 import EditableRecordsDialog from "@/components/EditableRecordsDialog";
+import PdfPreviewDialog from "@/components/PdfPreviewDialog";
+
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
 import {
@@ -34,6 +37,19 @@ interface PendingParsed {
   bank?: BankDetection;
 }
 
+interface PdfPreviewState {
+  fileName: string;
+  account: OFXAccountInfo;
+  holder?: HolderInfo;
+  bank?: BankDetection;
+  strategy: "colunas" | "linhas" | "blocos";
+  columns?: DetectedColumn[];
+  headerIndex?: number;
+  lines: PdfLine[];
+  records: FinancialRecord[];
+}
+
+
 export default function Index() {
   const { user: _user } = useAuth();
   const navigate = useNavigate();
@@ -50,6 +66,9 @@ export default function Index() {
   const [summary, setSummary] = useState<{ mode: "pre" | "post"; saved?: number; expenses?: number } | null>(null);
   const [duplicate, setDuplicate] = useState<{ existing: number; total: number } | null>(null);
   const [pdfDiag, setPdfDiag] = useState<(PdfDiagnostics & { fileName: string }) | null>(null);
+  const [pdfPreview, setPdfPreview] = useState<PdfPreviewState | null>(null);
+  const [identifyingLogo, setIdentifyingLogo] = useState(false);
+
 
   const { upsertMany, checkExisting } = useBankStatements();
   const { accounts, saveAccount } = useBankAccounts();
@@ -79,6 +98,15 @@ export default function Index() {
     setPendingParsed({ records: stmt.records, account: stmt.account, fileName: fn, holder, bank });
   }, [pendingPreview]);
 
+  /** Identificação do banco pela logo (IA) a partir de um arquivo PDF. */
+  const identifyLogoFor = useCallback(async (file: File, password?: string) => {
+    const imageBase64 = await renderHeaderImage(file, password);
+    const { data, error } = await supabase.functions.invoke("identify-bank-logo", { body: { imageBase64 } });
+    if (error) throw error;
+    if (data?.error || !data?.banco) return null;
+    return { name: data.banco as string, code: (data.codigo as string) || undefined };
+  }, []);
+
   const handlePdf = useCallback(async (file: File) => {
     let password: string | undefined;
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -89,18 +117,37 @@ export default function Index() {
           return;
         }
         setPdfFile({ file, password });
-        setPendingPreview({
-          statements: [{ account: parsed.account, records: parsed.records }],
-          fileName: file.name,
-          holder: parsed.holder,
-          bank: parsed.bank,
-        });
-        if (parsed.strategy === "colunas" && parsed.columns) {
-          toast.success(
-            `Colunas reconhecidas: ${parsed.columns.map((c) => `${c.label} → ${c.field}`).join(", ")}`,
-          );
+        let bank = parsed.bank;
+        const account = { ...parsed.account };
+
+        // Fallback automático: se o nome/código não deram confiança, tenta a logo (IA).
+        if (needsLogoFallback(bank)) {
+          try {
+            const byLogo = await identifyLogoFor(file, password);
+            if (byLogo) {
+              bank = { name: byLogo.name, code: byLogo.code, source: "logo", confidence: "alta" };
+              account.banco = byLogo.name;
+            }
+          } catch (e) {
+            console.warn("Identificação por logo indisponível", e);
+          }
+        } else if (bank) {
+          account.banco = bank.name;
         }
+
+        setPdfPreview({
+          fileName: file.name,
+          account,
+          holder: parsed.holder,
+          bank,
+          strategy: parsed.strategy,
+          columns: parsed.columns,
+          headerIndex: parsed.headerIndex,
+          lines: parsed.lines,
+          records: parsed.records,
+        });
         return;
+
       } catch (err) {
         if (err instanceof PdfPasswordRequiredError) {
           const input = window.prompt(
@@ -118,7 +165,8 @@ export default function Index() {
       }
     }
     toast.error("Não foi possível abrir o PDF (senha inválida).");
-  }, []);
+  }, [identifyLogoFor]);
+
 
   const handleFile = useCallback(async (file: File) => {
     const name = file.name.toLowerCase();
@@ -154,28 +202,68 @@ export default function Index() {
     input.click();
   };
 
-  /** Identificação do banco pela logo (IA), somente sob demanda. */
+  /** Identificação do banco pela logo (IA), sob demanda. */
   const identifyLogo = useCallback(async () => {
     if (!pdfFile) {
       toast.error("Identificação por logo disponível apenas para PDF.");
       return null;
     }
     try {
-      const imageBase64 = await renderHeaderImage(pdfFile.file, pdfFile.password);
-      const { data, error } = await supabase.functions.invoke("identify-bank-logo", {
-        body: { imageBase64 },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return null; }
-      if (!data?.banco) { toast.info("Não foi possível identificar o banco pela logo."); return null; }
-      toast.success(`Banco identificado: ${data.banco}`);
-      return { name: data.banco as string, code: (data.codigo as string) || undefined };
+      const found = await identifyLogoFor(pdfFile.file, pdfFile.password);
+      if (!found) { toast.info("Não foi possível identificar o banco pela logo."); return null; }
+      toast.success(`Banco identificado: ${found.name}`);
+      return found;
     } catch (e) {
       console.error(e);
       toast.error("Falha ao identificar o banco pela logo.");
       return null;
     }
-  }, [pdfFile]);
+  }, [pdfFile, identifyLogoFor]);
+
+  /** Reprocessa o PDF com o mapeamento de colunas corrigido pelo usuário. */
+  const applyColumnFix = useCallback((columns: DetectedColumn[]) => {
+    setPdfPreview((prev) => {
+      if (!prev) return prev;
+      const records = reparseWithColumns(prev.lines, columns, prev.headerIndex ?? 0);
+      if (records.length === 0) toast.warning("Nenhum lançamento com este mapeamento de colunas.");
+      return { ...prev, columns, records };
+    });
+  }, []);
+
+  /** Reidentifica o banco pela logo dentro do preview. */
+  const identifyLogoInPreview = useCallback(async () => {
+    if (!pdfFile) return;
+    setIdentifyingLogo(true);
+    const found = await identifyLogo();
+    setIdentifyingLogo(false);
+    if (!found) return;
+    setPdfPreview((prev) =>
+      prev
+        ? {
+            ...prev,
+            bank: { name: found.name, code: found.code, source: "logo", confidence: "alta" },
+            account: { ...prev.account, banco: found.name },
+          }
+        : prev,
+    );
+  }, [pdfFile, identifyLogo]);
+
+  /** Confirma o preview do PDF e segue para a chave da conta. */
+  const confirmPdfPreview = useCallback(() => {
+    setPdfPreview((prev) => {
+      if (prev) {
+        setPendingParsed({
+          records: prev.records,
+          account: prev.account,
+          fileName: prev.fileName,
+          holder: prev.holder,
+          bank: prev.bank,
+        });
+      }
+      return null;
+    });
+  }, []);
+
 
   const applyAccountKey = useCallback(async (res: AccountKeyResult) => {
     if (!pendingParsed) return;
@@ -327,6 +415,23 @@ export default function Index() {
         onCancel={() => setPendingPreview(null)}
         onConfirm={confirmPreview}
       />
+
+      <PdfPreviewDialog
+        open={!!pdfPreview}
+        fileName={pdfPreview?.fileName}
+        bank={pdfPreview?.bank}
+        account={pdfPreview?.account ?? {}}
+        titular={pdfPreview?.holder?.titular}
+        strategy={pdfPreview?.strategy ?? "linhas"}
+        columns={pdfPreview?.columns}
+        records={pdfPreview?.records ?? []}
+        identifying={identifyingLogo}
+        onIdentifyLogo={pdfFile ? () => { void identifyLogoInPreview(); } : undefined}
+        onColumnsChange={applyColumnFix}
+        onCancel={() => setPdfPreview(null)}
+        onConfirm={confirmPdfPreview}
+      />
+
 
       <AccountKeyDialog
         open={!!pendingParsed}
