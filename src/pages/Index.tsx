@@ -84,7 +84,7 @@ export default function Index() {
       try {
         const parsed = await parsePdfStatement(file, password);
         if (parsed.records.length === 0) {
-          toast.error("Nenhum lançamento reconhecido neste PDF.");
+          setPdfDiag({ fileName: file.name, ...parsed.diagnostics });
           return;
         }
         setPdfFile({ file, password });
