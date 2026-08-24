@@ -5,7 +5,7 @@ import { FileSpreadsheet, FolderOpen, ArrowLeft, Home, Database, Loader2, Landma
 import UserMenu from "@/components/UserMenu";
 import { useNavigate } from "react-router-dom";
 import { parseOFXFull, FinancialRecord, OFXAccountInfo, ParsedOFXStatement } from "@/lib/fileParser";
-import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage } from "@/lib/pdfStatementParser";
+import { parsePdfStatement, PdfPasswordRequiredError, renderHeaderImage, type PdfDiagnostics } from "@/lib/pdfStatementParser";
 import { detectBankFromText, type BankDetection } from "@/lib/bankDetect";
 import { extractHolder, maskDocument, type HolderInfo } from "@/lib/accountHolder";
 import { supabase } from "@/integrations/supabase/client";
