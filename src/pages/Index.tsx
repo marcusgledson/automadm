@@ -202,28 +202,68 @@ export default function Index() {
     input.click();
   };
 
-  /** Identificação do banco pela logo (IA), somente sob demanda. */
+  /** Identificação do banco pela logo (IA), sob demanda. */
   const identifyLogo = useCallback(async () => {
     if (!pdfFile) {
       toast.error("Identificação por logo disponível apenas para PDF.");
       return null;
     }
     try {
-      const imageBase64 = await renderHeaderImage(pdfFile.file, pdfFile.password);
-      const { data, error } = await supabase.functions.invoke("identify-bank-logo", {
-        body: { imageBase64 },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return null; }
-      if (!data?.banco) { toast.info("Não foi possível identificar o banco pela logo."); return null; }
-      toast.success(`Banco identificado: ${data.banco}`);
-      return { name: data.banco as string, code: (data.codigo as string) || undefined };
+      const found = await identifyLogoFor(pdfFile.file, pdfFile.password);
+      if (!found) { toast.info("Não foi possível identificar o banco pela logo."); return null; }
+      toast.success(`Banco identificado: ${found.name}`);
+      return found;
     } catch (e) {
       console.error(e);
       toast.error("Falha ao identificar o banco pela logo.");
       return null;
     }
-  }, [pdfFile]);
+  }, [pdfFile, identifyLogoFor]);
+
+  /** Reprocessa o PDF com o mapeamento de colunas corrigido pelo usuário. */
+  const applyColumnFix = useCallback((columns: DetectedColumn[]) => {
+    setPdfPreview((prev) => {
+      if (!prev) return prev;
+      const records = reparseWithColumns(prev.lines, columns, prev.headerIndex ?? 0);
+      if (records.length === 0) toast.warning("Nenhum lançamento com este mapeamento de colunas.");
+      return { ...prev, columns, records };
+    });
+  }, []);
+
+  /** Reidentifica o banco pela logo dentro do preview. */
+  const identifyLogoInPreview = useCallback(async () => {
+    if (!pdfFile) return;
+    setIdentifyingLogo(true);
+    const found = await identifyLogo();
+    setIdentifyingLogo(false);
+    if (!found) return;
+    setPdfPreview((prev) =>
+      prev
+        ? {
+            ...prev,
+            bank: { name: found.name, code: found.code, source: "logo", confidence: "alta" },
+            account: { ...prev.account, banco: found.name },
+          }
+        : prev,
+    );
+  }, [pdfFile, identifyLogo]);
+
+  /** Confirma o preview do PDF e segue para a chave da conta. */
+  const confirmPdfPreview = useCallback(() => {
+    setPdfPreview((prev) => {
+      if (prev) {
+        setPendingParsed({
+          records: prev.records,
+          account: prev.account,
+          fileName: prev.fileName,
+          holder: prev.holder,
+          bank: prev.bank,
+        });
+      }
+      return null;
+    });
+  }, []);
+
 
   const applyAccountKey = useCallback(async (res: AccountKeyResult) => {
     if (!pendingParsed) return;
