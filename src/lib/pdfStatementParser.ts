@@ -153,7 +153,7 @@ export interface ParsedPdfStatement {
   /** Colunas reconhecidas quando o extrato tem cabeçalho tabular. */
   columns?: DetectedColumn[];
   /** Estratégia utilizada na leitura. */
-  strategy: "colunas" | "linhas";
+  strategy: "colunas" | "linhas" | "blocos";
   /** Texto completo (para detecções adicionais). */
   text: string;
   diagnostics: PdfDiagnostics;
