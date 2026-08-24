@@ -548,11 +548,29 @@ export function parsePdfStatementLayout(lines: PdfLine[]): ParsedPdfStatement {
     holder,
     records,
     columns: detected?.columns,
+    headerIndex: detected?.headerIndex,
+    lines,
     strategy,
     text,
     diagnostics,
   };
 }
+
+/**
+ * Reprocessa os lançamentos usando um mapeamento de colunas corrigido pelo usuário.
+ * Colunas marcadas como "ignorar" são descartadas.
+ */
+export function reparseWithColumns(
+  lines: PdfLine[],
+  columns: DetectedColumn[],
+  headerIndex: number,
+): FinancialRecord[] {
+  const usable = columns.filter((c) => c.field !== "ignorar");
+  if (usable.length === 0) return [];
+  const yearHint = yearHintOf(lines.map((l) => l.text).join("\n"));
+  return parseByColumns(lines, usable, headerIndex, yearHint);
+}
+
 
 /** Compatibilidade: parser a partir de linhas de texto puras. */
 export function parsePdfStatementLines(textLines: string[]): ParsedPdfStatement {
