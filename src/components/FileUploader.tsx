@@ -183,7 +183,7 @@ export default function FileUploader({ onFilesSelected, loading }: FileUploaderP
         <UploadStatusPanel status={status} />
       </div>
 
-      <AlertDialog open={askMore} onOpenChange={(o) => { if (!o) proceed(); }}>
+      <AlertDialog open={askMore} onOpenChange={setAskMore}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Adicionar mais arquivos?</AlertDialogTitle>
