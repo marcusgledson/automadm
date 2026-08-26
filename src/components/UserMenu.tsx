@@ -25,6 +25,8 @@ import AdminPanel from "@/components/AdminPanel";
 import HelpDialog from "@/components/HelpDialog";
 import MyInfoDialog from "@/components/MyInfoDialog";
 import { useAppSettings } from "@/hooks/useAppSettings";
+import NotificationsBell from "@/components/NotificationsBell";
+
 
 
 export default function UserMenu() {
