@@ -174,17 +174,18 @@ function SignInForm() {
           Entrar
         </Button>
       </form>
-      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
       <button
         type="button"
         onClick={() => setForgotOpen(true)}
-        className="sr-only"
-        aria-hidden="true"
-        id="abrir-esqueci-senha"
-      />
+        className="mt-4 w-full text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+      >
+        Esqueci a senha
+      </button>
+      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </>
   );
 }
+
 
 function SignUpForm() {
   const { signUp } = useAuth();
