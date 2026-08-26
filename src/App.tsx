@@ -24,6 +24,9 @@ import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
+import { useOrganization } from "@/hooks/useOrganization";
+import PendingApprovalScreen from "@/components/PendingApprovalScreen";
+
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
 import ModuleGuard from "@/components/ModuleGuard";
