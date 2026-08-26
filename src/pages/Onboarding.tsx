@@ -46,6 +46,7 @@ export default function Onboarding() {
   const [palette, setPalette] = useState("oliva");
   const [themeStyle, setThemeStyle] = useState("neutro");
   const [orgName, setOrgName] = useState("");
+  const [orgCreated, setOrgCreated] = useState<string | null>(null);
   const [demanda, setDemanda] = useState("");
   const [nome, setNome] = useState("");
   const [phone, setPhone] = useState<PhoneValue>({ country: "+55", area: "", number: "", whatsapp: true });
@@ -55,9 +56,11 @@ export default function Onboarding() {
 
   const canFinish = useMemo(() => {
     if (!mode || modules.length === 0) return false;
+    if (mode !== "pessoal" && !orgCreated) return false;
     if (!needsCorporate) return true;
     return demanda.trim().length >= 20 && nome.trim().length >= 3 && isPhoneValid(phone);
-  }, [mode, modules, needsCorporate, demanda, nome, phone]);
+  }, [mode, modules, orgCreated, needsCorporate, demanda, nome, phone]);
+
 
   const toggleModule = (id: string) =>
     setModules((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
