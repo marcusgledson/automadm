@@ -39,7 +39,11 @@ const EMPTY_PHONE: PhoneValue = { country: "+55", area: "", number: "", whatsapp
 export default function Usuarios() {
   const navigate = useNavigate();
   const { isMaster, loading: roleLoading } = useUserRole();
-  const { users, loading, error, createUser, updateUser, deleteUser, resetPassword } = useOrgUsers(isMaster);
+  const { settings, loading: settingsLoading } = useAppSettings();
+  const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
+  const allowed = isMaster && multiUser;
+  const { users, loading, error, createUser, updateUser, deleteUser, resetPassword } = useOrgUsers(allowed);
+
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
