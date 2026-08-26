@@ -28,6 +28,8 @@ import DeleteImpactDialog from "@/components/DeleteImpactDialog";
 import AppearancePanel from "@/components/AppearancePanel";
 import SecuritySettingsPanel from "@/components/SecuritySettingsPanel";
 import DeleteAccountDialog from "@/components/DeleteAccountDialog";
+import UsageModePanel from "@/components/UsageModePanel";
+
 import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
