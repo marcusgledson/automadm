@@ -574,6 +574,116 @@ export type Database = {
         }
         Relationships: []
       }
+      org_access_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          organization_id: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          requester_email: string | null
+          requester_id: string
+          requester_name: string | null
+          status: Database["public"]["Enums"]["request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          organization_id: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          requester_email?: string | null
+          requester_id: string
+          requester_name?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          organization_id?: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          requester_email?: string | null
+          requester_id?: string
+          requester_name?: string | null
+          status?: Database["public"]["Enums"]["request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_access_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          bairro: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          complemento: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logradouro: string | null
+          nome_fantasia: string | null
+          numero: string | null
+          owner_id: string
+          razao_social: string
+          telefone: string | null
+          tipo_instituicao: string
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          complemento?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logradouro?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          owner_id: string
+          razao_social: string
+          telefone?: string | null
+          tipo_instituicao?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bairro?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          complemento?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logradouro?: string | null
+          nome_fantasia?: string | null
+          numero?: string | null
+          owner_id?: string
+          razao_social?: string
+          telefone?: string | null
+          tipo_instituicao?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pdf_column_profiles: {
         Row: {
           bank_code: string | null
@@ -619,6 +729,7 @@ export type Database = {
       profiles: {
         Row: {
           allowed_modules: string[]
+          approval_status: string
           avatar_url: string | null
           created_at: string
           display_name: string | null
@@ -627,6 +738,7 @@ export type Database = {
           id: string
           must_change_password: boolean
           org_owner_id: string | null
+          organization_id: string | null
           password_email_sent_at: string | null
           phone_area_code: string | null
           phone_country_code: string | null
@@ -639,6 +751,7 @@ export type Database = {
         }
         Insert: {
           allowed_modules?: string[]
+          approval_status?: string
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -647,6 +760,7 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           org_owner_id?: string | null
+          organization_id?: string | null
           password_email_sent_at?: string | null
           phone_area_code?: string | null
           phone_country_code?: string | null
@@ -659,6 +773,7 @@ export type Database = {
         }
         Update: {
           allowed_modules?: string[]
+          approval_status?: string
           avatar_url?: string | null
           created_at?: string
           display_name?: string | null
@@ -667,6 +782,7 @@ export type Database = {
           id?: string
           must_change_password?: boolean
           org_owner_id?: string | null
+          organization_id?: string | null
           password_email_sent_at?: string | null
           phone_area_code?: string | null
           phone_country_code?: string | null
@@ -677,7 +793,15 @@ export type Database = {
           user_id?: string
           username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_requests: {
         Row: {
@@ -965,6 +1089,7 @@ export type Database = {
           created_at: string
           id: string
           org_owner_id: string
+          organization_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -972,6 +1097,7 @@ export type Database = {
           created_at?: string
           id?: string
           org_owner_id: string
+          organization_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -979,19 +1105,47 @@ export type Database = {
           created_at?: string
           id?: string
           org_owner_id?: string
+          organization_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      approve_org_request: {
+        Args: {
+          _modules: string[]
+          _request_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
       can_manage_user: {
         Args: { _actor: string; _target: string }
         Returns: boolean
+      }
+      find_org_by_cnpj: {
+        Args: { _cnpj: string }
+        Returns: {
+          cidade: string
+          id: string
+          nome_fantasia: string
+          razao_social: string
+          tipo_instituicao: string
+          uf: string
+        }[]
       }
       has_role: {
         Args: {
@@ -1002,11 +1156,17 @@ export type Database = {
       }
       is_app_owner: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
+      is_org_owner: {
+        Args: { _org_id: string; _user_id: string }
+        Returns: boolean
+      }
       log_access_denied: {
         Args: { _module: string; _reason: string; _surface: string }
         Returns: undefined
       }
+      org_id_of: { Args: { _user_id: string }; Returns: string }
       org_owner_of: { Args: { _user_id: string }; Returns: string }
+      reject_org_request: { Args: { _request_id: string }; Returns: undefined }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
