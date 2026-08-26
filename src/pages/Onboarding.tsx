@@ -233,22 +233,50 @@ export default function Onboarding() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <ShieldCheck className="h-4 w-4 text-primary" />
-                    Você será o usuário Máster
+                    Empresa / Organização
                   </CardTitle>
                   <CardDescription>
-                    O primeiro usuário detém todas as funções e é o único com acesso ao Painel de Perfis e
-                    Usuários. Os demais recebem uma <strong>senha temporária única</strong>, válida por 72 horas, e são obrigados
-                    a trocá-la no primeiro acesso.
+                    Informe o CNPJ. Se a empresa ainda não existir, você a cadastra e se torna o{" "}
+                    <strong>Máster</strong>. Se já existir, enviamos um pedido de acesso ao Máster responsável
+                    e seu cadastro entra como <strong>Leitor</strong> até a aprovação.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {orgCreated ? (
+                    <Alert>
+                      <ShieldCheck className="h-4 w-4" />
+                      <AlertTitle>Empresa cadastrada</AlertTitle>
+                      <AlertDescription>
+                        <strong>{orgCreated}</strong> — você é o Máster desta organização.
+                      </AlertDescription>
+                    </Alert>
+                  ) : (
+                    <OrganizationForm
+                      requesterName={nome.trim() || null}
+                      onDone={async (r) => {
+                        if (r.kind === "created") {
+                          setOrgCreated(orgName.trim() || "Empresa cadastrada");
+                          return;
+                        }
+                        await save({
+                          usage_mode: mode,
+                          onboarding_done: true,
+                          enabled_modules: modules,
+                          palette,
+                          theme_style: themeStyle,
+                        });
+                        navigate("/", { replace: true });
+                      }}
+                    />
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="org">Nome da organização</Label>
+                    <Label htmlFor="org">Nome de exibição da organização (opcional)</Label>
                     <Input id="org" value={orgName} onChange={(e) => setOrgName(e.target.value)} maxLength={120} />
                   </div>
                 </CardContent>
               </Card>
             )}
+
 
             {needsCorporate && (
               <Card className="card-elevated border-primary/40">
