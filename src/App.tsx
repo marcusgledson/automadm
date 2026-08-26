@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+
 import Neoenergia from "./pages/Neoenergia";
 import NeoenergiaAnalytics from "./pages/NeoenergiaAnalytics";
 import ContasCentral from "./pages/ContasCentral";
@@ -186,6 +188,8 @@ const App = () => (
 
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+
             <Route
               path="/onboarding"
               element={

@@ -100,16 +100,30 @@ export default function Auth() {
         </div>
 
         {!pinUser && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
-            >
-              {isSignUp ? "Entrar" : "Cadastrar"}
-            </button>
-          </p>
+          <>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
+              >
+                {isSignUp ? "Entrar" : "Cadastrar"}
+              </button>
+            </p>
+            {!isSignUp && (
+              <p className="mt-2 text-center text-sm">
+                <button
+                  onClick={() => setForgotOpen(true)}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Esqueci a senha
+                </button>
+              </p>
+            )}
+            <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+          </>
         )}
+
 
         </div>
       </div>
@@ -122,73 +136,89 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     const { error } = await signIn(email, password);
     if (error) {
-      toast.error(error.message);
+      toast.error(traduzirErroAuth(error));
     }
     setSubmitting(false);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="email">E-mail</Label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="email"
-            type="email"
-            placeholder="voce@exemplo.com"
-            className="pl-10"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">E-mail</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="email"
+              type="email"
+              placeholder="voce@exemplo.com"
+              className="pl-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
         </div>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Senha</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            className="pl-10"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-          />
+        <div className="space-y-2">
+          <Label htmlFor="password">Senha</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              className="pl-10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={SENHA_MIN}
+              maxLength={SENHA_MAX}
+            />
+          </div>
         </div>
-      </div>
-      <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
-        {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-        Entrar
-      </Button>
-    </form>
+        <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
+          {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          Entrar
+        </Button>
+      </form>
+    </>
   );
 }
+
+
 
 function SignUpForm() {
   const { signUp } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
+  const [confirmEmail, setConfirmEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  const emailDivergente = !!confirmEmail && confirmEmail.trim().toLowerCase() !== email.trim().toLowerCase();
+  const senhaDivergente = !!confirmPassword && confirmPassword !== password;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (emailDivergente) return toast.error("A confirmação do e-mail não confere.");
+    const erroSenha = validarSenha(password);
+    if (erroSenha) return toast.error(erroSenha);
+    if (senhaDivergente) return toast.error("A confirmação da senha não confere.");
+
     setSubmitting(true);
     const { error } = await signUp(email, password, displayName || undefined);
     if (error) {
-      toast.error(error.message);
+      toast.error(traduzirErroAuth(error));
     } else {
-      toast.success("Verifique seu e-mail para confirmar sua conta");
+      toast.success("Cadastro criado. Verifique seu e-mail para confirmar sua conta.");
     }
     setSubmitting(false);
   };
@@ -225,6 +255,23 @@ function SignUpForm() {
         </div>
       </div>
       <div className="space-y-2">
+        <Label htmlFor="signup-email-confirm">Confirmar e-mail</Label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="signup-email-confirm"
+            type="email"
+            placeholder="repita seu e-mail"
+            className="pl-10"
+            value={confirmEmail}
+            onChange={(e) => setConfirmEmail(e.target.value)}
+            onPaste={(e) => e.preventDefault()}
+            required
+          />
+        </div>
+        {emailDivergente && <p className="text-xs text-destructive">Os e-mails não conferem.</p>}
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="signup-password">Senha</Label>
         <div className="relative">
           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -236,9 +283,29 @@ function SignUpForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={SENHA_MIN}
+            maxLength={SENHA_MAX}
           />
         </div>
+        <PasswordStrengthMeter value={password} />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="signup-password-confirm">Confirmar senha</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="signup-password-confirm"
+            type="password"
+            placeholder="••••••••"
+            className="pl-10"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            minLength={SENHA_MIN}
+            maxLength={SENHA_MAX}
+          />
+        </div>
+        {senhaDivergente && <p className="text-xs text-destructive">As senhas não conferem.</p>}
       </div>
       <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
         {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -247,3 +314,4 @@ function SignUpForm() {
     </form>
   );
 }
+
