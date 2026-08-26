@@ -97,7 +97,7 @@ export default function Usuarios() {
     setModules(MODULES.map((m) => m.id));
   };
 
-  if (roleLoading) {
+  if (roleLoading || settingsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -124,7 +124,21 @@ export default function Usuarios() {
       </header>
 
       <main className="safe-bottom mx-auto w-full max-w-5xl flex-1 space-y-6 p-4 sm:p-8">
-        {!isMaster ? (
+        {!multiUser ? (
+          <Card className="card-elevated">
+            <CardHeader>
+              <CardTitle className="text-base">Módulo indisponível no uso pessoal</CardTitle>
+              <CardDescription>
+                No modo <strong>Pessoal</strong> existe apenas um login, que já é o Máster com acesso total.
+                Para incluir outros usuários e atribuir perfis, migre para Co-participativo ou Corporativo em
+                <strong> Configurações → Modo de uso e empresa</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/")}>Voltar à tela inicial</Button>
+            </CardContent>
+          </Card>
+        ) : !isMaster ? (
           <Card className="card-elevated">
             <CardHeader>
               <CardTitle className="text-base">Acesso restrito</CardTitle>
@@ -137,6 +151,7 @@ export default function Usuarios() {
             </CardContent>
           </Card>
         ) : (
+
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
