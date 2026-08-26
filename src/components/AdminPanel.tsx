@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint } from "lucide-react";
+import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint, Building2 } from "lucide-react";
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
@@ -28,6 +28,8 @@ import DeleteImpactDialog from "@/components/DeleteImpactDialog";
 import AppearancePanel from "@/components/AppearancePanel";
 import SecuritySettingsPanel from "@/components/SecuritySettingsPanel";
 import DeleteAccountDialog from "@/components/DeleteAccountDialog";
+import UsageModePanel from "@/components/UsageModePanel";
+
 import { executeImpactPlan, type ImpactPlan, type ImpactTableKey } from "@/lib/deleteImpact";
 
 interface Props {
@@ -339,10 +341,18 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Building2 className="h-4 w-4 text-primary" /> Modo de uso e empresa
+              </h4>
+              <UsageModePanel />
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
                 <Palette className="h-4 w-4 text-primary" /> Aparência
               </h4>
               <AppearancePanel />
             </section>
+
 
             <section className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold">

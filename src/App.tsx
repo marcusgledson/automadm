@@ -24,6 +24,9 @@ import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
 import { useBiometricLock } from "@/hooks/useBiometricLock";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
+import { useOrganization } from "@/hooks/useOrganization";
+import PendingApprovalScreen from "@/components/PendingApprovalScreen";
+
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
 import ModuleGuard from "@/components/ModuleGuard";
@@ -65,6 +68,26 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Cadastro associado a uma empresa e ainda não aprovado pelo Máster. */
+function ApprovalGate({ children }: { children: React.ReactNode }) {
+  const { isPending, organization, loading, refresh } = useOrganization();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (isPending)
+    return (
+      <PendingApprovalScreen
+        organizationName={organization?.razao_social ?? null}
+        onRefresh={() => void refresh()}
+      />
+    );
+  return <>{children}</>;
+}
+
 /** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
 function PasswordGate({ children }: { children: React.ReactNode }) {
   const { profile, loading, refresh } = useProfile();
@@ -84,6 +107,7 @@ function PasswordGate({ children }: { children: React.ReactNode }) {
     );
   return <>{children}</>;
 }
+
 
 function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNode; skipOnboarding?: boolean }) {
   const { user, loading } = useAuth();
@@ -127,8 +151,11 @@ function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNod
   return (
     <>
       <RequireAppearance>
-        <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+        <ApprovalGate>
+          <PasswordGate>{skipOnboarding ? children : <OnboardingGate>{children}</OnboardingGate>}</PasswordGate>
+        </ApprovalGate>
       </RequireAppearance>
+
       <AlertDialog open={noticeOpen} onOpenChange={(v) => !v && dismissNotice()}>
         <AlertDialogContent>
           <AlertDialogHeader>

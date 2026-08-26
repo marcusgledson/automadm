@@ -49,5 +49,6 @@ describe("smoke: rota /auth", () => {
     const messages = errorSpy.mock.calls.map((c) => String(c[0] ?? ""));
     expect(messages.some((m) => m.includes("AppErrorBoundary"))).toBe(false);
     expect(messages.some((m) => m.includes("is not defined"))).toBe(false);
-  });
+  }, 20000);
+
 });

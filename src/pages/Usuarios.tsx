@@ -28,10 +28,12 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import UserMenu from "@/components/UserMenu";
 import PhoneField, { type PhoneValue } from "@/components/PhoneField";
-import { MODULES } from "@/hooks/useAppSettings";
+import { MODULES, useAppSettings } from "@/hooks/useAppSettings";
 import { ROLE_DESCRIPTION, ROLE_LABEL, useUserRole, type AppRole } from "@/hooks/useUserRole";
 import { useOrgUsers, type OrgUser } from "@/hooks/useOrgUsers";
 import { AUDIT_ACTION_LABEL, useAuditLogs } from "@/hooks/useAuditLogs";
+import ProfileGroupsPanel from "@/components/ProfileGroupsPanel";
+
 
 const ROLES: AppRole[] = ["master", "operador", "colaborador", "leitor"];
 const EMPTY_PHONE: PhoneValue = { country: "+55", area: "", number: "", whatsapp: false };
@@ -39,7 +41,11 @@ const EMPTY_PHONE: PhoneValue = { country: "+55", area: "", number: "", whatsapp
 export default function Usuarios() {
   const navigate = useNavigate();
   const { isMaster, loading: roleLoading } = useUserRole();
-  const { users, loading, error, createUser, updateUser, deleteUser, resetPassword } = useOrgUsers(isMaster);
+  const { settings, loading: settingsLoading } = useAppSettings();
+  const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
+  const allowed = isMaster && multiUser;
+  const { users, loading, error, createUser, updateUser, deleteUser, resetPassword } = useOrgUsers(allowed);
+
 
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -91,7 +97,7 @@ export default function Usuarios() {
     setModules(MODULES.map((m) => m.id));
   };
 
-  if (roleLoading) {
+  if (roleLoading || settingsLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -118,7 +124,21 @@ export default function Usuarios() {
       </header>
 
       <main className="safe-bottom mx-auto w-full max-w-5xl flex-1 space-y-6 p-4 sm:p-8">
-        {!isMaster ? (
+        {!multiUser ? (
+          <Card className="card-elevated">
+            <CardHeader>
+              <CardTitle className="text-base">Módulo indisponível no uso pessoal</CardTitle>
+              <CardDescription>
+                No modo <strong>Pessoal</strong> existe apenas um login, que já é o Máster com acesso total.
+                Para incluir outros usuários e atribuir perfis, migre para Co-participativo ou Corporativo em
+                <strong> Configurações → Modo de uso e empresa</strong>.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/")}>Voltar à tela inicial</Button>
+            </CardContent>
+          </Card>
+        ) : !isMaster ? (
           <Card className="card-elevated">
             <CardHeader>
               <CardTitle className="text-base">Acesso restrito</CardTitle>
@@ -131,6 +151,7 @@ export default function Usuarios() {
             </CardContent>
           </Card>
         ) : (
+
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -255,7 +276,13 @@ export default function Usuarios() {
               </div>
             )}
 
+            <ProfileGroupsPanel
+              users={users}
+              onAssign={(userId, r, mods) => updateUser(userId, { role: r, allowed_modules: mods })}
+            />
+
             <AuditLogList />
+
           </>
         )}
       </main>
