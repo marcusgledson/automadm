@@ -82,12 +82,13 @@ export default function UserMenu() {
             <Settings className="mr-2 h-4 w-4" />
             Configurações
           </DropdownMenuItem>
-          {isMaster && (
+          {isMaster && multiUser && (
             <DropdownMenuItem onClick={() => navigate("/usuarios")}>
               <Users className="mr-2 h-4 w-4" />
               Perfis e Usuários
             </DropdownMenuItem>
           )}
+
           <DropdownMenuItem onClick={() => setInfoOpen(true)}>
             <UserRoundCog className="mr-2 h-4 w-4" />
             Minhas Informações
