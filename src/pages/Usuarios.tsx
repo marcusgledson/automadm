@@ -28,10 +28,12 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import UserMenu from "@/components/UserMenu";
 import PhoneField, { type PhoneValue } from "@/components/PhoneField";
-import { MODULES } from "@/hooks/useAppSettings";
+import { MODULES, useAppSettings } from "@/hooks/useAppSettings";
 import { ROLE_DESCRIPTION, ROLE_LABEL, useUserRole, type AppRole } from "@/hooks/useUserRole";
 import { useOrgUsers, type OrgUser } from "@/hooks/useOrgUsers";
 import { AUDIT_ACTION_LABEL, useAuditLogs } from "@/hooks/useAuditLogs";
+import ProfileGroupsPanel from "@/components/ProfileGroupsPanel";
+
 
 const ROLES: AppRole[] = ["master", "operador", "colaborador", "leitor"];
 const EMPTY_PHONE: PhoneValue = { country: "+55", area: "", number: "", whatsapp: false };
