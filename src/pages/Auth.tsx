@@ -100,16 +100,30 @@ export default function Auth() {
         </div>
 
         {!pinUser && (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
-            >
-              {isSignUp ? "Entrar" : "Cadastrar"}
-            </button>
-          </p>
+          <>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}{" "}
+              <button
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="font-medium text-primary hover:underline underline-offset-4 transition-colors"
+              >
+                {isSignUp ? "Entrar" : "Cadastrar"}
+              </button>
+            </p>
+            {!isSignUp && (
+              <p className="mt-2 text-center text-sm">
+                <button
+                  onClick={() => setForgotOpen(true)}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Esqueci a senha
+                </button>
+              </p>
+            )}
+            <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
+          </>
         )}
+
 
         </div>
       </div>
