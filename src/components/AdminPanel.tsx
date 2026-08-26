@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint } from "lucide-react";
+import { Download, Trash2, Loader2, Database, AlertTriangle, FileJson, ShieldCheck, Upload, Cloud, Settings, Palette, Fingerprint, Building2 } from "lucide-react";
 import { encryptBackup, decryptBackup, envelopeToBlob, defaultFileName, type BackupEnvelope } from "@/lib/backupCrypto";
 import { isDriveBackupConfigured, uploadBackupToDrive } from "@/lib/googleDriveBackup";
 import { useNavigate } from "react-router-dom";
