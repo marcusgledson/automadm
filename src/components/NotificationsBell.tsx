@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MODULES } from "@/hooks/useAppSettings";
+import { MODULES, useAppSettings } from "@/hooks/useAppSettings";
 import { ROLE_DESCRIPTION, ROLE_LABEL, useUserRole, type AppRole } from "@/hooks/useUserRole";
 import { useOrgRequests, type OrgRequest } from "@/hooks/useOrgRequests";
 
@@ -36,13 +36,17 @@ const ROLES: AppRole[] = ["master", "operador", "colaborador", "leitor"];
 /** Sino de notificações do Máster: pedidos de acesso pendentes com aprovação direta. */
 export default function NotificationsBell() {
   const { isMaster } = useUserRole();
-  const { requests, loading, approve, reject } = useOrgRequests(isMaster);
+  const { settings } = useAppSettings();
+  const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
+  const active = isMaster && multiUser;
+  const { requests, loading, approve, reject } = useOrgRequests(active);
   const [selected, setSelected] = useState<OrgRequest | null>(null);
   const [role, setRole] = useState<AppRole>("leitor");
   const [modules, setModules] = useState<string[]>(MODULES.map((m) => m.id));
   const [busy, setBusy] = useState(false);
 
-  if (!isMaster) return null;
+  if (!active) return null;
+
 
   const openRequest = (r: OrgRequest) => {
     setSelected(r);
