@@ -65,6 +65,26 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+/** Cadastro associado a uma empresa e ainda não aprovado pelo Máster. */
+function ApprovalGate({ children }: { children: React.ReactNode }) {
+  const { isPending, organization, loading, refresh } = useOrganization();
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (isPending)
+    return (
+      <PendingApprovalScreen
+        organizationName={organization?.razao_social ?? null}
+        onRefresh={() => void refresh()}
+      />
+    );
+  return <>{children}</>;
+}
+
 /** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
 function PasswordGate({ children }: { children: React.ReactNode }) {
   const { profile, loading, refresh } = useProfile();
@@ -84,6 +104,7 @@ function PasswordGate({ children }: { children: React.ReactNode }) {
     );
   return <>{children}</>;
 }
+
 
 function ProtectedRoute({ children, skipOnboarding }: { children: React.ReactNode; skipOnboarding?: boolean }) {
   const { user, loading } = useAuth();
