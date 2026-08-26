@@ -339,10 +339,18 @@ export default function AdminPanel({ open, onOpenChange }: Props) {
           <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
             <section className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold">
+                <Building2 className="h-4 w-4 text-primary" /> Modo de uso e empresa
+              </h4>
+              <UsageModePanel />
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="flex items-center gap-2 text-sm font-semibold">
                 <Palette className="h-4 w-4 text-primary" /> Aparência
               </h4>
               <AppearancePanel />
             </section>
+
 
             <section className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold">
