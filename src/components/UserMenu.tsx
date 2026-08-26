@@ -58,8 +58,10 @@ export default function UserMenu() {
 
   return (
     <>
+      <NotificationsBell />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
+
           <Button variant="ghost" size="sm" className="h-8 gap-2 px-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-[10px] font-semibold text-primary">
               {initials}
