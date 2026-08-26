@@ -29,10 +29,13 @@ export default function UserMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isMaster } = useUserRole();
+  const { settings } = useAppSettings();
+  const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+
 
   useEffect(() => {
     const onChange = () => setIsFullscreen(!!document.fullscreenElement);
