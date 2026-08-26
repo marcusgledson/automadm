@@ -174,17 +174,10 @@ function SignInForm() {
           Entrar
         </Button>
       </form>
-      <button
-        type="button"
-        onClick={() => setForgotOpen(true)}
-        className="mt-4 w-full text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
-      >
-        Esqueci a senha
-      </button>
-      <ForgotPasswordDialog open={forgotOpen} onOpenChange={setForgotOpen} />
     </>
   );
 }
+
 
 
 function SignUpForm() {
