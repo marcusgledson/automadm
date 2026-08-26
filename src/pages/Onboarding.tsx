@@ -13,6 +13,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { MODULES, PALETTES, THEME_STYLES, useAppSettings, type UsageMode } from "@/hooks/useAppSettings";
 import PhoneField, { isPhoneValid, type PhoneValue } from "@/components/PhoneField";
+import OrganizationForm from "@/components/OrganizationForm";
+
 
 const MODES: { id: UsageMode; title: string; icon: typeof User; text: string }[] = [
   {
