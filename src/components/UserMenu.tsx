@@ -24,6 +24,8 @@ import {
 import AdminPanel from "@/components/AdminPanel";
 import HelpDialog from "@/components/HelpDialog";
 import MyInfoDialog from "@/components/MyInfoDialog";
+import { useAppSettings } from "@/hooks/useAppSettings";
+
 
 export default function UserMenu() {
   const { user, signOut } = useAuth();
