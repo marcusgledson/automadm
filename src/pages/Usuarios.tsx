@@ -276,7 +276,13 @@ export default function Usuarios() {
               </div>
             )}
 
+            <ProfileGroupsPanel
+              users={users}
+              onAssign={(userId, r, mods) => updateUser(userId, { role: r, allowed_modules: mods })}
+            />
+
             <AuditLogList />
+
           </>
         )}
       </main>
