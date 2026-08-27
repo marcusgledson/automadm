@@ -181,6 +181,13 @@ export const PALETTES: PaletteDef[] = [
   },
 ];
 
+import heroEscritorio from "@/assets/theme-escritorio.jpg";
+import heroConstrucao from "@/assets/theme-construcao.jpg";
+import heroArquitetura from "@/assets/theme-arquitetura.jpg";
+import heroMeioAmbiente from "@/assets/theme-meioambiente.jpg";
+import heroCarros from "@/assets/theme-carros.jpg";
+import heroAviacao from "@/assets/theme-aviacao.jpg";
+
 export interface ThemeStyleDef {
   id: ThemeStyleId;
   label: string;
@@ -189,6 +196,12 @@ export interface ThemeStyleDef {
   icon: string;
   /** Ângulos/tons decorativos da arte gerada. */
   art: { from: string; to: string };
+  /** Imagem de destaque da tela inicial (nulo = fotografia padrão). */
+  image: string | null;
+  /** Fonte de destaque (Google Fonts). Nulo mantém a fonte padrão. */
+  font: { family: string; googleQuery: string } | null;
+  /** Ícones dos cards do painel, por módulo (nomes lucide). */
+  icons: Record<string, string>;
 }
 
 export const THEME_STYLES: ThemeStyleDef[] = [
@@ -198,6 +211,9 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Visual padrão, sem referências de segmento.",
     icon: "Sparkles",
     art: { from: "primary", to: "accent" },
+    image: null,
+    font: null,
+    icons: {},
   },
   {
     id: "escritorio",
@@ -205,6 +221,14 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Ambiente administrativo, relatórios e planilhas.",
     icon: "Briefcase",
     art: { from: "primary", to: "accent" },
+    image: heroEscritorio,
+    font: { family: "Italianno", googleQuery: "Italianno" },
+    icons: {
+      extrato: "FileSpreadsheet",
+      contas: "Files",
+      investimentos: "LineChart",
+      metas: "ClipboardList",
+    },
   },
   {
     id: "construcao",
@@ -212,6 +236,14 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Obras, medições e controle de materiais.",
     icon: "HardHat",
     art: { from: "accent", to: "primary" },
+    image: heroConstrucao,
+    font: { family: "Tangerine", googleQuery: "Tangerine:wght@700" },
+    icons: {
+      extrato: "Blocks",
+      contas: "Hammer",
+      investimentos: "Wrench",
+      metas: "Construction",
+    },
   },
   {
     id: "arquitetura",
@@ -219,6 +251,14 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Projetos, plantas e composição de custos.",
     icon: "Ruler",
     art: { from: "primary", to: "accent" },
+    image: heroArquitetura,
+    font: { family: "Bungee", googleQuery: "Bungee" },
+    icons: {
+      extrato: "PencilRuler",
+      contas: "Presentation",
+      investimentos: "DraftingCompass",
+      metas: "PenTool",
+    },
   },
   {
     id: "meioambiente",
@@ -226,6 +266,14 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Sustentabilidade, consumo e eficiência.",
     icon: "Leaf",
     art: { from: "accent", to: "primary" },
+    image: heroMeioAmbiente,
+    font: { family: "Tinos", googleQuery: "Tinos:wght@400;700" },
+    icons: {
+      extrato: "Sprout",
+      contas: "Apple",
+      investimentos: "TreeDeciduous",
+      metas: "Recycle",
+    },
   },
   {
     id: "carros",
@@ -233,6 +281,14 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Frota, combustível e manutenção.",
     icon: "Car",
     art: { from: "primary", to: "accent" },
+    image: heroCarros,
+    font: { family: "Bungee Shade", googleQuery: "Bungee+Shade" },
+    icons: {
+      extrato: "Gauge",
+      contas: "Fuel",
+      investimentos: "CircleGauge",
+      metas: "CarFront",
+    },
   },
   {
     id: "aviacao",
@@ -240,8 +296,17 @@ export const THEME_STYLES: ThemeStyleDef[] = [
     description: "Operações aéreas, rotas e custos de voo.",
     icon: "Plane",
     art: { from: "accent", to: "primary" },
+    image: heroAviacao,
+    font: { family: "Tangerine", googleQuery: "Tangerine:wght@700" },
+    icons: {
+      extrato: "PlaneTakeoff",
+      contas: "Ticket",
+      investimentos: "Radar",
+      metas: "Navigation",
+    },
   },
 ];
+
 
 export const DEFAULT_PALETTE: PaletteId = "oliva";
 export const DEFAULT_THEME_STYLE: ThemeStyleId = "neutro";
