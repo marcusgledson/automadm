@@ -10,6 +10,11 @@ import FinanceHero from "@/components/FinanceHero";
 import { lovable } from "@/integrations/lovable";
 import PinLogin from "@/components/PinLogin";
 import { listPinUsers, type PinUser } from "@/lib/pinLock";
+import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
+import PasswordStrengthMeter from "@/components/PasswordStrengthMeter";
+import { traduzirErroAuth } from "@/lib/authErrors";
+import { SENHA_MAX, SENHA_MIN, validarSenha } from "@/lib/password";
+
 
 
 function GoogleButton() {
