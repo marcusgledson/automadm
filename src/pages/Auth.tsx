@@ -52,6 +52,8 @@ export default function Auth() {
   const { user, loading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [pinUser, setPinUser] = useState<PinUser | null>(() => listPinUsers()[0] ?? null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+
 
   if (loading) {
     return (
