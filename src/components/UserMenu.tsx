@@ -99,6 +99,11 @@ export default function UserMenu() {
             </DropdownMenuItem>
           )}
 
+          <DropdownMenuItem onClick={() => navigate("/solicitacoes")}>
+            <ClipboardList className="mr-2 h-4 w-4" />
+            Solicitações e Relatórios
+          </DropdownMenuItem>
+
           <DropdownMenuItem onClick={() => setInfoOpen(true)}>
             <UserRoundCog className="mr-2 h-4 w-4" />
             Minhas Informações
