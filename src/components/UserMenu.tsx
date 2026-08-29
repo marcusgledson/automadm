@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  ClipboardList,
   HelpCircle,
   LogOut,
   Maximize2,
