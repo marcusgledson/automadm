@@ -19,6 +19,7 @@ import SmsConfig from "./pages/SmsConfig";
 import SmsReview from "./pages/SmsReview";
 import Onboarding from "./pages/Onboarding";
 import Metas from "./pages/Metas";
+import Solicitacoes from "./pages/Solicitacoes";
 import Usuarios from "./pages/Usuarios";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
@@ -279,6 +280,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <FAQ />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/solicitacoes"
+              element={
+                <ProtectedRoute>
+                  <Solicitacoes />
                 </ProtectedRoute>
               }
             />
