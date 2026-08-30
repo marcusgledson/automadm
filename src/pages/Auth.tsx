@@ -185,8 +185,6 @@ function SignInForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={SENHA_MIN}
-              maxLength={SENHA_MAX}
             />
           </div>
         </div>
