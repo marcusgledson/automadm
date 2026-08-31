@@ -242,7 +242,7 @@ export const THEME_STYLES: ThemeStyleDef[] = [
       extrato: "Blocks",
       contas: "Hammer",
       investimentos: "Wrench",
-      metas: "Brick",
+      metas: "Construction",
     },
   },
   {
