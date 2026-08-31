@@ -1,9 +1,9 @@
 /** Tradução das mensagens de erro de autenticação do backend para pt-BR. */
 const MAP: { match: RegExp; msg: string }[] = [
-  { match: /invalid login credentials/i, msg: "E-mail ou senha incorretos." },
+  { match: /invalid login credentials/i, msg: "Senha incorreta ou e-mail não cadastrado. Confira o e-mail digitado, verifique o Caps Lock e digite a senha novamente. Se não lembrar, use \"Esqueci a senha\"." },
   { match: /email not confirmed/i, msg: "Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada." },
   { match: /user already registered|already been registered/i, msg: "Já existe uma conta com este e-mail." },
-  { match: /password should be at least/i, msg: "A senha deve ter pelo menos 8 caracteres." },
+  { match: /password should be at least/i, msg: "Ao criar ou redefinir sua senha, use pelo menos 8 caracteres." },
   { match: /(pwned|leaked|compromised) password|has been leaked/i, msg: "Esta senha aparece em vazamentos conhecidos. Escolha outra senha." },
   { match: /unable to validate email|invalid email/i, msg: "Informe um e-mail válido." },
   { match: /email rate limit|over_email_send_rate_limit|too many requests|rate limit/i, msg: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
