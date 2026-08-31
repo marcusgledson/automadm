@@ -112,3 +112,9 @@
 @layer base {
   html, body { -webkit-tap-highlight-color: transparent; }
 }
+@layer utilities {
+  /* Fonte de destaque definida pelo Tema / estilo (ver src/lib/appearance.ts). */
+  .font-display {
+    font-family: var(--font-display, inherit);
+  }
+}

@@ -143,14 +143,18 @@ function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  
+  const [erro, setErro] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErro(null);
     setSubmitting(true);
-    const { error } = await signIn(email, password);
+    // A senha é enviada exatamente como digitada (sem cortes ou normalização).
+    const { error } = await signIn(email.trim(), password);
     if (error) {
-      toast.error(traduzirErroAuth(error));
+      const msg = traduzirErroAuth(error);
+      setErro(msg);
+      toast.error(msg);
     }
     setSubmitting(false);
   };
@@ -183,10 +187,19 @@ function SignInForm() {
               placeholder="••••••••"
               className="pl-10"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (erro) setErro(null);
+              }}
+              autoComplete="current-password"
               required
             />
           </div>
+          {erro && (
+            <p role="alert" className="text-xs text-destructive">
+              {erro}
+            </p>
+          )}
         </div>
         <Button type="submit" className="w-full active:scale-[0.97]" disabled={submitting}>
           {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
