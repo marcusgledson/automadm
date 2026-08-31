@@ -65,7 +65,31 @@ export default function ThemedHero({ className = "", priority = false, editable 
         className="pointer-events-none absolute -inset-1 bg-gradient-to-tr from-primary/10 via-transparent to-accent/10 opacity-70 transition-opacity duration-500 group-hover:opacity-100"
       />
 
-      {useArt ? (
+      {useArt && theme.image ? (
+        <div
+          role="img"
+          aria-label={`Ilustração do tema ${theme.label}`}
+          className="relative h-full w-full overflow-hidden rounded-xl"
+        >
+          <img
+            src={theme.image}
+            alt=""
+            aria-hidden
+            loading={priority ? "eager" : "lazy"}
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03] motion-safe:animate-fade-up"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-transparent"
+          />
+          <div className="absolute inset-x-0 bottom-0 flex items-center gap-2 p-4">
+            <span className="rounded-xl bg-primary/15 p-2 text-primary shadow-sm">
+              <Icon className="h-5 w-5" />
+            </span>
+            <span className="font-display text-2xl leading-none text-foreground">{theme.label}</span>
+          </div>
+        </div>
+      ) : useArt ? (
         <div
           role="img"
           aria-label={`Ilustração do tema ${theme.label}`}
@@ -89,7 +113,7 @@ export default function ThemedHero({ className = "", priority = false, editable 
             <span className="rounded-2xl bg-primary/15 p-4 text-primary shadow-sm transition-transform duration-500 group-hover:scale-105">
               <Icon className="h-9 w-9" />
             </span>
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="font-display text-xl tracking-wide text-muted-foreground">
               {theme.label}
             </span>
           </div>
