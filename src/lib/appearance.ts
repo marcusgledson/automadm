@@ -322,12 +322,38 @@ export function getThemeStyle(id?: string | null): ThemeStyleDef {
 }
 
 const STYLE_EL_ID = "app-appearance-tokens";
+const FONT_LINK_ID = "app-theme-font";
 
 function toCssBlock(selector: string, tokens: Record<string, string>) {
   const body = Object.entries(tokens)
     .map(([k, v]) => `--${k}: ${v};`)
     .join("");
   return `${selector}{${body}}`;
+}
+
+/** Carrega (uma vez) a fonte de destaque do tema no Google Fonts. */
+function applyThemeFont(theme: ThemeStyleDef) {
+  const link =
+    (document.getElementById(FONT_LINK_ID) as HTMLLinkElement | null) ??
+    (() => {
+      const l = document.createElement("link");
+      l.id = FONT_LINK_ID;
+      l.rel = "stylesheet";
+      document.head.appendChild(l);
+      return l;
+    })();
+
+  if (!theme.font) {
+    link.removeAttribute("href");
+    document.documentElement.style.removeProperty("--font-display");
+    return;
+  }
+  const href = `https://fonts.googleapis.com/css2?family=${theme.font.googleQuery}&display=swap`;
+  if (link.getAttribute("href") !== href) link.href = href;
+  document.documentElement.style.setProperty(
+    "--font-display",
+    `"${theme.font.family}", "DM Sans", system-ui, sans-serif`,
+  );
 }
 
 /** Aplica a paleta escolhida escrevendo as variáveis CSS no documento. */
@@ -345,9 +371,12 @@ export function applyAppearance(paletteId?: string | null, themeStyleId?: string
   el.textContent =
     toCssBlock(":root", palette.tokens) + toCssBlock(".dark", palette.darkTokens);
 
+  applyThemeFont(theme);
+
   document.documentElement.dataset.palette = palette.id;
   document.documentElement.dataset.themeStyle = theme.id;
 }
+
 
 export function readCachedAppearance(): { palette: string; theme_style: string } | null {
   try {
