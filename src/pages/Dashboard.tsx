@@ -4,7 +4,8 @@ import { FileSpreadsheet, Receipt, TrendingUp, Sparkles, HelpCircle, Target } fr
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import UserMenu from "@/components/UserMenu";
-import FinanceHero from "@/components/FinanceHero";
+import ThemedHero from "@/components/ThemedHero";
+import { useThemeIcon } from "@/hooks/useThemeIcon";
 import HelpDialog from "@/components/HelpDialog";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
 
@@ -12,13 +13,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [helpOpen, setHelpOpen] = useState(false);
   const { canAccess } = useModuleAccess();
+  const themeIcon = useThemeIcon();
 
   const modules = [
     {
       id: "extrato",
       title: "Análise de Extrato Bancário",
       description: "Importe OFX, analise transações e salve seu extrato bancário na base por agência e conta.",
-      icon: FileSpreadsheet,
+      icon: themeIcon("extrato", FileSpreadsheet),
       path: "/extrato",
       gradient: "from-primary/15 to-primary/0",
       iconBg: "bg-primary/12 text-primary",
@@ -27,7 +29,7 @@ export default function Dashboard() {
       id: "contas",
       title: "Central de Contas e Despesas",
       description: "Energia, Internet, Água, IPTU, IPVA, Taxas, Boletos. Carregue arquivos ou lance manualmente — inclui as Faturas de Energia.",
-      icon: Receipt,
+      icon: themeIcon("contas", Receipt),
       path: "/contas",
       gradient: "from-emerald-500/15 to-emerald-500/0",
       iconBg: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-400",
@@ -36,7 +38,7 @@ export default function Dashboard() {
       id: "investimentos",
       title: "Meus Investimentos",
       description: "Importe extratos de investimentos e entenda taxas, carência, resgate e rentabilidade em linguagem simples.",
-      icon: TrendingUp,
+      icon: themeIcon("investimentos", TrendingUp),
       path: "/investimentos",
       gradient: "from-amber-500/15 to-amber-500/0",
       iconBg: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
@@ -45,7 +47,7 @@ export default function Dashboard() {
       id: "metas",
       title: "Metas e Orçamento",
       description: "Defina objetivo de economia e prazo por modalidade de consumo e receba alerta quando o custo real ultrapassar o orçado.",
-      icon: Target,
+      icon: themeIcon("metas", Target),
       path: "/metas",
       gradient: "from-sky-500/15 to-sky-500/0",
       iconBg: "bg-sky-500/12 text-sky-600 dark:text-sky-400",
@@ -82,7 +84,7 @@ export default function Dashboard() {
               <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
               <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
             </div>
-            <FinanceHero editable className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
+            <ThemedHero editable className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

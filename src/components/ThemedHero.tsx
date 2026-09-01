@@ -1,10 +1,11 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ImagePlus, RotateCcw, Sparkles, Briefcase, HardHat, Ruler, Leaf, Car, Plane } from "lucide-react";
 import { toast } from "sonner";
 import { useHeroImage } from "@/hooks/useHeroImage";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { getThemeStyle, type ThemeStyleId } from "@/lib/appearance";
+import ImageCropDialog from "@/components/ImageCropDialog";
 
 const ICONS: Record<string, React.ElementType> = {
   Sparkles,
@@ -33,6 +34,8 @@ export default function ThemedHero({ className = "", priority = false, editable 
   const { settings } = useAppSettings();
   const { src, setCustom, reset, isCustom } = useHeroImage();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
 
   const theme = getThemeStyle(themeStyle ?? settings?.theme_style);
   const Icon = ICONS[theme.icon] ?? Sparkles;
@@ -43,17 +46,12 @@ export default function ThemedHero({ className = "", priority = false, editable 
       toast.error("Selecione um arquivo de imagem válido.");
       return;
     }
-    if (file.size > 3 * 1024 * 1024) {
-      toast.error("Imagem muito grande. Use até 3 MB.");
+    if (file.size > 12 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Use até 12 MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setCustom(String(reader.result));
-      toast.success("Imagem da tela inicial atualizada.");
-    };
-    reader.onerror = () => toast.error("Falha ao ler a imagem.");
-    reader.readAsDataURL(file);
+    setCropFile(file);
+    setCropOpen(true);
   };
 
   return (
@@ -163,6 +161,20 @@ export default function ThemedHero({ className = "", priority = false, editable 
           />
         </div>
       )}
+
+      <ImageCropDialog
+        open={cropOpen}
+        onOpenChange={(v) => {
+          setCropOpen(v);
+          if (!v) setCropFile(null);
+        }}
+        file={cropFile}
+        aspect={4 / 3}
+        onCropped={(dataUrl) => {
+          setCustom(dataUrl);
+          toast.success("Imagem da tela inicial atualizada.");
+        }}
+      />
     </div>
   );
 }
