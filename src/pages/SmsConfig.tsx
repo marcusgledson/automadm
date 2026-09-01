@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, Plus, Pencil, Trash2, Download, Smartphone } from "lucide-react";
+import { ArrowLeft, Home, Plus, Pencil, Trash2, Download, Smartphone, ClipboardPaste } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import UserMenu from "@/components/UserMenu";
 import SmsBankConfigDialog from "@/components/SmsBankConfigDialog";
+import SmsPasteDialog from "@/components/SmsPasteDialog";
 import { useSmsBankConfigs, type SmsBankConfigRow } from "@/hooks/useSmsBankConfigs";
 import { useSmsReviewQueue } from "@/hooks/useSmsReviewQueue";
 import {
@@ -21,6 +22,7 @@ export default function SmsConfig() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SmsBankConfigRow | null>(null);
   const [scanning, setScanning] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
 
   const handleAdd = () => { setEditing(null); setDialogOpen(true); };
   const handleEdit = (row: SmsBankConfigRow) => { setEditing(row); setDialogOpen(true); };
@@ -62,8 +64,18 @@ export default function SmsConfig() {
         conta: cfg.conta,
       });
     }
-    if (rows.length) await insertMany(rows);
-    toast({ title: `${rows.length} SMS enviados para revisão` });
+    if (rows.length) {
+      await insertMany(rows);
+      toast({ title: `${rows.length} SMS enviados para revisão` });
+    } else {
+      toast({
+        title: "Nenhum SMS reconhecido",
+        description:
+          messages.length === 0
+            ? "Não há mensagens recentes acessíveis no aparelho."
+            : "As mensagens encontradas não casaram com os remetentes cadastrados. Ajuste os remetentes do banco ou use 'Colar SMS'.",
+      });
+    }
     setScanning(false);
   };
 
@@ -94,6 +106,9 @@ export default function SmsConfig() {
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={loadPresets}>
                 <Download className="mr-2 h-4 w-4" /> Carregar presets
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setPasteOpen(true)}>
+                <ClipboardPaste className="mr-2 h-4 w-4" /> Colar SMS
               </Button>
               <Button variant="outline" size="sm" onClick={handleScan} disabled={scanning}>
                 <Smartphone className="mr-2 h-4 w-4" />
@@ -147,6 +162,13 @@ export default function SmsConfig() {
           Para ler SMS automaticamente, exporte para GitHub e rode <code>npx cap add android</code> e <code>npx cap run android</code>. iOS e Web não suportam leitura de SMS.
         </p>
       </main>
+
+      <SmsPasteDialog
+        open={pasteOpen}
+        onOpenChange={setPasteOpen}
+        configs={items}
+        onQueue={insertMany}
+      />
 
       <SmsBankConfigDialog
         open={dialogOpen}

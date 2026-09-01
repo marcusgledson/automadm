@@ -96,6 +96,19 @@ function containsAny(text: string, list: string[]): boolean {
   return list.some((k) => k && t.includes(k.toLowerCase()));
 }
 
+// Heurísticas usadas quando as palavras-chave do banco não decidem.
+const FALLBACK_DEBIT = [
+  "compra", "compra aprovada", "débito", "debito", "pagamento", "pagto",
+  "pix enviado", "pix env", "transferência enviada", "transferencia enviada",
+  "saque", "ted enviada", "doc enviado", "tarifa", "débito automático",
+  "debito automatico", "boleto pago", "fatura",
+];
+const FALLBACK_CREDIT = [
+  "crédito", "credito", "recebido", "pix recebido", "depósito", "deposito",
+  "ted recebida", "doc recebido", "transferência recebida", "transferencia recebida",
+  "salário", "salario", "estorno", "reembolso", "devolução", "devolucao",
+];
+
 export function detectKind(
   text: string,
   cfg: Pick<SmsBankConfig, "debit_keywords" | "credit_keywords">,
@@ -104,6 +117,13 @@ export function detectKind(
   const isCredit = containsAny(text, cfg.credit_keywords);
   if (isDebit && !isCredit) return "debit";
   if (isCredit && !isDebit) return "credit";
+  const fbDebit = containsAny(text, FALLBACK_DEBIT);
+  const fbCredit = containsAny(text, FALLBACK_CREDIT);
+  if (fbDebit && !fbCredit) return "debit";
+  if (fbCredit && !fbDebit) return "credit";
+  // Sinal explícito de valor negativo/positivo no texto.
+  if (/-\s*r\$/i.test(text)) return "debit";
+  if (/\+\s*r\$/i.test(text)) return "credit";
   return "unknown";
 }
 
