@@ -61,7 +61,7 @@ export default function Dashboard() {
           <div className="rounded-lg bg-primary/10 p-1.5">
             <FileSpreadsheet className="h-4 w-4 text-primary" />
           </div>
-          <span className="truncate text-sm font-semibold text-foreground">Painel Financeiro</span>
+          <span className="font-display truncate text-sm font-semibold text-foreground">Painel Financeiro</span>
         </div>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setHelpOpen(true)}>
@@ -81,7 +81,7 @@ export default function Dashboard() {
               <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
                 <Sparkles className="h-3 w-3 text-accent" /> Edição moderna · pronto para mobile
               </div>
-              <h1 className="text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
+              <h1 className="font-display text-3xl font-bold tracking-tight gradient-text sm:text-4xl">Bem-vindo ao Painel Financeiro</h1>
               <p className="text-sm text-muted-foreground sm:text-base">Escolha um módulo para começar</p>
             </div>
             <ThemedHero editable className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
@@ -99,7 +99,7 @@ export default function Dashboard() {
                   <div className={`rounded-xl p-3 ${mod.iconBg} transition-transform group-hover:scale-110`}>
                     <mod.icon className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-base sm:text-lg leading-tight">{mod.title}</CardTitle>
+                  <CardTitle className="font-display text-base sm:text-lg leading-tight">{mod.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription className="text-sm">{mod.description}</CardDescription>
