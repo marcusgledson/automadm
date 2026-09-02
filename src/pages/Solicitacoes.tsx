@@ -76,6 +76,22 @@ export default function Solicitacoes() {
     toast.success(status === "aprovada" ? "Solicitação aprovada." : "Solicitação recusada.");
   };
 
+  /** Gera e baixa o relatório de um pedido já aprovado. */
+  const baixar = async (r: { id: string; modulo: string; formato: string }) => {
+    setGerando(r.id);
+    try {
+      const res = await generateReport(r.modulo, r.formato, {
+        titulo: `${moduleLabel(r.modulo)} · ${formatLabel(r.formato)}`,
+      });
+      toast.success(`Relatório gerado (${res.total} registro(s)): ${res.fileName}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o relatório.");
+    } finally {
+      setGerando(null);
+    }
+  };
+
+
   const submitCorporate = async () => {
     if (demanda.trim().length < 10)
       return toast.error("Descreva a demanda com pelo menos 10 caracteres.");
