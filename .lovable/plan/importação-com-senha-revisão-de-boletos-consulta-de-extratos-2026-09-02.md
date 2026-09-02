@@ -5,6 +5,7 @@
 Hoje a senha é validada apenas no primeiro PDF e, se falhar, toda a importação para.
 
 Novo comportamento:
+
 - A senha digitada é testada em **todos** os arquivos selecionados antes de processar.
 - Os arquivos que aceitam a senha seguem o processamento normalmente.
 - Os que recusam ficam com status "Senha incorreta" e abrem um **pop-up** pedindo a senha correta apenas para esses arquivos (com o nome do arquivo em destaque e a dica de senha quando o PDF traz uma).
@@ -18,6 +19,7 @@ Ao final, os dados importados são gravados em `consumption_bills` e ficam visí
 
 - O upload universal passa a detectar PDF protegido e abrir o mesmo pop-up de senha (campo visível, por arquivo).
 - Painel de status da importação por arquivo: senha exigida, lido, revisado, gravado, duplicado, erro — comprovando a captação das informações.
+- Não pode haver duplicidade de informações, portanto, chacar as linhas já existentes pela chave da informação antes de gravá-las.
 
 ## 3. Leitura aprimorada de boletos e tela de revisão
 
