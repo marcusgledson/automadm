@@ -23,6 +23,7 @@ import {
   type RequestStatus,
 } from "@/hooks/useReportRequests";
 import { useCorporateRequests } from "@/hooks/useCorporateRequests";
+import { generateReport } from "@/lib/reportGenerator";
 
 const statusVariant = (s: RequestStatus) =>
   s === "aprovada" ? "default" : s === "recusada" ? "destructive" : "outline";
@@ -45,6 +46,7 @@ export default function Solicitacoes() {
   const [formato, setFormato] = useState<string>(REPORT_FORMATS[0].id);
   const [justificativa, setJustificativa] = useState("");
   const [sending, setSending] = useState(false);
+  const [gerando, setGerando] = useState<string | null>(null);
 
   const [empresa, setEmpresa] = useState(settings?.org_name ?? "");
   const [demanda, setDemanda] = useState("");
@@ -239,6 +241,16 @@ export default function Solicitacoes() {
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                          {r.status === "aprovada" && (
+                            <Button size="sm" variant="outline" disabled={gerando === r.id} onClick={() => baixar(r)}>
+                              {gerando === r.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="mr-2 h-4 w-4" />
+                              )}
+                              Baixar
+                            </Button>
+                          )}
                           {r.status === "pendente" && (
                             <>
                               <Button size="sm" variant="outline" onClick={() => decide(r.id, "recusada")}>
@@ -283,7 +295,19 @@ export default function Solicitacoes() {
                           {new Date(r.created_at).toLocaleString("pt-BR")}
                         </p>
                       </div>
-                      <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                        {r.status === "aprovada" && (
+                          <Button size="sm" disabled={gerando === r.id} onClick={() => baixar(r)}>
+                            {gerando === r.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="mr-2 h-4 w-4" />
+                            )}
+                            Baixar relatório
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
