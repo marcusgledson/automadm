@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Building2, ClipboardList, FileDown, Home, Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, Building2, ClipboardList, Download, FileDown, Home, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import {
   type RequestStatus,
 } from "@/hooks/useReportRequests";
 import { useCorporateRequests } from "@/hooks/useCorporateRequests";
+import { generateReport } from "@/lib/reportGenerator";
 
 const statusVariant = (s: RequestStatus) =>
   s === "aprovada" ? "default" : s === "recusada" ? "destructive" : "outline";
@@ -45,6 +46,7 @@ export default function Solicitacoes() {
   const [formato, setFormato] = useState<string>(REPORT_FORMATS[0].id);
   const [justificativa, setJustificativa] = useState("");
   const [sending, setSending] = useState(false);
+  const [gerando, setGerando] = useState<string | null>(null);
 
   const [empresa, setEmpresa] = useState(settings?.org_name ?? "");
   const [demanda, setDemanda] = useState("");
@@ -75,6 +77,22 @@ export default function Solicitacoes() {
     if (!res.ok) return toast.error(res.error);
     toast.success(status === "aprovada" ? "Solicitação aprovada." : "Solicitação recusada.");
   };
+
+  /** Gera e baixa o relatório de um pedido já aprovado. */
+  const baixar = async (r: { id: string; modulo: string; formato: string }) => {
+    setGerando(r.id);
+    try {
+      const res = await generateReport(r.modulo, r.formato, {
+        titulo: `${moduleLabel(r.modulo)} · ${formatLabel(r.formato)}`,
+      });
+      toast.success(`Relatório gerado (${res.total} registro(s)): ${res.fileName}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível gerar o relatório.");
+    } finally {
+      setGerando(null);
+    }
+  };
+
 
   const submitCorporate = async () => {
     if (demanda.trim().length < 10)
@@ -223,6 +241,16 @@ export default function Solicitacoes() {
                         </div>
                         <div className="flex shrink-0 items-center gap-2">
                           <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                          {r.status === "aprovada" && (
+                            <Button size="sm" variant="outline" disabled={gerando === r.id} onClick={() => baixar(r)}>
+                              {gerando === r.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Download className="mr-2 h-4 w-4" />
+                              )}
+                              Baixar
+                            </Button>
+                          )}
                           {r.status === "pendente" && (
                             <>
                               <Button size="sm" variant="outline" onClick={() => decide(r.id, "recusada")}>
@@ -267,7 +295,19 @@ export default function Solicitacoes() {
                           {new Date(r.created_at).toLocaleString("pt-BR")}
                         </p>
                       </div>
-                      <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge variant={statusVariant(r.status)}>{STATUS_LABEL[r.status]}</Badge>
+                        {r.status === "aprovada" && (
+                          <Button size="sm" disabled={gerando === r.id} onClick={() => baixar(r)}>
+                            {gerando === r.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="mr-2 h-4 w-4" />
+                            )}
+                            Baixar relatório
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
