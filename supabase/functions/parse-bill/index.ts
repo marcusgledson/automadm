@@ -71,7 +71,18 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
   (ex.: "Assaí Cobrança", cartório), retorne o sacador ORIGINAL nesse caso.
 - fornecedor: preencha com o sacador/beneficiário identificado.
 - emissor_documento: CNPJ do sacador/beneficiário, se disponível.
-- linha_digitavel/codigo_barras: quando visíveis no boleto.`;
+- linha_digitavel/codigo_barras: quando visíveis no boleto.
+- BOLETOS DE TRIBUTOS (IPTU, IPVA, taxas, ISS, alvará): leia com atenção redobrada.
+  Extraia também: inscricao_imobiliaria, renavam, placa, exercicio (ano do tributo),
+  cota/parcela (ex.: "03/10"), numero_documento/nosso_numero, contribuinte,
+  valor_principal, desconto, multa, juros, correcao_monetaria, taxas_adicionais,
+  outros_acrescimos, valor_venal, aliquota, data_emissao, vencimentos alternativos
+  (lista de datas/valores quando o carnê apresenta cota única e parcelas).
+- Quando existir "cota única" e "parcelamento", use como data_vencimento a data da
+  parcela/cota efetivamente cobrada nesta via e registre as demais em vencimentos_alternativos.
+- Detalhe cada linha da composição do valor em itens_fatura (descrição + valor).
+- Nunca invente valores: campo não localizado deve ser null.`;
+
 
     const body = JSON.stringify({
       model: "google/gemini-2.5-flash",
@@ -127,8 +138,35 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
                   },
                 },
               },
+              inscricao_imobiliaria: { type: "string" },
+              renavam: { type: "string" },
+              placa: { type: "string" },
+              exercicio: { type: "string", description: "Ano de exercício do tributo" },
+              cota: { type: "string", description: "Cota/parcela, ex.: 03/10 ou Cota única" },
+              numero_documento: { type: "string", description: "Nosso número / número do documento" },
+              contribuinte: { type: "string" },
+              valor_principal: { type: "number" },
+              desconto: { type: "number" },
+              multa: { type: "number" },
+              juros: { type: "number" },
+              correcao_monetaria: { type: "number" },
+              taxas_adicionais: { type: "number" },
+              outros_acrescimos: { type: "number" },
+              valor_venal: { type: "number" },
+              aliquota: { type: "number" },
+              data_emissao: { type: "string" },
+              vencimentos_alternativos: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    descricao: { type: "string" }, data_vencimento: { type: "string" }, valor: { type: "number" },
+                  },
+                },
+              },
             },
             required: ["numero_instalacao", "data_vencimento", "valor_total"],
+
           },
         },
       }],

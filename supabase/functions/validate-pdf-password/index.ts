@@ -91,10 +91,19 @@ serve(async (req) => {
       });
       const pdfDoc = await loadingTask.promise;
       const encrypted = pdfDoc.numPages > 0; // load succeeded
+      let hint: string | undefined;
+      try {
+        const meta = await pdfDoc.getMetadata();
+        const info = (meta?.info ?? {}) as Record<string, unknown>;
+        for (const v of [info.Keywords, info.Subject, info.Title]) {
+          if (typeof v === "string" && /senha|password|cpf|cnpj/i.test(v)) { hint = v.trim(); break; }
+        }
+      } catch (_) { /* metadados indisponíveis */ }
       return new Response(
-        JSON.stringify({ success: true, encrypted, numPages: pdfDoc.numPages }),
+        JSON.stringify({ success: true, encrypted, numPages: pdfDoc.numPages, hint }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const lower = msg.toLowerCase();

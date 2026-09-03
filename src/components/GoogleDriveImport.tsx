@@ -1,4 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import PdfPasswordDialog, { type PdfPasswordRequest } from "@/components/PdfPasswordDialog";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +62,9 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [pdfPassword, setPdfPassword] = useState("");
+  const [pwRequest, setPwRequest] = useState<PdfPasswordRequest | null>(null);
+  const pwResolver = useRef<((v: string | null) => void) | null>(null);
+
   const { links: savedLinks, addLink, removeLink } = useDriveLinks();
 
   const saveCurrentLink = useCallback(async () => {
@@ -150,56 +155,17 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
     }
   };
 
-  const importSelected = useCallback(async () => {
-    const toProcess = files.filter((f) => selectedFiles.has(f.id));
-    if (toProcess.length === 0) {
-      toast.error("Selecione ao menos um arquivo.");
-      return;
-    }
-
-    setImporting(true);
-
-    // Validação prévia da senha usando o primeiro PDF ainda não processado
-    const sample = toProcess.find((f) => f.status !== "done") || toProcess[0];
-    try {
-      const { data: vData, error: vErr } = await supabase.functions.invoke("validate-pdf-password", {
-        body: { fileId: sample.id, password: pdfPassword || undefined },
-      });
-      if (vErr) throw new Error(vErr.message);
-      if (!vData?.success) {
-        toast.error(vData?.error || "Senha inválida.", {
-          description: "Corrija a senha e tente novamente.",
-        });
-        setImporting(false);
-        return;
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Falha ao validar a senha do PDF.";
-      toast.error(msg);
-      setImporting(false);
-      return;
-    }
-
-    const importedInvoices: InvoiceData[] = [];
-    // Chaves existentes (instalação + mês/ano) — reimport substituirá ao invés de ignorar
-    const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
-    let reimported = 0;
-
-    for (const file of toProcess) {
-      setFiles((prev) =>
-        prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: undefined } : f))
-      );
-
-      // Retry com backoff em caso de rate-limit (429) da IA
+  /** Processa um arquivo já liberado (senha válida) e devolve a fatura importada. */
+  const processFile = useCallback(
+    async (file: DriveFile, password: string | undefined, existingKeys: Set<string>) => {
       const MAX_ATTEMPTS = 4;
       let attempt = 0;
-      let succeeded = false;
 
-      while (attempt < MAX_ATTEMPTS && !succeeded) {
+      while (attempt < MAX_ATTEMPTS) {
         attempt++;
         try {
           const { data, error } = await supabase.functions.invoke("download-drive-file", {
-            body: { fileId: file.id, fileName: file.name, password: pdfPassword || undefined },
+            body: { fileId: file.id, fileName: file.name, password: password || undefined },
           });
 
           if (error) throw new Error(error.message);
@@ -212,57 +178,165 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
           };
           const key = getInvoiceKey(invoice);
           const isReimport = existingKeys.has(key);
-          if (isReimport) reimported++;
           existingKeys.add(key);
-          importedInvoices.push(invoice);
           setFiles((prev) =>
             prev.map((f) =>
               f.id === file.id
                 ? { ...f, status: "done" as const, errorMsg: isReimport ? "Atualizado (reimportado)" : undefined }
-                : f
-            )
+                : f,
+            ),
           );
-          succeeded = true;
+          return { invoice, isReimport };
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Erro";
           const isRateLimit = /429|limite de requisi|rate limit/i.test(msg);
           if (isRateLimit && attempt < MAX_ATTEMPTS) {
-            const waitMs = 5000 * attempt; // 5s, 10s, 15s
+            const waitMs = 5000 * attempt;
             setFiles((prev) =>
               prev.map((f) =>
                 f.id === file.id
                   ? { ...f, status: "processing" as const, errorMsg: `Aguardando ${waitMs / 1000}s (rate-limit)` }
-                  : f
-              )
+                  : f,
+              ),
             );
             await new Promise((r) => setTimeout(r, waitMs));
             continue;
           }
           console.error("Error processing", file.name, err);
           setFiles((prev) =>
-            prev.map((f) =>
-              f.id === file.id
-                ? { ...f, status: "error" as const, errorMsg: msg }
-                : f
-            )
+            prev.map((f) => (f.id === file.id ? { ...f, status: "error" as const, errorMsg: msg } : f)),
           );
-          break;
+          return null;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  /** Testa a senha em um arquivo. */
+  const validateOne = useCallback(async (file: DriveFile, password?: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("validate-pdf-password", {
+        body: { fileId: file.id, password: password || undefined },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.success) return { ok: true as const };
+      if (data?.requiresPassword) {
+        return { ok: false as const, needsPassword: true, hint: data.hint as string | undefined, msg: data.error as string };
+      }
+      return { ok: false as const, needsPassword: false, msg: (data?.error as string) || "Falha ao abrir o PDF." };
+    } catch (err) {
+      return {
+        ok: false as const,
+        needsPassword: false,
+        msg: err instanceof Error ? err.message : "Falha ao validar a senha do PDF.",
+      };
+    }
+  }, []);
+
+  /** Abre o pop-up e aguarda a senha (ou desistência). */
+  const askPassword = useCallback((req: PdfPasswordRequest) => {
+    return new Promise<string | null>((resolve) => {
+      pwResolver.current = resolve;
+      setPwRequest(req);
+    });
+  }, []);
+
+  const importSelected = useCallback(async () => {
+    const toProcess = files.filter((f) => selectedFiles.has(f.id));
+    if (toProcess.length === 0) {
+      toast.error("Selecione ao menos um arquivo.");
+      return;
+    }
+
+    setImporting(true);
+
+    const importedInvoices: InvoiceData[] = [];
+    const existingKeys = new Set(existingInvoices.map((i) => getInvoiceKey(i)));
+    let reimported = 0;
+
+    // Fila de arquivos ainda bloqueados por senha
+    let pending = [...toProcess];
+    let password: string | undefined = pdfPassword.trim() || undefined;
+    let wrongAttempt = false;
+
+    while (pending.length > 0) {
+      const liberados: DriveFile[] = [];
+      const bloqueados: DriveFile[] = [];
+      let hint: string | undefined;
+
+      // 1) Testa a senha corrente em TODOS os arquivos pendentes
+      for (const file of pending) {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: "Verificando senha…" } : f)),
+        );
+        const res = await validateOne(file, password);
+        if (res.ok) {
+          liberados.push(file);
+        } else if (res.needsPassword) {
+          hint = hint ?? res.hint;
+          bloqueados.push(file);
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === file.id ? { ...f, status: "error" as const, errorMsg: "Senha incorreta ou não informada" } : f,
+            ),
+          );
+        } else {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === file.id ? { ...f, status: "error" as const, errorMsg: res.msg } : f)),
+          );
         }
       }
 
-      // Intervalo entre faturas para reduzir rate-limit (429) da IA
-      await new Promise((r) => setTimeout(r, 3000));
+      // 2) Processa os liberados com a senha atual
+      for (const file of liberados) {
+        setFiles((prev) =>
+          prev.map((f) => (f.id === file.id ? { ...f, status: "processing" as const, errorMsg: undefined } : f)),
+        );
+        const res = await processFile(file, password, existingKeys);
+        if (res) {
+          importedInvoices.push(res.invoice);
+          if (res.isReimport) reimported++;
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+
+      if (bloqueados.length === 0) break;
+
+      // 3) Pede a senha correta apenas para os que continuam bloqueados
+      const nova = await askPassword({
+        fileNames: bloqueados.map((f) => f.name),
+        hint,
+        wrong: wrongAttempt || !!password,
+      });
+      if (!nova) {
+        setFiles((prev) =>
+          prev.map((f) =>
+            bloqueados.some((b) => b.id === f.id)
+              ? { ...f, status: "error" as const, errorMsg: "Importação cancelada — senha não informada" }
+              : f,
+          ),
+        );
+        break;
+      }
+      password = nova;
+      wrongAttempt = true;
+      pending = bloqueados;
     }
 
     if (importedInvoices.length > 0) {
       onInvoicesImported(importedInvoices);
       toast.success(
-        `${importedInvoices.length} fatura(s) importada(s)${reimported ? ` — ${reimported} atualizada(s) por reimportação` : ""}.`
+        `${importedInvoices.length} fatura(s) importada(s)${reimported ? ` — ${reimported} atualizada(s) por reimportação` : ""}.`,
       );
+    } else {
+      toast.error("Nenhuma fatura foi importada.");
     }
 
     setImporting(false);
-  }, [files, selectedFiles, onInvoicesImported, existingInvoices]);
+  }, [files, selectedFiles, onInvoicesImported, existingInvoices, pdfPassword, validateOne, processFile, askPassword]);
+
 
   const formatSize = (bytes: number | null) => {
     if (!bytes) return "—";
@@ -362,17 +436,21 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
             <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-2">
               <label className="text-sm font-medium">Senha de visualização do PDF (se houver)</label>
               <p className="text-xs text-muted-foreground">
-                Algumas faturas da Neoenergia abrem com senha (CPF/CNPJ do titular). Informe abaixo antes de importar — a mesma senha será usada para todos os arquivos selecionados.
+                A senha é testada em <strong>todos</strong> os arquivos selecionados. Os que aceitarem
+                seguem o processamento; para os demais, será solicitada a senha correta em um pop-up.
+                O campo fica visível por se tratar de senha do documento (normalmente CPF/CNPJ do titular).
               </p>
               <Input
-                type="password"
+                type="text"
                 placeholder="Ex: somente números do CPF/CNPJ"
                 value={pdfPassword}
                 onChange={(e) => setPdfPassword(e.target.value)}
                 disabled={importing}
                 autoComplete="off"
+                spellCheck={false}
               />
             </div>
+
             <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
                 {selectedFiles.size} de {files.length} selecionado(s)
@@ -491,6 +569,13 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
           </div>
         )}
       </CardContent>
+
+      <PdfPasswordDialog
+        request={pwRequest}
+        onSubmit={(pw) => { setPwRequest(null); pwResolver.current?.(pw); pwResolver.current = null; }}
+        onSkip={() => { setPwRequest(null); pwResolver.current?.(null); pwResolver.current = null; }}
+      />
     </Card>
   );
 }
+
