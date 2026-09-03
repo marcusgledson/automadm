@@ -436,17 +436,21 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
             <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 space-y-2">
               <label className="text-sm font-medium">Senha de visualização do PDF (se houver)</label>
               <p className="text-xs text-muted-foreground">
-                Algumas faturas da Neoenergia abrem com senha (CPF/CNPJ do titular). Informe abaixo antes de importar — a mesma senha será usada para todos os arquivos selecionados.
+                A senha é testada em <strong>todos</strong> os arquivos selecionados. Os que aceitarem
+                seguem o processamento; para os demais, será solicitada a senha correta em um pop-up.
+                O campo fica visível por se tratar de senha do documento (normalmente CPF/CNPJ do titular).
               </p>
               <Input
-                type="password"
+                type="text"
                 placeholder="Ex: somente números do CPF/CNPJ"
                 value={pdfPassword}
                 onChange={(e) => setPdfPassword(e.target.value)}
                 disabled={importing}
                 autoComplete="off"
+                spellCheck={false}
               />
             </div>
+
             <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-sm text-muted-foreground">
                 {selectedFiles.size} de {files.length} selecionado(s)
