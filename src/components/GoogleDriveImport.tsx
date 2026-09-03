@@ -569,6 +569,13 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
           </div>
         )}
       </CardContent>
+
+      <PdfPasswordDialog
+        request={pwRequest}
+        onSubmit={(pw) => { setPwRequest(null); pwResolver.current?.(pw); pwResolver.current = null; }}
+        onSkip={() => { setPwRequest(null); pwResolver.current?.(null); pwResolver.current = null; }}
+      />
     </Card>
   );
 }
+
