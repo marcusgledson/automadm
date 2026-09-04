@@ -218,7 +218,7 @@ export default function UniversalBillUpload({ onInserted }: { onInserted?: () =>
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <ImportModeSelector value={mode} onChange={setMode} />
+        <ImportModeSelector mode={mode} onChange={setMode} />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
