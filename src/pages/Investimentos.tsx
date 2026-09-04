@@ -19,7 +19,9 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import UserMenu from "@/components/UserMenu";
+import ManualInvestmentDialog from "@/components/ManualInvestmentDialog";
 import { useInvestments, type Investment } from "@/hooks/useInvestments";
+
 import {
   GLOSSARIO, toInvestmentRow, type ExtractedInvestment,
 } from "@/lib/investmentMapper";
@@ -141,14 +143,20 @@ export default function Investimentos() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Upload className="h-5 w-5 text-accent" /> Importar extrato de investimentos
-            </CardTitle>
-            <CardDescription>
-              Aceita PDF, TXT ou CSV. Se o extrato tiver vários investimentos, você escolhe quais salvar.
-              Tudo é traduzido em linguagem simples.
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Upload className="h-5 w-5 text-accent" /> Importar extrato de investimentos
+                </CardTitle>
+                <CardDescription>
+                  Aceita PDF, TXT ou CSV. Se o extrato tiver vários investimentos, você escolhe quais salvar.
+                  Tudo é traduzido em linguagem simples — ou inclua manualmente.
+                </CardDescription>
+              </div>
+              <ManualInvestmentDialog />
+            </div>
           </CardHeader>
+
           <CardContent className="space-y-4">
             <div>
               <Label className="text-xs">Instituição (opcional)</Label>
