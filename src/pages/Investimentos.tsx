@@ -19,7 +19,9 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
 import UserMenu from "@/components/UserMenu";
+import ManualInvestmentDialog from "@/components/ManualInvestmentDialog";
 import { useInvestments, type Investment } from "@/hooks/useInvestments";
+
 import {
   GLOSSARIO, toInvestmentRow, type ExtractedInvestment,
 } from "@/lib/investmentMapper";
