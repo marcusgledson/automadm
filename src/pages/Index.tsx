@@ -522,6 +522,10 @@ export default function Index() {
               <FolderOpen className="h-4 w-4" /> Abrir OFX/PDF
             </Button>
           )}
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setConsultOpen(true)} title="Consultar base">
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Consultar base</span>
+          </Button>
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
             <Home className="h-4 w-4" />
             <span className="hidden sm:inline">Tela inicial</span>
