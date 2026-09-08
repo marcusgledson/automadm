@@ -503,6 +503,8 @@ export default function Index() {
     setSummary({ mode: "pre" });
   };
 
+  const [consultOpen, setConsultOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4 select-none">
