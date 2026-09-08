@@ -23,6 +23,7 @@ import { dedupeRecords } from "@/lib/dedupeRecords";
 
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
+import SavedStatementsDialog from "@/components/SavedStatementsDialog";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -502,6 +503,8 @@ export default function Index() {
     setSummary({ mode: "pre" });
   };
 
+  const [consultOpen, setConsultOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen flex-col app-surface">
       <header className="safe-top sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-card/70 px-3 backdrop-blur-md sm:px-4 select-none">
@@ -519,6 +522,10 @@ export default function Index() {
               <FolderOpen className="h-4 w-4" /> Abrir OFX/PDF
             </Button>
           )}
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setConsultOpen(true)} title="Consultar base">
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Consultar base</span>
+          </Button>
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
             <Home className="h-4 w-4" />
             <span className="hidden sm:inline">Tela inicial</span>
@@ -725,6 +732,8 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SavedStatementsDialog open={consultOpen} onOpenChange={setConsultOpen} />
     </div>
   );
 }

@@ -12,6 +12,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Tenta achar a dica de senha varrendo os bytes do PDF, pois em arquivos
+ * protegidos o pdf.js não expõe metadados antes de abrir o documento.
+ */
+function findHintInBytes(bytes: Uint8Array): string | undefined {
+  try {
+    const raw = new TextDecoder("latin1").decode(bytes.subarray(0, 400_000));
+    const re = /\/(?:Keywords|Subject|Title)\s*\(([^)]{3,200})\)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(raw)) !== null) {
+      const v = m[1].replace(/\\([()\\])/g, "$1").trim();
+      if (/senha|password|cpf|cnpj/i.test(v)) return v;
+    }
+  } catch (_) { /* sem dica */ }
+  return undefined;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -112,6 +129,7 @@ serve(async (req) => {
           JSON.stringify({
             success: false,
             requiresPassword: true,
+            hint: findHintInBytes(bytes),
             error: password
               ? "Senha do PDF incorreta. Verifique e tente novamente."
               : "Este PDF está protegido por senha. Informe a senha de visualização.",
