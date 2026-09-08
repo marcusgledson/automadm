@@ -145,6 +145,7 @@ export type Database = {
           account_id: string | null
           agencia: string
           banco: string | null
+          banco_codigo: string | null
           categoria: string | null
           codigo_operacao: string | null
           conta: string
@@ -170,6 +171,7 @@ export type Database = {
           account_id?: string | null
           agencia?: string
           banco?: string | null
+          banco_codigo?: string | null
           categoria?: string | null
           codigo_operacao?: string | null
           conta?: string
@@ -195,6 +197,7 @@ export type Database = {
           account_id?: string | null
           agencia?: string
           banco?: string | null
+          banco_codigo?: string | null
           categoria?: string | null
           codigo_operacao?: string | null
           conta?: string
@@ -406,24 +409,30 @@ export type Database = {
       drive_links: {
         Row: {
           created_at: string
+          file_kind: string
           id: string
           label: string | null
+          module: string
           updated_at: string
           url: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          file_kind?: string
           id?: string
           label?: string | null
+          module?: string
           updated_at?: string
           url: string
           user_id: string
         }
         Update: {
           created_at?: string
+          file_kind?: string
           id?: string
           label?: string | null
+          module?: string
           updated_at?: string
           url?: string
           user_id?: string
