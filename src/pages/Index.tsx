@@ -732,6 +732,8 @@ export default function Index() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <SavedStatementsDialog open={consultOpen} onOpenChange={setConsultOpen} />
     </div>
   );
 }
