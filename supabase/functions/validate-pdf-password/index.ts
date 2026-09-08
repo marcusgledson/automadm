@@ -129,6 +129,7 @@ serve(async (req) => {
           JSON.stringify({
             success: false,
             requiresPassword: true,
+            hint: findHintInBytes(bytes),
             error: password
               ? "Senha do PDF incorreta. Verifique e tente novamente."
               : "Este PDF está protegido por senha. Informe a senha de visualização.",
