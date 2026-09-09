@@ -23,7 +23,8 @@ import { dedupeRecords } from "@/lib/dedupeRecords";
 
 import ImportSummaryDialog from "@/components/ImportSummaryDialog";
 import GoogleDriveOFXImport from "@/components/GoogleDriveOFXImport";
-import SavedStatementsDialog from "@/components/SavedStatementsDialog";
+import SavedStatementsTable from "@/components/SavedStatementsTable";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -503,7 +504,7 @@ export default function Index() {
     setSummary({ mode: "pre" });
   };
 
-  const [consultOpen, setConsultOpen] = useState(false);
+  const [tab, setTab] = useState("analisar");
 
   return (
     <div className="flex min-h-screen flex-col app-surface">
@@ -522,10 +523,6 @@ export default function Index() {
               <FolderOpen className="h-4 w-4" /> Abrir OFX/PDF
             </Button>
           )}
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => setConsultOpen(true)} title="Consultar base">
-            <Database className="h-4 w-4" />
-            <span className="hidden sm:inline">Consultar base</span>
-          </Button>
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs" onClick={() => navigate("/")} title="Tela inicial">
             <Home className="h-4 w-4" />
             <span className="hidden sm:inline">Tela inicial</span>
@@ -535,6 +532,17 @@ export default function Index() {
       </header>
 
       <main className="flex-1 overflow-auto p-3 sm:p-5">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="analisar" className="gap-2 text-xs sm:text-sm">
+              <FileSpreadsheet className="h-4 w-4" /> Analisar arquivo
+            </TabsTrigger>
+            <TabsTrigger value="consultar" className="gap-2 text-xs sm:text-sm">
+              <Database className="h-4 w-4" /> Consultar base
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="analisar" className="mt-0">
         {records.length === 0 ? (
           <div className="mx-auto flex h-full w-full max-w-3xl flex-col items-stretch justify-center gap-4 py-4">
             <div className="opacity-0 animate-fade-up" style={{ animationDelay: "100ms" }}>
@@ -585,6 +593,12 @@ export default function Index() {
             <DataTable records={records} />
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="consultar" className="mt-0">
+            <SavedStatementsTable />
+          </TabsContent>
+        </Tabs>
       </main>
 
       <OFXPreviewDialog
@@ -733,7 +747,7 @@ export default function Index() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <SavedStatementsDialog open={consultOpen} onOpenChange={setConsultOpen} />
+      
     </div>
   );
 }
