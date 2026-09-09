@@ -22,6 +22,10 @@ export interface BankStatementRow {
   codigo_operacao: string | null;
   raw: Record<string, unknown> | null;
   file_name: string | null;
+  account_id: string | null;
+  titular: string | null;
+  documento_titular: string | null;
+  banco_codigo: string | null;
   created_at: string;
   updated_at: string;
 }
