@@ -38,6 +38,29 @@ function brToISO(d: string): string | null {
   return `${m[3]}-${m[2]}-${m[1]}`;
 }
 
+/** Chave-base antiduplicidade de um lançamento dentro da conta. */
+function baseFitid(r: FinancialRecord): string {
+  return r.fitid || r.documento || `${r.data}|${r.valor}|${r.descricao}`.slice(0, 80);
+}
+
+/**
+ * Gera um fitid por lançamento, único dentro do lote. Repetições do mesmo
+ * fitid-base recebem sufixo estável por ocorrência (#2, #3...), preservando
+ * lançamentos idênticos legítimos e evitando o erro do Postgres
+ * "ON CONFLICT DO UPDATE command cannot affect row a second time".
+ * Como o sufixo depende só da ordem no arquivo, a reimportação gera as
+ * mesmas chaves e segue atualizando em vez de duplicar.
+ */
+export function buildFitids(records: FinancialRecord[]): string[] {
+  const seen = new Map<string, number>();
+  return records.map((r) => {
+    const base = baseFitid(r);
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return n === 1 ? base : `${base}#${n}`;
+  });
+}
+
 export interface UpsertContext {
   agencia: string;
   conta: string;
