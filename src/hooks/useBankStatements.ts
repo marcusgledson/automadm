@@ -73,6 +73,10 @@ export function recordToRow(
     codigo_operacao: r.codigoOperacao ?? null,
     raw: r.raw ?? {},
     file_name: ctx.fileName ?? null,
+    account_id: ctx.accountId ?? null,
+    titular: ctx.titular ?? null,
+    documento_titular: ctx.documento ?? null,
+    banco_codigo: ctx.bancoCodigo ?? null,
   };
 }
 
