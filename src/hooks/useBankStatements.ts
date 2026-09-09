@@ -22,6 +22,10 @@ export interface BankStatementRow {
   codigo_operacao: string | null;
   raw: Record<string, unknown> | null;
   file_name: string | null;
+  account_id: string | null;
+  titular: string | null;
+  documento_titular: string | null;
+  banco_codigo: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -38,6 +42,7 @@ export interface UpsertContext {
   agencia: string;
   conta: string;
   banco?: string;
+  bancoCodigo?: string | null;
   fileName?: string;
   /** Conta cadastrada vinculada ao extrato. */
   accountId?: string | null;
@@ -68,6 +73,10 @@ export function recordToRow(
     codigo_operacao: r.codigoOperacao ?? null,
     raw: r.raw ?? {},
     file_name: ctx.fileName ?? null,
+    account_id: ctx.accountId ?? null,
+    titular: ctx.titular ?? null,
+    documento_titular: ctx.documento ?? null,
+    banco_codigo: ctx.bancoCodigo ?? null,
   };
 }
 

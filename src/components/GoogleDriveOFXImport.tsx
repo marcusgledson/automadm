@@ -35,7 +35,7 @@ export default function GoogleDriveOFXImport({ onOFXLoaded }: GoogleDriveOFXImpo
   const [progress, setProgress] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
-  const { links: savedLinks, addLink, removeLink } = useDriveLinks();
+  const { links: savedLinks, addLink, removeLink } = useDriveLinks({ module: "extrato", fileKind: "ofx" });
 
   useEffect(() => {
     if (!importingId) { setProgress(0); setElapsed(0); return; }

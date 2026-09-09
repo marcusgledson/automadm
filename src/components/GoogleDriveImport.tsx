@@ -65,7 +65,7 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
   const [pwRequest, setPwRequest] = useState<PdfPasswordRequest | null>(null);
   const pwResolver = useRef<((v: string | null) => void) | null>(null);
 
-  const { links: savedLinks, addLink, removeLink } = useDriveLinks();
+  const { links: savedLinks, addLink, removeLink } = useDriveLinks({ module: "contas", fileKind: "pdf" });
 
   const saveCurrentLink = useCallback(async () => {
     const res = await addLink(folderLink, linkLabel);
