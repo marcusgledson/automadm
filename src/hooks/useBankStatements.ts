@@ -42,6 +42,7 @@ export interface UpsertContext {
   agencia: string;
   conta: string;
   banco?: string;
+  bancoCodigo?: string | null;
   fileName?: string;
   /** Conta cadastrada vinculada ao extrato. */
   accountId?: string | null;
