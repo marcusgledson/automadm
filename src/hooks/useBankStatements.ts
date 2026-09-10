@@ -127,8 +127,10 @@ export function useBankStatements() {
       if (!ctx.agencia || !ctx.conta) {
         return { ok: false, count: 0, error: "Agência/Conta não encontrados no OFX." };
       }
-      const payload = records.map((r) => ({
+      const fitids = buildFitids(records);
+      const payload = records.map((r, i) => ({
         ...recordToRow(r, ctx, user.id),
+        fitid: fitids[i],
         account_id: ctx.accountId ?? null,
         titular: ctx.titular ?? null,
         documento_titular: ctx.documento ?? null,
@@ -153,9 +155,7 @@ export function useBankStatements() {
       ctx: { agencia: string; conta: string },
     ): Promise<{ existing: number; total: number }> => {
       if (!user || records.length === 0) return { existing: 0, total: records.length };
-      const fitids = records.map(
-        (r) => r.fitid || r.documento || `${r.data}|${r.valor}|${r.descricao}`.slice(0, 80),
-      );
+      const fitids = buildFitids(records);
       const unique = [...new Set(fitids)];
       let existing = 0;
       for (let i = 0; i < unique.length; i += 200) {
