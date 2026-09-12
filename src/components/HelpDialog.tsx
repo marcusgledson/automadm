@@ -29,7 +29,14 @@ import {
   ArrowRight,
   Leaf,
   Loader2,
+  TrendingUp,
+  Target,
+  ShieldCheck,
+  Search,
 } from "lucide-react";
+
+const MANUAL_UPDATED = "Setembro de 2026";
+const MANUAL_URL = "/manual-do-usuario.pdf?v=2026-09";
 
 interface HelpDialogProps {
   open: boolean;
@@ -66,9 +73,10 @@ const steps: Step[] = [
       <>
         No painel principal você verá os módulos disponíveis:
         <ul className="mt-2 space-y-1 pl-4">
-          <li className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5 text-primary" /> <strong>Análise de Extrato</strong> — importar OFX.</li>
-          <li className="flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-accent" /> <strong>Faturas Neoenergia</strong> — importar contas de energia.</li>
-          <li className="flex items-center gap-2"><Receipt className="h-3.5 w-3.5 text-emerald-600" /> <strong>Central de Contas</strong> — despesas consolidadas.</li>
+          <li className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5 text-primary" /> <strong>Análise de Extrato Bancário</strong> — importar, revisar e consultar extratos.</li>
+          <li className="flex items-center gap-2"><Receipt className="h-3.5 w-3.5 text-accent" /> <strong>Central de Contas e Despesas</strong> — contas, boletos e faturas de energia.</li>
+          <li className="flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5 text-primary" /> <strong>Meus Investimentos</strong> — importar ou incluir aplicações manualmente.</li>
+          <li className="flex items-center gap-2"><Target className="h-3.5 w-3.5 text-accent" /> <strong>Metas e Orçamento</strong> — acompanhar limites e alertas de custo.</li>
         </ul>
       </>
     ),
@@ -77,14 +85,14 @@ const steps: Step[] = [
   {
     id: "ofx",
     icon: FolderOpen,
-    title: "3. Importar o arquivo OFX",
+    title: "3. Analisar um extrato",
     body: (
       <>
-        No módulo <strong>Análise de Extrato</strong>, você pode:
+        Na aba <strong>Analisar arquivo</strong> do módulo de Extrato, você pode:
         <ul className="mt-2 space-y-1 pl-4 list-disc">
-          <li>Arrastar um arquivo <code>.ofx</code> na área indicada, ou</li>
-          <li>Clicar em <em>Selecionar Arquivo OFX</em>, ou</li>
-          <li>Buscar direto de uma <strong>pasta pública do Google Drive</strong>.</li>
+          <li>Carregar arquivos <code>.ofx</code> ou <code>.pdf</code> do dispositivo;</li>
+          <li>Buscar arquivos OFX em uma pasta pública do <strong>Google Drive</strong>;</li>
+          <li>Escolher o modo <strong>Apenas leitura</strong> ou <strong>Gravação</strong>.</li>
         </ul>
       </>
     ),
@@ -123,12 +131,12 @@ const steps: Step[] = [
   {
     id: "salvar",
     icon: Database,
-    title: "6. Salvar na base",
+    title: "6. Gravar e consultar extratos",
     body: (
       <>
-        Clique em <strong>Salvar na Base</strong>. Um resumo aparece com o banco, agência,
-        conta e quantidade de lançamentos. Confirme para gravar — os dados vão para o
-        extrato e também para a Central de Despesas.
+        No modo <strong>Gravação</strong>, confirme banco, agência, conta, titular e documento antes de salvar.
+        Use a aba <strong>Consultar base</strong> para filtrar os lançamentos por banco, conta,
+        titular ou período e exportar o resultado. Débitos também podem alimentar a Central de Despesas.
       </>
     ),
     jumpTo: { label: "Ir para salvamento", path: "/extrato" },
@@ -136,20 +144,69 @@ const steps: Step[] = [
   {
     id: "resumo",
     icon: CheckCircle2,
-    title: "7. Conferir o resumo final",
+    title: "7. Importar contas e boletos",
     body: (
       <>
-        Ao concluir, você verá quantos lançamentos foram salvos no <strong>extrato</strong> e
-        quantos foram vinculados como <strong>despesas</strong>. A partir daí, é possível
-        exportar em XLSX ou seguir para outros módulos.
+        Na <strong>Central de Contas e Despesas</strong>, carregue PDFs de contas, tributos e boletos,
+        ou faça um lançamento manual. Revise os campos encontrados antes de confirmar. Em Faturas de
+        Energia, cada PDF protegido é validado separadamente e o status aparece por arquivo.
       </>
     ),
     jumpTo: { label: "Ver Central de Contas", path: "/contas" },
   },
   {
+    id: "investimentos",
+    icon: TrendingUp,
+    title: "8. Registrar investimentos",
+    body: (
+      <>
+        Em <strong>Meus Investimentos</strong>, carregue um extrato em PDF, TXT ou CSV. Quando houver
+        vários investimentos, marque quais deseja salvar. Também é possível usar <strong>Inclusão manual</strong>.
+        Abra um item salvo para entender taxa, liquidez, carência, impostos e rendimento em linguagem simples.
+      </>
+    ),
+    jumpTo: { label: "Abrir Meus Investimentos", path: "/investimentos" },
+  },
+  {
+    id: "metas",
+    icon: Target,
+    title: "9. Acompanhar metas e orçamento",
+    body: (
+      <>
+        Defina o valor planejado, a economia desejada e o prazo no módulo <strong>Metas e Orçamento</strong>.
+        O painel compara o custo realizado com o limite e avisa quando o orçamento é ultrapassado.
+      </>
+    ),
+    jumpTo: { label: "Abrir Metas e Orçamento", path: "/metas" },
+  },
+  {
+    id: "seguranca",
+    icon: ShieldCheck,
+    title: "10. Segurança, PIN e perfil",
+    body: (
+      <>
+        Pelo menu do usuário, atualize seus dados, aparência e opções de segurança. Quando configurados,
+        PIN ou biometria desbloqueiam o aplicativo sem pedir novamente o e-mail. Use <strong>Sair da conta</strong>
+        ao terminar em um aparelho compartilhado.
+      </>
+    ),
+    tip: "Nunca compartilhe senha, PIN ou arquivos financeiros por mensagens.",
+  },
+  {
+    id: "links",
+    icon: Search,
+    title: "11. Links e arquivos salvos",
+    body: (
+      <>
+        Os links do Google Drive são separados por módulo e tipo de arquivo. Assim, pastas de PDFs de contas
+        aparecem apenas no importador de contas, enquanto pastas de OFX ficam no módulo de Extrato.
+      </>
+    ),
+  },
+  {
     id: "sair",
     icon: LogOut,
-    title: "8. Sair com segurança",
+    title: "12. Sair com segurança",
     body: (
       <>
         No menu de usuário (canto superior direito), use <strong>Sair da conta</strong> para
@@ -181,7 +238,7 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
     const link = document.createElement("link");
     link.rel = "prefetch";
     link.as = "document";
-    link.href = "/manual-do-usuario.pdf";
+    link.href = MANUAL_URL;
     document.head.appendChild(link);
     return () => {
       try { document.head.removeChild(link); } catch { /* noop */ }
@@ -203,7 +260,7 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                 Ajuda &amp; Manual do Usuário
               </DialogTitle>
               <DialogDescription className="text-xs sm:text-sm">
-                Guia passo a passo, manual em PDF e materiais para download.
+                 Guia passo a passo e manual em PDF · Atualizado em {MANUAL_UPDATED}.
               </DialogDescription>
             </div>
           </div>
@@ -354,7 +411,7 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/30 px-3 py-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <FileText className="h-3.5 w-3.5 text-primary" />
-                    manual-do-usuario.pdf
+                     Manual do Usuário · {MANUAL_UPDATED}
                     {!pdfReady && (
                       <span className="inline-flex items-center gap-1 text-[11px]">
                         <Loader2 className="h-3 w-3 animate-spin" /> carregando…
@@ -363,12 +420,12 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                   </div>
                   <div className="flex gap-1">
                     <Button asChild variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-                      <a href="/manual-do-usuario.pdf" target="_blank" rel="noopener noreferrer">
+                       <a href={MANUAL_URL} target="_blank" rel="noopener noreferrer">
                         Abrir em nova aba
                       </a>
                     </Button>
                     <Button asChild variant="outline" size="sm" className="h-7 gap-1 px-2 text-xs">
-                      <a href="/manual-do-usuario.pdf" download="manual-do-usuario.pdf">
+                       <a href={MANUAL_URL} download="manual-do-usuario-setembro-2026.pdf">
                         <Download className="h-3 w-3" /> PDF
                       </a>
                     </Button>
@@ -378,7 +435,7 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                   {pdfLoaded ? (
                     <iframe
                       title="Manual do Usuário"
-                      src="/manual-do-usuario.pdf#view=FitH&zoom=page-width&pagemode=none&toolbar=1"
+                       src={`${MANUAL_URL}#view=FitH&zoom=page-width&pagemode=none&toolbar=1`}
                       className="absolute inset-0 h-full w-full border-0"
                       loading="lazy"
                       onLoad={() => setPdfReady(true)}
@@ -399,10 +456,10 @@ export default function HelpDialog({ open, onOpenChange }: HelpDialogProps) {
                   <h3 className="text-sm font-semibold">Materiais para download</h3>
                   <DownloadRow
                     icon={FileText}
-                    title="Manual do Usuário — PDF"
-                    desc="Ideal para leitura em qualquer dispositivo, com marcadores e busca."
-                    href="/manual-do-usuario.pdf"
-                    file="manual-do-usuario.pdf"
+                     title={`Manual do Usuário — ${MANUAL_UPDATED}`}
+                     desc="Guia atualizado dos módulos, importações, consultas e segurança."
+                     href={MANUAL_URL}
+                     file="manual-do-usuario-setembro-2026.pdf"
                   />
 
                 </div>

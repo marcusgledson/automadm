@@ -6,6 +6,15 @@ import UserMenu from "@/components/UserMenu";
 
 const faqs = [
   {
+    q: "Como consultar extratos que já foram salvos?",
+    a: (
+      <>
+        Abra <strong>Análise de Extrato Bancário</strong> e selecione a aba <strong>Consultar base</strong>.
+        Você pode filtrar por banco, conta, titular e período, além de exportar o resultado.
+      </>
+    ),
+  },
+  {
     q: "Falha ao baixar OFX do Google Drive",
     a: (
       <>
@@ -48,8 +57,9 @@ const faqs = [
     q: "Fatura Neoenergia não é processada / dados genéricos",
     a: (
       <>
-        Informe a <strong>senha do PDF</strong> (geralmente o CPF/CNPJ do titular) no campo acima da
-        lista antes de importar. Sem a senha correta, a IA não consegue ler o conteúdo real do PDF.
+        Cada PDF é validado antes do processamento. Os arquivos liberados continuam normalmente; para os
+        protegidos, informe a <strong>senha do PDF</strong> no pop-up (geralmente o CPF/CNPJ do titular).
+        O status individual informa quais arquivos foram liberados, rejeitados ou ainda aguardam senha.
       </>
     ),
   },
@@ -79,6 +89,24 @@ const faqs = [
         Menu do usuário → <em>Menu Gerencial</em> → <em>Exportar backup completo</em>. O JSON contém
         extratos, faturas, despesas e links do Drive. A exportação para o Google Drive é criptografada
         no estilo WhatsApp e só pode ser aberta pelo mesmo login.
+      </>
+    ),
+  },
+  {
+    q: "Por que meus links do Google Drive mudam entre as telas?",
+    a: (
+      <>
+        Os links são separados pelo módulo e pelo tipo de arquivo. Pastas de PDF ficam no importador de contas,
+        enquanto pastas de OFX aparecem no módulo de Extrato. Isso evita usar uma pasta na tela errada.
+      </>
+    ),
+  },
+  {
+    q: "Como incluir um investimento sem arquivo?",
+    a: (
+      <>
+        Abra <strong>Meus Investimentos</strong> e escolha <strong>Inclusão manual</strong>. Informe a instituição,
+        o ativo, a data de aplicação e os valores disponíveis; depois confirme para salvar.
       </>
     ),
   },
@@ -125,7 +153,7 @@ export default function FAQ() {
         <div className="mb-6 space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">FAQ &amp; Solução de Problemas</h1>
           <p className="text-sm text-muted-foreground">
-            Respostas rápidas para as dúvidas e erros mais comuns.
+            Respostas rápidas para as dúvidas e erros mais comuns · Atualizado em setembro de 2026.
           </p>
         </div>
         <Accordion type="single" collapsible className="rounded-lg border border-border/60 bg-card/60">
