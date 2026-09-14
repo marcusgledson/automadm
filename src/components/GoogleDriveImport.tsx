@@ -390,7 +390,38 @@ export default function GoogleDriveImport({ onInvoicesImported, existingInvoices
           </div>
         </div>
 
+        {otherLinks.length > 0 && (
+          <div className="rounded-lg border border-dashed border-border p-2">
+            <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">
+              Links salvos em outras telas ({otherLinks.length}) — traga para esta tela se forem pastas de contas em PDF
+            </p>
+            <ul className="space-y-1">
+              {otherLinks.map((l) => (
+                <li key={l.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm">
+                  <LinkIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1 truncate text-xs text-muted-foreground" title={l.url}>
+                    {l.label ? `${l.label} — ${l.url}` : l.url}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={loading || importing}
+                    onClick={async () => {
+                      const res = await moveLink(l.id);
+                      if (res.ok) toast.success("Link movido para esta tela."); else toast.error(res.error!);
+                    }}
+                  >
+                    Trazer para cá
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {savedLinks.length > 0 && (
+
           <div className="rounded-lg border border-border bg-muted/20 p-2">
             <p className="px-1 pb-2 text-xs font-medium text-muted-foreground">
               Links salvos ({savedLinks.length})
