@@ -39,11 +39,13 @@ export function useReportRequests() {
   const { user } = useAuth();
   const { isMaster, orgOwnerId } = useUserRole();
   const [requests, setRequests] = useState<ReportRequest[]>([]);
+  const [requesters, setRequesters] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!user) {
       setRequests([]);
+      setRequesters({});
       setLoading(false);
       return;
     }
@@ -52,7 +54,23 @@ export function useReportRequests() {
       .from("report_requests")
       .select("*")
       .order("created_at", { ascending: false });
-    setRequests((data as ReportRequest[]) ?? []);
+    const rows = (data as ReportRequest[]) ?? [];
+    setRequests(rows);
+
+    const ids = Array.from(new Set(rows.map((r) => r.requester_id)));
+    if (ids.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, full_name")
+        .in("user_id", ids);
+      const map: Record<string, string> = {};
+      for (const p of profs ?? []) {
+        map[p.user_id] = p.full_name || p.display_name || "";
+      }
+      setRequesters(map);
+    } else {
+      setRequesters({});
+    }
     setLoading(false);
   }, [user]);
 
