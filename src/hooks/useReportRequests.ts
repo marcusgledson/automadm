@@ -129,5 +129,22 @@ export function useReportRequests() {
     [mine],
   );
 
-  return { requests, mine, inbox, pendingCount, loading, refresh, create, decide, isApproved };
+  /** Nome (ou e-mail) do solicitante para exibição nas listas. */
+  const requesterLabel = useCallback(
+    (id: string) => requesters[id] || (id === user?.id ? user?.email ?? "Você" : "Usuário"),
+    [requesters, user],
+  );
+
+  return {
+    requests,
+    mine,
+    inbox,
+    pendingCount,
+    loading,
+    refresh,
+    create,
+    decide,
+    isApproved,
+    requesterLabel,
+  };
 }
