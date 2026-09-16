@@ -37,4 +37,5 @@ Depois do domínio ativo:
 
 ## Primeiro passo
 
-Configurar o domínio remetente antes de eu ligar os envios.
+Configurar o domínio remetente antes de eu ligar os envios.  
+Ao termino da implementação, me diga se posso configurar um e-mail temporário já com máscara e layout da aplicação.
