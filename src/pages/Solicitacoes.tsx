@@ -230,6 +230,9 @@ export default function Solicitacoes() {
                           <p className="font-medium">
                             {moduleLabel(r.modulo)} · {formatLabel(r.formato)}
                           </p>
+                          <p className="text-xs text-muted-foreground">
+                            Solicitante: {reports.requesterLabel(r.requester_id)}
+                          </p>
                           {r.justificativa && (
                             <p className="text-xs text-muted-foreground">{r.justificativa}</p>
                           )}
@@ -290,6 +293,9 @@ export default function Solicitacoes() {
                       <div className="min-w-0">
                         <p className="truncate font-medium">
                           {moduleLabel(r.modulo)} · {formatLabel(r.formato)}
+                        </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Solicitante: {reports.requesterLabel(r.requester_id)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(r.created_at).toLocaleString("pt-BR")}
