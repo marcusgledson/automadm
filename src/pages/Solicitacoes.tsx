@@ -294,6 +294,9 @@ export default function Solicitacoes() {
                         <p className="truncate font-medium">
                           {moduleLabel(r.modulo)} · {formatLabel(r.formato)}
                         </p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          Solicitante: {reports.requesterLabel(r.requester_id)}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(r.created_at).toLocaleString("pt-BR")}
                         </p>
