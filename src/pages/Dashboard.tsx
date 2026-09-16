@@ -8,6 +8,7 @@ import ThemedHero from "@/components/ThemedHero";
 import { useThemeIcon } from "@/hooks/useThemeIcon";
 import HelpDialog from "@/components/HelpDialog";
 import { useModuleAccess } from "@/hooks/useModuleAccess";
+import AlertsPanel from "@/components/AlertsPanel";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -86,6 +87,8 @@ export default function Dashboard() {
             </div>
             <ThemedHero editable className="aspect-[4/3] w-full max-w-md justify-self-center md:justify-self-end" />
           </div>
+
+          <AlertsPanel />
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {modules.map((mod, i) => (
