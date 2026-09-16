@@ -109,7 +109,7 @@ export function useAlerts() {
         count: smsPending,
         severity: "warning",
         actionLabel: "Revisar",
-        path: "/sms-revisao",
+        path: "/sms/revisao",
       });
     }
 
