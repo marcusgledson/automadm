@@ -230,6 +230,9 @@ export default function Solicitacoes() {
                           <p className="font-medium">
                             {moduleLabel(r.modulo)} · {formatLabel(r.formato)}
                           </p>
+                          <p className="text-xs text-muted-foreground">
+                            Solicitante: {reports.requesterLabel(r.requester_id)}
+                          </p>
                           {r.justificativa && (
                             <p className="text-xs text-muted-foreground">{r.justificativa}</p>
                           )}
