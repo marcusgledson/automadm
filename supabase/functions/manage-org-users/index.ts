@@ -38,7 +38,7 @@ serve(async (req) => {
   if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
 
   const url = Deno.env.get("SUPABASE_URL")!;
-  const anon = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!);
+  const anon = createClient(url, (Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))!);
   const { data: u, error: ue } = await anon.auth.getUser(authHeader.replace("Bearer ", ""));
   if (ue || !u?.user) return json({ error: "Unauthorized" }, 401);
   const caller = u.user;
