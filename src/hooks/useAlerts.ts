@@ -130,7 +130,7 @@ export function useAlerts() {
         list.push({
           id: "contas-vencendo",
           title: "Contas a vencer",
-          description: `${billsDue} conta(s) vencem nos próximos 7 dias ou já venceram.`,
+          description: `${billsDue} conta(s) vencem nos próximos 7 dias ou venceram há menos de 30 dias.`,
           count: billsDue,
           severity: "info",
           actionLabel: "Abrir Central de Contas",
