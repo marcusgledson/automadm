@@ -583,6 +583,50 @@ export type Database = {
         }
         Relationships: []
       }
+      org_access_notifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          note: string | null
+          organization_id: string
+          recipient_email: string
+          send_error: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          recipient_email: string
+          send_error?: string | null
+          sent_at?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          recipient_email?: string
+          send_error?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_access_notifications_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_access_requests: {
         Row: {
           created_at: string
@@ -635,6 +679,10 @@ export type Database = {
       }
       organizations: {
         Row: {
+          access_decided_at: string | null
+          access_decided_by: string | null
+          access_note: string | null
+          access_status: string
           bairro: string | null
           cep: string | null
           cidade: string | null
@@ -645,6 +693,7 @@ export type Database = {
           id: string
           logradouro: string | null
           nome_fantasia: string | null
+          notify_email: string | null
           numero: string | null
           owner_id: string
           razao_social: string
@@ -654,6 +703,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_decided_at?: string | null
+          access_decided_by?: string | null
+          access_note?: string | null
+          access_status?: string
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -664,6 +717,7 @@ export type Database = {
           id?: string
           logradouro?: string | null
           nome_fantasia?: string | null
+          notify_email?: string | null
           numero?: string | null
           owner_id: string
           razao_social: string
@@ -673,6 +727,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_decided_at?: string | null
+          access_decided_by?: string | null
+          access_note?: string | null
+          access_status?: string
           bairro?: string | null
           cep?: string | null
           cidade?: string | null
@@ -683,6 +741,7 @@ export type Database = {
           id?: string
           logradouro?: string | null
           nome_fantasia?: string | null
+          notify_email?: string | null
           numero?: string | null
           owner_id?: string
           razao_social?: string

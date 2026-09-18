@@ -8,6 +8,13 @@
       "when": 1789430348965,
       "tag": "0000_revoke_anon_grants_public_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789689925700,
+      "tag": "0001_org_access_control",
+      "breakpoints": true
     }
   ]
 }
