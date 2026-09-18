@@ -33,19 +33,13 @@ serve(async (req) => {
   }
 
   // Require authenticated user
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const authedUser = await getRequestUser(req);
+  if (!authedUser) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
-  const { data: userData, error: userErr } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
-  if (userErr || !userData?.user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), {
-      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  }
+  const userData = { user: authedUser };
 
 
   try {
