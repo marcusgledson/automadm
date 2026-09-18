@@ -47,6 +47,7 @@ export function useAlerts() {
       supabase
         .from("consumption_bills")
         .select("id", head)
+        .gte("data_vencimento", todayISO(-30))
         .lte("data_vencimento", todayISO(7)),
       supabase.from("consumption_bills").select("id", head).is("valor_total", null),
       isMaster
