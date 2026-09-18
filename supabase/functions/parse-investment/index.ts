@@ -16,7 +16,7 @@ serve(async (req) => {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, (Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))!);
   const { data: u, error: ue } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
   if (ue || !u?.user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
