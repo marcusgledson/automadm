@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 // @ts-ignore - pdfjs legacy build runs in Deno
 import * as pdfjsLib from "npm:pdfjs-dist@4.0.379/legacy/build/pdf.mjs";
 import { guardAndAudit, MAX_TEXT_CHARS } from "../_shared/fileGuard.ts";
+import { getRequestUser } from "../_shared/auth.ts";
 
 
 
@@ -17,15 +17,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
+  const user = await getRequestUser(req);
+  if (!user) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!);
-  const { data: u, error: ue } = await sb.auth.getUser(authHeader.replace("Bearer ", ""));
-  if (ue || !u?.user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
+  const u = { user };
 
 
   try {
