@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useAppOwner } from "@/hooks/useAppOwner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Building2,
   ClipboardList,
   HelpCircle,
   LogOut,
@@ -34,6 +36,7 @@ export default function UserMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isMaster } = useUserRole();
+  const { isAppOwner } = useAppOwner();
   const { settings } = useAppSettings();
   const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -98,6 +101,13 @@ export default function UserMenu() {
               Perfis e Usuários
             </DropdownMenuItem>
           )}
+          {isAppOwner && (
+            <DropdownMenuItem onClick={() => navigate("/empresas")}>
+              <Building2 className="mr-2 h-4 w-4" />
+              Empresas e Acessos
+            </DropdownMenuItem>
+          )}
+
 
           <DropdownMenuItem onClick={() => navigate("/solicitacoes")}>
             <ClipboardList className="mr-2 h-4 w-4" />

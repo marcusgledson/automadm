@@ -19,9 +19,14 @@ export interface Organization {
   bairro: string | null;
   cidade: string | null;
   uf: string | null;
+  access_status?: string | null;
+  access_note?: string | null;
 }
 
-export type OrganizationInput = Omit<Organization, "id" | "owner_id">;
+export type OrganizationInput = Omit<
+  Organization,
+  "id" | "owner_id" | "access_status" | "access_note"
+>;
 
 /** Dados mínimos devolvidos na consulta pública por CNPJ. */
 export interface OrgSummary {

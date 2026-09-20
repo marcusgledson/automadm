@@ -21,6 +21,7 @@ import Onboarding from "./pages/Onboarding";
 import Metas from "./pages/Metas";
 import Solicitacoes from "./pages/Solicitacoes";
 import Usuarios from "./pages/Usuarios";
+import Empresas from "./pages/Empresas";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
@@ -29,6 +30,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
 import { useOrganization } from "@/hooks/useOrganization";
 import PendingApprovalScreen from "@/components/PendingApprovalScreen";
+import BlockedOrgScreen from "@/components/BlockedOrgScreen";
+import { useAppOwner } from "@/hooks/useAppOwner";
 
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
@@ -74,7 +77,8 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
 /** Cadastro associado a uma empresa e ainda não aprovado pelo Máster. */
 function ApprovalGate({ children }: { children: React.ReactNode }) {
   const { isPending, organization, loading, refresh } = useOrganization();
-  if (loading) {
+  const { isAppOwner, loading: ownerLoading } = useAppOwner();
+  if (loading || ownerLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -88,8 +92,17 @@ function ApprovalGate({ children }: { children: React.ReactNode }) {
         onRefresh={() => void refresh()}
       />
     );
+  if (!isAppOwner && organization?.access_status === "bloqueado")
+    return (
+      <BlockedOrgScreen
+        organizationName={organization?.razao_social ?? null}
+        note={organization?.access_note ?? null}
+        onRefresh={() => void refresh()}
+      />
+    );
   return <>{children}</>;
 }
+
 
 /** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
 function PasswordGate({ children }: { children: React.ReactNode }) {
@@ -214,6 +227,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Usuarios />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/empresas"
+              element={
+                <ProtectedRoute>
+                  <Empresas />
                 </ProtectedRoute>
               }
             />

@@ -244,7 +244,7 @@ export default function Empresas() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TIPOS_INSTITUICAO.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
