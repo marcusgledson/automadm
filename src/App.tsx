@@ -21,6 +21,7 @@ import Onboarding from "./pages/Onboarding";
 import Metas from "./pages/Metas";
 import Solicitacoes from "./pages/Solicitacoes";
 import Usuarios from "./pages/Usuarios";
+import Empresas from "./pages/Empresas";
 import { Loader2 } from "lucide-react";
 import { useIdleLogout } from "@/hooks/useIdleLogout";
 import { useMobileFullscreen } from "@/hooks/useMobileFullscreen";
@@ -29,6 +30,8 @@ import { useAppSettings } from "@/hooks/useAppSettings";
 import { useProfile } from "@/hooks/useProfile";
 import { useOrganization } from "@/hooks/useOrganization";
 import PendingApprovalScreen from "@/components/PendingApprovalScreen";
+import BlockedOrgScreen from "@/components/BlockedOrgScreen";
+import { useAppOwner } from "@/hooks/useAppOwner";
 
 import BiometricLockScreen from "@/components/BiometricLockScreen";
 import ForcePasswordChange from "@/components/ForcePasswordChange";
