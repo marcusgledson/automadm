@@ -92,8 +92,17 @@ function ApprovalGate({ children }: { children: React.ReactNode }) {
         onRefresh={() => void refresh()}
       />
     );
+  if (!isAppOwner && organization?.access_status === "bloqueado")
+    return (
+      <BlockedOrgScreen
+        organizationName={organization?.razao_social ?? null}
+        note={organization?.access_note ?? null}
+        onRefresh={() => void refresh()}
+      />
+    );
   return <>{children}</>;
 }
+
 
 /** Primeiro acesso com a senha padrão: exige a troca antes de liberar o app. */
 function PasswordGate({ children }: { children: React.ReactNode }) {
