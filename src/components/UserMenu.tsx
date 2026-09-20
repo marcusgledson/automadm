@@ -101,6 +101,13 @@ export default function UserMenu() {
               Perfis e Usuários
             </DropdownMenuItem>
           )}
+          {isAppOwner && (
+            <DropdownMenuItem onClick={() => navigate("/empresas")}>
+              <Building2 className="mr-2 h-4 w-4" />
+              Empresas e Acessos
+            </DropdownMenuItem>
+          )}
+
 
           <DropdownMenuItem onClick={() => navigate("/solicitacoes")}>
             <ClipboardList className="mr-2 h-4 w-4" />
