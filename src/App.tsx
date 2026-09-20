@@ -77,7 +77,8 @@ function OnboardingGate({ children }: { children: React.ReactNode }) {
 /** Cadastro associado a uma empresa e ainda não aprovado pelo Máster. */
 function ApprovalGate({ children }: { children: React.ReactNode }) {
   const { isPending, organization, loading, refresh } = useOrganization();
-  if (loading) {
+  const { isAppOwner, loading: ownerLoading } = useAppOwner();
+  if (loading || ownerLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
