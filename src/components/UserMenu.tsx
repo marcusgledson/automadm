@@ -36,6 +36,7 @@ export default function UserMenu() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const { isMaster } = useUserRole();
+  const { isAppOwner } = useAppOwner();
   const { settings } = useAppSettings();
   const multiUser = (settings?.usage_mode ?? "pessoal") !== "pessoal";
   const [isFullscreen, setIsFullscreen] = useState(false);
