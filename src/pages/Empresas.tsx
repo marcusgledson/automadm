@@ -216,7 +216,7 @@ export default function Empresas() {
                         <Mail className="h-3.5 w-3.5" />
                         {last.sent_at
                           ? `Aviso enviado para ${last.recipient_email}.`
-                          : `Aviso para ${last.recipient_email} ainda não enviado (envio de e-mails indisponível).`}
+                          : `Aviso para ${last.recipient_email} não foi enviado: cadastre o domínio de e-mail do aplicativo para ativar os avisos automáticos.`}
                       </p>
                     )}
                   </CardContent>
