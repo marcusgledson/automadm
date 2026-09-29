@@ -126,7 +126,11 @@ export default function UniversalBillUpload({ onInserted }: { onInserted?: () =>
         // 2) Texto do PDF (layout-aware) e extração assistida por IA
         setStage(file.name, "lendo", "Extraindo texto");
         const pdfText = await extractPdfPlainText(buffer, password);
-        if (!pdfText.trim()) throw new Error("Não foi possível ler o texto do PDF.");
+        if (pdfText.replace(/\s+/g, "").length < 80)
+          throw new Error("O PDF não tem texto legível (pode ser imagem escaneada). Nada foi gravado.");
+        if (/DANFE|NOTA FISCAL ELETR[ÔO]NICA|DOCUMENTO AUXILIAR DA NOTA FISCAL/i.test(pdfText) &&
+            !/(unidade consumidora|instala[çc][ãa]o|kwh|consumo)/i.test(pdfText))
+          throw new Error("Este arquivo é uma nota fiscal, não uma conta de consumo. Nada foi gravado.");
 
         setStage(file.name, "ia");
         const { data, error } = await supabase.functions.invoke("parse-bill", {
@@ -136,6 +140,25 @@ export default function UniversalBillUpload({ onInserted }: { onInserted?: () =>
         if (!data?.success) throw new Error(data?.error || "Falha na leitura por IA");
 
         const captured = (data.data ?? {}) as Record<string, unknown>;
+        // Anti-invenção: só aceita valores que realmente aparecem no texto do PDF.
+        {
+          const flat = pdfText.replace(/\s+/g, " ");
+          const digits = pdfText.replace(/\D/g, "");
+          const v = captured.valor_total;
+          if (typeof v === "number") {
+            const br = v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            if (!flat.includes(br) && !flat.includes(br.replace(/\./g, ""))) captured.valor_total = null;
+          }
+          const d = captured.data_vencimento;
+          if (typeof d === "string" && d && !flat.includes(d)) captured.data_vencimento = null;
+          const inst = String(captured.numero_instalacao ?? "").replace(/\D/g, "");
+          if (inst && !digits.includes(inst)) captured.numero_instalacao = null;
+          const tit = captured.titular;
+          if (typeof tit === "string" && tit && !flat.toUpperCase().includes(tit.toUpperCase().slice(0, 12)))
+            captured.titular = null;
+          if (captured.valor_total == null && captured.data_vencimento == null && captured.numero_instalacao == null)
+            throw new Error("Não foi possível confirmar nenhum dado da fatura no texto do PDF. Nada foi gravado.");
+        }
         const mapped = toBillRow(captured as ExtractedInvoice, {
           fileName: file.name, tipo_conta: tipo,
           fornecedor: fornecedor.trim() || undefined, source: "upload",

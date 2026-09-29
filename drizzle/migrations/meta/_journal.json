@@ -15,6 +15,13 @@
       "when": 1789689925700,
       "tag": "0001_org_access_control",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790724941335,
+      "tag": "0002_allow_self_finish_password_change",
+      "breakpoints": true
     }
   ]
 }
