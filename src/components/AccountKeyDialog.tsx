@@ -85,12 +85,13 @@ export default function AccountKeyDialog({
     documento: !!(defaultDocumento && defaultDocumento.trim()),
   }), [defaultBanco, defaultAgencia, defaultConta, defaultTitular, defaultDocumento]);
 
+  // Usa os campos atuais: se a agência/conta já estão preenchidas, não há o que avisar.
   const missingList = useMemo(() => {
     const m: string[] = [];
-    if (!detected.agencia) m.push("Agência");
-    if (!detected.conta) m.push("Conta");
+    if (!agencia.trim()) m.push("Agência");
+    if (conta.replace(/\D/g, "").length < 2) m.push("Conta");
     return m;
-  }, [detected]);
+  }, [agencia, conta]);
 
   useEffect(() => {
     if (!open) return;
