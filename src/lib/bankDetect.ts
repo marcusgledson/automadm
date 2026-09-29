@@ -23,7 +23,15 @@ export interface BankDetection {
 
 /** Linha de lançamento (contém valor monetário) — nela aparecem bancos de terceiros. */
 function isTransactionLine(line: string): boolean {
-  return /\d,\d{2}/.test(line) || /\bpix\b|\bted\b|\bdoc\b|transfer[êe]ncia/i.test(line);
+  return /\d,\d{2}/.test(line)
+    || /\bpix\b|\bted\b|\bdoc\b|transfer[êe]ncia/i.test(line)
+    // Contrapartes: CPF mascarado, "(0341) Agência: 123 Conta:" etc.
+    || /•••|\*\*\*\.\d{3}|\(\d{3,4}\)\s*ag[êe]ncia|ag[êe]ncia:\s*\d+\s+conta:/i.test(line);
+}
+
+/** Rodapé institucional (ouvidoria, site do banco): identifica o emissor. */
+function isIssuerLine(line: string): boolean {
+  return /ouvidoria|\.com\.br|sac\b|central de atendimento/i.test(line);
 }
 
 function escapeRe(s: string) {
@@ -44,7 +52,7 @@ function countAlias(text: string, alias: string): number {
  */
 function scoreBanks(text: string): { entry: BankEntry; score: number; evidence?: string }[] {
   const rawLines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const header = rawLines.slice(0, 25);
+  const header = [...rawLines.slice(0, 25), ...rawLines.filter(isIssuerLine)];
   const info = rawLines.filter((l) => !isTransactionLine(l));
   const tx = rawLines.filter(isTransactionLine);
 
