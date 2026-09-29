@@ -52,7 +52,10 @@ function countAlias(text: string, alias: string): number {
  */
 function scoreBanks(text: string): { entry: BankEntry; score: number; evidence?: string }[] {
   const rawLines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const header = [...rawLines.slice(0, 25), ...rawLines.filter(isIssuerLine)];
+  const header = [
+    ...rawLines.slice(0, 25).filter((l) => !isTransactionLine(l)),
+    ...rawLines.filter(isIssuerLine),
+  ];
   const info = rawLines.filter((l) => !isTransactionLine(l));
   const tx = rawLines.filter(isTransactionLine);
 
