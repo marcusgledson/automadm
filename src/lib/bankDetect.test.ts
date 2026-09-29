@@ -38,3 +38,15 @@ describe("detectBankFromText", () => {
     expect(detectBankFromText("lista de compras")).toBeUndefined();
   });
 });
+
+describe("detectBankFromText — contrapartes", () => {
+  it("não confunde Nubank com banco de contraparte Pix", () => {
+    const t = [
+      "EMPRESA X", "Agência", "0001", "Conta", "48639989-1",
+      "FULANO - •••.720.638-•• - ITAÚ", "UNIBANCO S.A. (0341) Agência: 7480 Conta: 8066-",
+      "ITAÚ UNIBANCO S.A. (0341) Agência: 368 Conta:",
+      "fale com a Ouvidoria em 0800 887 0463", "disponíveis em nubank.com.br/contatos#ouvidoria .",
+    ].join("\n");
+    expect(detectBankFromText(t)?.code).toBe("260");
+  });
+});
