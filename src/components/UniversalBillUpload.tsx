@@ -131,6 +131,9 @@ export default function UniversalBillUpload({ onInserted }: { onInserted?: () =>
         if (/DANFE|NOTA FISCAL ELETR[ÔO]NICA|DOCUMENTO AUXILIAR DA NOTA FISCAL/i.test(pdfText) &&
             !/(unidade consumidora|instala[çc][ãa]o|kwh|consumo)/i.test(pdfText))
           throw new Error("Este arquivo é uma nota fiscal, não uma conta de consumo. Nada foi gravado.");
+        if (/Sistema de Informa[çc][õo]es de Cr[ée]dito|\bSCR\b|Empr[ée]stimos e Financiamentos|Registrato/i.test(pdfText) &&
+            !/(unidade consumidora|instala[çc][ãa]o|kwh|consumo|vencimento)/i.test(pdfText))
+          throw new Error("Este arquivo é um relatório de empréstimos (SCR), não uma conta de consumo. Nada foi gravado.");
 
         setStage(file.name, "ia");
         const { data, error } = await supabase.functions.invoke("parse-bill", {
