@@ -22,6 +22,13 @@
       "when": 1790724941335,
       "tag": "0002_allow_self_finish_password_change",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1790771182482,
+      "tag": "0003_org_members_read_and_leitor_readonly",
+      "breakpoints": true
     }
   ]
 }

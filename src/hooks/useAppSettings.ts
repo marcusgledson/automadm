@@ -49,10 +49,19 @@ export function useAppSettings() {
       return;
     }
     setLoading(true);
+    // Convidados usam a configuração da empresa (dono da organização).
+    const { data: roleRow } = await supabase
+      .from("user_roles")
+      .select("org_owner_id")
+      .eq("user_id", user.id)
+      .order("created_at")
+      .limit(1)
+      .maybeSingle();
+    const ownerId = (roleRow?.org_owner_id as string | undefined) ?? user.id;
     const { data } = await supabase
       .from("app_settings")
       .select("*")
-      .eq("owner_id", user.id)
+      .eq("owner_id", ownerId)
       .maybeSingle();
     setSettings((data as AppSettings) ?? null);
     setLoading(false);
