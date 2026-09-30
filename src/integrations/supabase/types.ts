@@ -1204,6 +1204,7 @@ export type Database = {
         Args: { _actor: string; _target: string }
         Returns: boolean
       }
+      current_user_is_leitor: { Args: never; Returns: boolean }
       find_org_by_cnpj: {
         Args: { _cnpj: string }
         Returns: {
