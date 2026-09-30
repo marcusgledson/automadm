@@ -138,31 +138,11 @@ Extraia TODOS os dados possíveis. Use null para campos não encontrados.
                   },
                 },
               },
-              inscricao_imobiliaria: { type: "string" },
-              renavam: { type: "string" },
-              placa: { type: "string" },
-              exercicio: { type: "string", description: "Ano de exercício do tributo" },
-              cota: { type: "string", description: "Cota/parcela, ex.: 03/10 ou Cota única" },
-              numero_documento: { type: "string", description: "Nosso número / número do documento" },
-              contribuinte: { type: "string" },
-              valor_principal: { type: "number" },
-              desconto: { type: "number" },
-              multa: { type: "number" },
-              juros: { type: "number" },
-              correcao_monetaria: { type: "number" },
-              taxas_adicionais: { type: "number" },
-              outros_acrescimos: { type: "number" },
-              valor_venal: { type: "number" },
-              aliquota: { type: "number" },
-              data_emissao: { type: "string" },
-              vencimentos_alternativos: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    descricao: { type: "string" }, data_vencimento: { type: "string" }, valor: { type: "number" },
-                  },
-                },
+              // Campos de tributos agrupados em texto para manter o esquema simples
+              // (esquemas com muitos campos opcionais são recusados pela IA).
+              dados_tributo: {
+                type: "string",
+                description: "Para IPTU/IPVA/taxas: inscrição, RENAVAM, placa, exercício, cota, nosso número, principal, multa, juros, desconto e vencimentos alternativos, em texto 'campo: valor; ...'",
               },
             },
             required: ["numero_instalacao", "data_vencimento", "valor_total"],
