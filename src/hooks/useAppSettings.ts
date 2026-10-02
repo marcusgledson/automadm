@@ -41,6 +41,7 @@ export function useAppSettings() {
   const { user } = useAuth();
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     if (!user) {
@@ -58,6 +59,7 @@ export function useAppSettings() {
       .limit(1)
       .maybeSingle();
     const ownerId = (roleRow?.org_owner_id as string | undefined) ?? user.id;
+    setOwnerId(ownerId);
     const { data } = await supabase
       .from("app_settings")
       .select("*")
@@ -74,6 +76,8 @@ export function useAppSettings() {
   const save = useCallback(
     async (patch: Partial<Omit<AppSettings, "id" | "owner_id">>) => {
       if (!user) return { ok: false, error: "Não autenticado" };
+      if (ownerId && ownerId !== user.id)
+        return { ok: false, error: "apenas o responsável pela empresa pode alterar estas configurações." };
       const { error } = await supabase
         .from("app_settings")
         .upsert({ owner_id: user.id, ...patch }, { onConflict: "owner_id" });
@@ -81,7 +85,7 @@ export function useAppSettings() {
       await refresh();
       return { ok: true };
     },
-    [user, refresh],
+    [user, ownerId, refresh],
   );
 
   const isModuleEnabled = useCallback(
@@ -89,5 +93,5 @@ export function useAppSettings() {
     [settings],
   );
 
-  return { settings, loading, save, refresh, isModuleEnabled };
+  return { settings, loading, canEdit: !ownerId || ownerId === user?.id, save, refresh, isModuleEnabled };
 }
